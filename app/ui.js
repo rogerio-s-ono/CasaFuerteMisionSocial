@@ -18,7 +18,10 @@ let wzState = { step:1, activity:null, role:null };
    MODO DEMO — datos de ejemplo (simulan lo que vendrá del backend compartido)
    Perfiles: voluntario / líder de una cadena / admin.
    ========================================================================= */
-let DEMO_PROFILE = 'voluntario';   // 'voluntario' | 'lider_A' | 'lider_B' | 'admin'
+let DEMO_PROFILE = 'voluntario';   // 'voluntario' | 'lider_A' | 'lider_B' | 'lider_AB' | 'admin'
+/* estado de la vista líder */
+let LIDER_SCOPE = 'all';           // 'all' | 'A' | 'B'  (cadena mostrada)
+let LIDER_VIEW = 'dia';            // 'dia' | 'fn'  (agrupación)
 /* líderes autorizados por el admin, por cadena (en real: allowlist en la planilha) */
 const DEMO_LIDERES = {
   A: { name:'Rogério Ono', email:'rogerio.s.ono@gmail.com' },
@@ -45,9 +48,21 @@ const DEMO_ESPERA = {
   B4:{ limpeza:['Sara'] }
 };
 function tmplId(activityId){ return (activityId||'').replace(/-.*/,''); }
-function isLider(){ return DEMO_PROFILE==='lider_A' || DEMO_PROFILE==='lider_B'; }
+function isLider(){ return DEMO_PROFILE==='lider_A' || DEMO_PROFILE==='lider_B' || DEMO_PROFILE==='lider_AB'; }
 function isAdmin(){ return DEMO_PROFILE==='admin'; }
-function liderCadena(){ return DEMO_PROFILE==='lider_A' ? 'A' : DEMO_PROFILE==='lider_B' ? 'B' : null; }
+/* cadenas de las que la persona es líder (lista) */
+function liderCadenas(){
+  if(DEMO_PROFILE==='lider_A') return ['A'];
+  if(DEMO_PROFILE==='lider_B') return ['B'];
+  if(DEMO_PROFILE==='lider_AB') return ['A','B'];
+  return [];
+}
+/* cadenas visibles según el scope elegido */
+function scopeCadenas(){
+  const mias = liderCadenas();
+  if(LIDER_SCOPE==='all') return mias;
+  return mias.includes(LIDER_SCOPE) ? [LIDER_SCOPE] : mias;
+}
 /* inscritos (demo + los míos) por actividad/rol */
 function inscritosDe(activity, roleId){
   const t = tmplId(activity.id);
@@ -169,12 +184,13 @@ function renderDemoBar(){
       <option value="voluntario">Voluntario</option>
       <option value="lider_A">Líder · Cadena MercaMadrid</option>
       <option value="lider_B">Líder · Cadena Banco de Alimentos</option>
+      <option value="lider_AB">Líder · Ambas cadenas</option>
       <option value="admin">Admin</option>
     </select>`;
   document.getElementById('demoSel').value = DEMO_PROFILE;
   applyProfile();
 }
-function setProfile(p){ DEMO_PROFILE=p; applyProfile(); renderAll();
+function setProfile(p){ DEMO_PROFILE=p; LIDER_SCOPE='all'; LIDER_VIEW='dia'; applyProfile(); renderAll();
   // si dejo de ser líder y estoy en su vista, vuelvo a inicio
   if(!isLider() && document.getElementById('v-lider').classList.contains('active')) go('v-inicio');
 }
@@ -186,44 +202,141 @@ function applyProfile(){
 }
 
 /* ---------- VISTA LÍDER ---------- */
+/* helpers de HTML reutilizables */
+function chipsRol(a, r){
+  const cap=a.roles[r]; const gente=inscritosDe(a,r); const falta=Math.max(0,cap-gente.length);
+  return gente.map(n=>`<span class="chip">${n}</span>`).join('')
+    + Array.from({length:falta}).map(()=>`<span class="chip vac">vacante</span>`).join('');
+}
+function esperaHtml(a, r){
+  const esp = esperaDe(a,r);
+  return esp.length ? `<div class="lc-esp"><div class="et">⏳ Lista de espera</div><div class="people">${esp.map(n=>`<span class="chip esp">${n}</span>`).join('')}</div></div>` : '';
+}
+function actCardLider(a){
+  const f=fmtFecha(a.data); const roleIds=Object.keys(a.roles);
+  const faltaAct = roleIds.reduce((s,r)=>s+libresRol(a,r),0);
+  const roles = roleIds.map(r=>{
+    const cap=a.roles[r]; const gente=inscritosDe(a,r); const falta=Math.max(0,cap-gente.length);
+    const rd=window.CFMS.ROLES[r];
+    return `<div class="lc-role">
+      <div class="lr-h"><span class="lr-name">${rd?rd.label[LANG]:r}</span><span class="lr-count ${falta>0?'miss':'full'}">${gente.length}/${cap}${falta>0?` · faltan ${falta}`:' · completo'}</span></div>
+      <div class="people">${chipsRol(a,r)||'<span class="chip vac">sin inscritos</span>'}</div>
+      ${esperaHtml(a,r)}</div>`;
+  }).join('');
+  const badge = faltaAct>0 ? `<span class="lc-badge falta">Faltan ${faltaAct}</span>` : `<span class="lc-badge ok">Completa</span>`;
+  return `<div class="lcard ${faltaAct>0?'falta':'completa'}">
+    <div class="lc-h"><div><span class="lc-t">${a.titulo[LANG]}</span> <span class="lc-time">${a.hora}</span></div>${badge}</div>
+    ${roles}</div>`;
+}
+function covOf(acts){
+  let plazas=0, cub=0, esp=0;
+  acts.forEach(a=>Object.keys(a.roles).forEach(r=>{ plazas+=a.roles[r]; cub+=Math.min(a.roles[r],ocupados(a,r)); esp+=esperaDe(a,r).length; }));
+  return { plazas, cub, falta:Math.max(0,plazas-cub), esp, pct: plazas?Math.round(cub/plazas*100):100 };
+}
+function covBarClass(pct){ return pct>=100?'':pct>=60?'mid':'low'; }
+
+function setLiderScope(s){ LIDER_SCOPE=s; renderLider(); }
+function setLiderView(v){ LIDER_VIEW=v; renderLider(); }
+window.setLiderScope=setLiderScope; window.setLiderView=setLiderView;
+
 function renderLider(){
-  if(!isLider()){ document.getElementById('liderList').innerHTML=''; document.getElementById('liderHead').innerHTML=''; return; }
-  const cad = liderCadena();
+  const head=document.getElementById('liderHead'), list=document.getElementById('liderList');
+  const ctrl=document.getElementById('liderCtrl');
+  if(!isLider()){ head.innerHTML=''; list.innerHTML=''; if(ctrl) ctrl.innerHTML=''; return; }
   document.getElementById('mesLabelL').textContent = MESES[LANG][cursor.getMonth()] + ' ' + cursor.getFullYear();
-  const acts = currentActivities().filter(a=>a.cadeia===cad);
-  // KPIs de la cadena
-  let plazas=0, cubiertas=0, esperaTot=0;
-  acts.forEach(a=>Object.keys(a.roles).forEach(r=>{ plazas+=a.roles[r]; cubiertas+=Math.min(a.roles[r], ocupados(a,r)); esperaTot+=esperaDe(a,r).length; }));
-  const faltan = Math.max(0, plazas-cubiertas);
-  document.getElementById('liderHead').innerHTML = `<div class="lider-head">
-    <div class="lh-cad">${window.CFMS.cadenaLabel(cad)}</div>
-    <div class="lh-sub">Líder: ${DEMO_LIDERES[cad].name} · ${acts.length} actividades este mes</div>
+
+  const mias = liderCadenas();
+  // asegurar scope válido
+  if(LIDER_SCOPE!=='all' && !mias.includes(LIDER_SCOPE)) LIDER_SCOPE='all';
+  const cadenas = scopeCadenas();
+  const acts = currentActivities().filter(a=>cadenas.includes(a.cadeia));
+
+  // ---- resumen general ----
+  const cov = covOf(acts);
+  const scopeTitle = (LIDER_SCOPE==='all' && mias.length>1) ? 'Todas las cadenas' : window.CFMS.cadenaLabel(cadenas[0]);
+  const liderNombre = mias.map(c=>DEMO_LIDERES[c].name).filter((v,i,a)=>a.indexOf(v)===i).join(' · ');
+  head.innerHTML = `<div class="lider-head">
+    <div class="lh-cad">${scopeTitle}</div>
+    <div class="lh-sub">Líder: ${liderNombre} · ${acts.length} actividades este mes</div>
     <div class="lh-kpi">
-      <div><b>${cubiertas}/${plazas}</b>Plazas cubiertas</div>
-      <div class="falta"><b>${faltan}</b>Faltan</div>
-      <div><b>${esperaTot}</b>En espera</div>
+      <div><b>${cov.cub}/${cov.plazas}</b>Plazas cubiertas</div>
+      <div class="falta"><b>${cov.falta}</b>Faltan</div>
+      <div><b>${cov.esp}</b>En espera</div>
     </div></div>`;
-  // tarjeta por actividad
-  document.getElementById('liderList').innerHTML = acts.map(a=>{
-    const f=fmtFecha(a.data);
-    const roleIds=Object.keys(a.roles);
-    const faltaAct = roleIds.reduce((s,r)=>s+libresRol(a,r),0);
-    const roles = roleIds.map(r=>{
-      const cap=a.roles[r]; const gente=inscritosDe(a,r); const falta=Math.max(0,cap-gente.length);
-      const rd=window.CFMS.ROLES[r];
-      const chips = gente.map(n=>`<span class="chip">${n}</span>`).join('')
-        + Array.from({length:falta}).map(()=>`<span class="chip vacante">vacante</span>`).join('');
-      const esp = esperaDe(a,r);
-      const espHtml = esp.length ? `<div class="lc-espera"><div class="le-t">⏳ Lista de espera</div><div class="lc-people">${esp.map(n=>`<span class="chip espera">${n}</span>`).join('')}</div></div>` : '';
-      return `<div class="lc-role">
-        <div class="lr-h"><span class="lr-name">${rd?rd.label[LANG]:r}</span><span class="lr-count ${falta>0?'miss':'full'}">${gente.length}/${cap}${falta>0?` · faltan ${falta}`:' · completo'}</span></div>
-        <div class="lc-people">${chips||'<span class="chip vacante">sin inscritos</span>'}</div>
-        ${espHtml}</div>`;
+
+  // ---- controles: selector de cadena (si es líder de >1) + toggle de vista ----
+  let ctrlHtml = '';
+  if(mias.length>1){
+    ctrlHtml += `<div class="scope-sel"><label>Cadena</label>
+      <select onchange="setLiderScope(this.value)">
+        <option value="all">Todas las cadenas</option>
+        ${mias.map(c=>`<option value="${c}">${window.CFMS.cadenaLabel(c)}</option>`).join('')}
+      </select></div>`;
+  }
+  ctrlHtml += `<div class="switch">
+      <button class="${LIDER_VIEW==='dia'?'on':''}" onclick="setLiderView('dia')">Por día</button>
+      <button class="${LIDER_VIEW==='fn'?'on':''}" onclick="setLiderView('fn')">Por función</button>
+    </div>`;
+  ctrl.innerHTML = ctrlHtml;
+  // reflejar scope en el select
+  const sel = ctrl.querySelector('.scope-sel select'); if(sel) sel.value = LIDER_SCOPE;
+
+  // ---- cuerpo ----
+  list.innerHTML = cadenas.map(cad=>{
+    const actsCad = acts.filter(a=>a.cadeia===cad);
+    const cadHeader = (LIDER_SCOPE==='all' && mias.length>1)
+      ? (()=>{ const c=covOf(actsCad); return `<div class="cad-sep"><span class="cad-name">${window.CFMS.cadenaLabel(cad)}</span><span class="cad-cov ${c.falta>0?'falta':'ok'}">${c.cub}/${c.plazas}${c.falta>0?` · faltan ${c.falta}`:' · completo'}</span></div>`; })()
+      : '';
+    return cadHeader + (LIDER_VIEW==='dia' ? renderPorDia(actsCad) : renderPorFuncion(actsCad));
+  }).join('');
+}
+
+/* ---- A: agrupado por DÍA ---- */
+function renderPorDia(acts){
+  // agrupar por fecha
+  const byDay = {};
+  acts.forEach(a=>{ (byDay[a.data]=byDay[a.data]||[]).push(a); });
+  const dias = Object.keys(byDay).sort();
+  return dias.map(iso=>{
+    const dayActs = byDay[iso].sort((x,y)=>x.hora.localeCompare(y.hora));
+    const f=fmtFecha(iso); const c=covOf(dayActs);
+    const tipos = dayActs.map(a=>a.titulo[LANG].split(' ')[0]).filter((v,i,a)=>a.indexOf(v)===i).join(' + ');
+    return `<div class="day">
+      <div class="day-h">
+        <div class="day-badge"><div class="dd">${f.d}</div><div class="dw">${f.w}</div></div>
+        <div class="day-info">
+          <div class="dt">${f.w} ${f.d} ${f.m}</div>
+          <div class="dcov">${tipos} · ${c.cub} de ${c.plazas} plazas</div>
+          <div class="cov-bar ${covBarClass(c.pct)}"><i style="width:${c.pct}%"></i></div>
+        </div>
+        <span class="day-pill ${c.falta>0?'falta':'ok'}">${c.falta>0?`Faltan ${c.falta}`:'Completa'}</span>
+      </div>
+      ${dayActs.map(a=>actCardLider(a)).join('')}
+    </div>`;
+  }).join('');
+}
+
+/* ---- B: agrupado por FUNCIÓN ---- */
+function renderPorFuncion(acts){
+  const TIPO_ORDER=['retirada','prep','distri','limpieza'];
+  const TIPO_COLOR={ retirada:'#f2711c', prep:'#e8a300', distri:'#7cb518', limpieza:'#4f9d69' };
+  const TIPO_LABEL={ retirada:'Recogida', prep:'Preparación', distri:'Distribución', limpieza:'Limpieza' };
+  // recopilar (actividad, rol) por tipo
+  const byTipo={};
+  acts.forEach(a=>{ const t=tipoDe(a.templateId); (byTipo[t]=byTipo[t]||[]).push(a); });
+  return TIPO_ORDER.filter(t=>byTipo[t]).map(t=>{
+    const occ = byTipo[t].sort((x,y)=>(x.data+x.hora).localeCompare(y.data+y.hora)).map(a=>{
+      const f=fmtFecha(a.data);
+      return Object.keys(a.roles).map(r=>{
+        const cap=a.roles[r]; const gente=inscritosDe(a,r); const falta=Math.max(0,cap-gente.length);
+        const rd=window.CFMS.ROLES[r];
+        const extra = Object.keys(a.roles).length>1 ? ` · ${rd?rd.label[LANG]:r}` : '';
+        return `<div class="fn-occ">
+          <div class="oc-h"><span class="oc-when"><b>${f.w} ${f.d}</b> · ${a.hora}${extra}</span><span class="oc-c ${falta>0?'miss':'full'}">${gente.length}/${cap}${falta>0?` · faltan ${falta}`:' · completo'}</span></div>
+          <div class="people">${chipsRol(a,r)}</div></div>`;
+      }).join('');
     }).join('');
-    const badge = faltaAct>0 ? `<span class="lc-badge falta">Faltan ${faltaAct}</span>` : `<span class="lc-badge ok">Completa</span>`;
-    return `<div class="lcard ${faltaAct>0?'falta':'completa'}">
-      <div class="lc-h"><div><span class="lc-t">${a.titulo[LANG]}</span> <span class="lc-d">${f.w} ${f.d} ${f.m} · ${a.hora}</span></div>${badge}</div>
-      ${roles}</div>`;
+    return `<div class="fn-group"><div class="fn-h"><span class="fn-dot" style="background:${TIPO_COLOR[t]}"></span><span class="fn-t">${TIPO_LABEL[t]}</span></div>${occ}</div>`;
   }).join('');
 }
 

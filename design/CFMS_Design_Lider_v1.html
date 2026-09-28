@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Manos Fuertes · Vista Líder (design)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Jost:wght@300;400;500;600&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --negro:#0f0f0f; --grafito:#1f1f1f; --gris:#767676; --gris-cl:#9a9a9a;
+    --linea:#e7e5e1; --hueso:#f7f7f5; --blanco:#fff;
+    --oro:#f5c518; --oro-osc:#d9a90a; --oro-cl:#ffe27a;
+    --t-retirada:#f2711c; --t-retirada-tx:#c2560c; --t-retirada-bg:#fdeadb;
+    --t-prep:#e8a300; --t-prep-tx:#9a6d00; --t-prep-bg:#fbf1d0;
+    --t-distri:#7cb518; --t-distri-tx:#4e7a0a; --t-distri-bg:#eef7d9;
+    --t-limpieza:#4f9d69; --t-limpieza-tx:#2f6b46; --t-limpieza-bg:#e4f2e9;
+    --ok:#4a7052; --ok-bg:#eaf2ec; --warn:#c2560c; --warn-bg:#fdeadb;
+    --raio:6px;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0; font-family:"Jost",system-ui,sans-serif; background:var(--hueso); color:var(--grafito); max-width:480px; margin:0 auto; font-weight:300; -webkit-font-smoothing:antialiased; }
+  header{ background:var(--negro); color:#fff; padding:14px 16px; text-align:center; }
+  header .t{ font-family:"Oswald",sans-serif; text-transform:uppercase; letter-spacing:.05em; font-size:20px; }
+  header .s{ font-size:11px; color:var(--gris-cl); margin-top:2px; }
+  .wrap{ padding:16px; }
+
+  /* resumen cadena */
+  .lider-head{ background:var(--negro); color:#fff; border-radius:var(--raio); padding:16px 18px; position:relative; overflow:hidden; margin-bottom:14px; }
+  .lider-head::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--oro); }
+  .lh-cad{ font-family:"Cormorant Garamond",serif; font-style:italic; font-size:24px; }
+  .lh-sub{ font-size:12px; color:var(--gris-cl); margin-top:4px; }
+  .lh-kpi{ display:flex; gap:20px; margin-top:12px; }
+  .lh-kpi div{ font-size:11px; color:var(--gris-cl); } .lh-kpi b{ display:block; font-family:"Cormorant Garamond",serif; font-size:24px; color:#fff; } .lh-kpi .falta b{ color:var(--oro); }
+
+  /* toggle de vista */
+  .switch{ display:flex; background:#ececec; border-radius:999px; padding:3px; margin-bottom:16px; }
+  .switch button{ flex:1; border:0; background:none; padding:9px; border-radius:999px; font-family:"Jost",sans-serif; font-size:12px; font-weight:500; text-transform:uppercase; letter-spacing:.06em; color:var(--gris); cursor:pointer; }
+  .switch button.on{ background:#fff; color:var(--negro); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+
+  /* ===== grupo por DÍA ===== */
+  .day{ margin-bottom:20px; }
+  .day-h{ display:flex; align-items:center; gap:10px; margin:0 2px 10px; }
+  .day-badge{ background:var(--negro); color:#fff; border-radius:8px; text-align:center; padding:5px 9px; min-width:46px; }
+  .day-badge .dd{ font-family:"Cormorant Garamond",serif; font-size:20px; font-weight:700; line-height:1; }
+  .day-badge .dw{ font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:var(--oro-cl); }
+  .day-info{ flex:1; }
+  .day-info .dt{ font-family:"Cormorant Garamond",serif; font-size:17px; font-weight:600; }
+  .day-info .dcov{ font-size:11px; color:var(--gris); }
+  /* barra de cobertura do dia */
+  .cov-bar{ height:6px; border-radius:3px; background:#eee; overflow:hidden; margin-top:5px; max-width:150px; }
+  .cov-bar i{ display:block; height:100%; background:var(--t-distri); }
+  .cov-bar.low i{ background:var(--t-retirada); } .cov-bar.mid i{ background:var(--t-prep); }
+  .day-pill{ font-size:10px; font-weight:600; padding:3px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; }
+  .day-pill.ok{ background:var(--t-distri-bg); color:var(--t-distri-tx); } .day-pill.falta{ background:var(--warn-bg); color:var(--warn); }
+
+  /* card actividad */
+  .lcard{ background:var(--blanco); border:1px solid var(--linea); border-radius:var(--raio); margin-bottom:10px; overflow:hidden; }
+  .lcard.falta{ border-left:4px solid var(--t-retirada); } .lcard.completa{ border-left:4px solid var(--t-distri); }
+  .lc-h{ padding:11px 14px; border-bottom:1px solid var(--linea); display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .lc-t{ font-family:"Cormorant Garamond",serif; font-weight:600; font-size:17px; } .lc-time{ font-size:11px; color:var(--gris); }
+  .lc-badge{ font-size:10px; font-weight:600; padding:3px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:.05em; }
+  .lc-badge.ok{ background:var(--t-distri-bg); color:var(--t-distri-tx); } .lc-badge.falta{ background:var(--warn-bg); color:var(--warn); }
+  .lc-role{ padding:10px 14px; border-bottom:1px solid var(--linea); } .lc-role:last-child{ border-bottom:0; }
+  .lr-h{ display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .lr-name{ font-weight:500; font-size:13px; } .lr-count{ font-size:12px; font-weight:600; } .lr-count.miss{ color:var(--warn); } .lr-count.full{ color:var(--t-distri-tx); }
+  .people{ display:flex; flex-wrap:wrap; gap:6px; }
+  .chip{ font-size:12px; background:var(--hueso); border:1px solid var(--linea); border-radius:999px; padding:3px 10px; }
+  .chip.vac{ border-style:dashed; color:var(--warn); background:var(--warn-bg); border-color:transparent; }
+  .chip.esp{ background:#fdf4e8; border-color:#ead9bf; }
+  .lc-esp{ padding:9px 14px; background:#fdf9f0; border-top:1px dashed var(--linea); font-size:12px; }
+  .lc-esp .et{ color:var(--oro-osc); font-weight:600; text-transform:uppercase; letter-spacing:.05em; font-size:10px; margin-bottom:5px; }
+
+  /* ===== vista POR FUNCIÓN ===== */
+  .fn-group{ margin-bottom:18px; }
+  .fn-h{ display:flex; align-items:center; gap:8px; margin:0 2px 10px; padding-bottom:6px; border-bottom:2px solid var(--linea); }
+  .fn-dot{ width:12px; height:12px; border-radius:3px; }
+  .fn-t{ font-family:"Oswald",sans-serif; text-transform:uppercase; letter-spacing:.04em; font-size:14px; font-weight:600; }
+  .fn-sum{ margin-left:auto; font-size:11px; color:var(--gris); }
+  .fn-occ{ background:var(--blanco); border:1px solid var(--linea); border-radius:var(--raio); padding:10px 14px; margin-bottom:8px; }
+  .fn-occ .oc-h{ display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .fn-occ .oc-when{ font-size:13px; } .fn-occ .oc-when b{ font-family:"Cormorant Garamond",serif; }
+  .fn-occ .oc-c{ font-size:12px; font-weight:600; } .fn-occ .oc-c.miss{ color:var(--warn); } .fn-occ .oc-c.full{ color:var(--t-distri-tx); }
+
+  .hint{ font-size:11px; color:var(--gris-cl); text-align:center; padding:14px; font-weight:300; }
+  .hidden{ display:none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="t">Manos Fuertes</div>
+  <div class="s">Vista Líder — mock de validación (A: por día · B: por función)</div>
+</header>
+
+<div class="wrap">
+  <div class="lider-head">
+    <div class="lh-cad">Cadena MercaMadrid</div>
+    <div class="lh-sub">Líder: Rogério Ono · octubre 2026</div>
+    <div class="lh-kpi">
+      <div><b>18/28</b>Plazas cubiertas</div>
+      <div class="falta"><b>10</b>Faltan</div>
+      <div><b>0</b>En espera</div>
+    </div>
+  </div>
+
+  <div class="switch">
+    <button class="on" id="btnDia" onclick="setView('dia')">Por día</button>
+    <button id="btnFn" onclick="setView('fn')">Por función</button>
+  </div>
+
+  <!-- ===================== VISTA A: POR DÍA ===================== -->
+  <div id="viewDia">
+
+    <!-- Sábado 3 -->
+    <div class="day">
+      <div class="day-h">
+        <div class="day-badge"><div class="dd">3</div><div class="dw">Sáb</div></div>
+        <div class="day-info">
+          <div class="dt">Sábado 3 oct</div>
+          <div class="dcov">Recogida + Preparación · 6 de 10 plazas</div>
+          <div class="cov-bar mid"><i style="width:60%"></i></div>
+        </div>
+        <span class="day-pill falta">Faltan 4</span>
+      </div>
+
+      <div class="lcard falta">
+        <div class="lc-h"><div><span class="lc-t">Recogida MercaMadrid</span> <span class="lc-time">08:00</span></div><span class="lc-badge falta">Faltan 1</span></div>
+        <div class="lc-role">
+          <div class="lr-h"><span class="lr-name">Conductor (furgoneta)</span><span class="lr-count miss">1/2 · falta 1</span></div>
+          <div class="people"><span class="chip">Carlos R.</span><span class="chip vac">vacante</span></div>
+        </div>
+        <div class="lc-role">
+          <div class="lr-h"><span class="lr-name">Ayudante de carga</span><span class="lr-count full">2/2 · completo</span></div>
+          <div class="people"><span class="chip">Marcos</span><span class="chip">Alessandra</span></div>
+        </div>
+      </div>
+
+      <div class="lcard falta">
+        <div class="lc-h"><div><span class="lc-t">Preparación</span> <span class="lc-time">15:00</span></div><span class="lc-badge falta">Faltan 3</span></div>
+        <div class="lc-role">
+          <div class="lr-h"><span class="lr-name">Preparación</span><span class="lr-count miss">3/6 · faltan 3</span></div>
+          <div class="people"><span class="chip">Débora M.</span><span class="chip">Everton</span><span class="chip">Daniel</span><span class="chip vac">vacante</span><span class="chip vac">vacante</span><span class="chip vac">vacante</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Domingo 4 -->
+    <div class="day">
+      <div class="day-h">
+        <div class="day-badge"><div class="dd">4</div><div class="dw">Dom</div></div>
+        <div class="day-info">
+          <div class="dt">Domingo 4 oct</div>
+          <div class="dcov">Preparación + Distribución + Limpieza · 13 de 20 plazas</div>
+          <div class="cov-bar mid"><i style="width:65%"></i></div>
+        </div>
+        <span class="day-pill falta">Faltan 7</span>
+      </div>
+
+      <div class="lcard falta">
+        <div class="lc-h"><div><span class="lc-t">Preparación</span> <span class="lc-time">08:00</span></div><span class="lc-badge falta">Faltan 3</span></div>
+        <div class="lc-role">
+          <div class="lr-h"><span class="lr-name">Preparación</span><span class="lr-count miss">7/10 · faltan 3</span></div>
+          <div class="people"><span class="chip">Ana L.</span><span class="chip">Célio</span><span class="chip">María G.</span><span class="chip">Sofía</span><span class="chip">Lucas</span><span class="chip">Pedro</span><span class="chip">Marta</span><span class="chip vac">vacante</span><span class="chip vac">vacante</span><span class="chip vac">vacante</span></div>
+        </div>
+      </div>
+
+      <div class="lcard falta">
+        <div class="lc-h"><div><span class="lc-t">Distribución</span> <span class="lc-time">12:00–16:00</span></div><span class="lc-badge falta">Faltan 2</span></div>
+        <div class="lc-role">
+          <div class="lr-h"><span class="lr-name">Distribución</span><span class="lr-count miss">4/6 · faltan 2</span></div>
+          <div class="people"><span class="chip">Carlos R.</span><span class="chip">Marcos</span><span class="chip">Ana L.</span><span class="chip">Daniel</span><span class="chip vac">vacante</span><span class="chip vac">vacante</span></div>
+        </div>
+      </div>
+
+      <div class="lcard falta">
+        <div class="lc-h"><div><span class="lc-t">Limpieza</span> <span class="lc-time">16:00</span></div><span class="lc-badge falta">Faltan 2</span></div>
+        <div class="lc-role">
+          <div class="lr-h"><span class="lr-name">Limpieza</span><span class="lr-count miss">2/4 · faltan 2</span></div>
+          <div class="people"><span class="chip">Everton</span><span class="chip">Sofía</span><span class="chip vac">vacante</span><span class="chip vac">vacante</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== VISTA B: POR FUNCIÓN ===================== -->
+  <div id="viewFn" class="hidden">
+
+    <div class="fn-group">
+      <div class="fn-h"><span class="fn-dot" style="background:#f2711c"></span><span class="fn-t">Recogida</span><span class="fn-sum">Conductor + Ayudante</span></div>
+      <div class="fn-occ">
+        <div class="oc-h"><span class="oc-when"><b>Sáb 3</b> · 08:00 · Conductor</span><span class="oc-c miss">1/2 · falta 1</span></div>
+        <div class="people"><span class="chip">Carlos R.</span><span class="chip vac">vacante</span></div>
+      </div>
+      <div class="fn-occ">
+        <div class="oc-h"><span class="oc-when"><b>Sáb 3</b> · 08:00 · Ayudante</span><span class="oc-c full">2/2 · completo</span></div>
+        <div class="people"><span class="chip">Marcos</span><span class="chip">Alessandra</span></div>
+      </div>
+    </div>
+
+    <div class="fn-group">
+      <div class="fn-h"><span class="fn-dot" style="background:#e8a300"></span><span class="fn-t">Preparación</span><span class="fn-sum">2 sesiones</span></div>
+      <div class="fn-occ">
+        <div class="oc-h"><span class="oc-when"><b>Sáb 3</b> · 15:00</span><span class="oc-c miss">3/6 · faltan 3</span></div>
+        <div class="people"><span class="chip">Débora M.</span><span class="chip">Everton</span><span class="chip">Daniel</span><span class="chip vac">+3 vacantes</span></div>
+      </div>
+      <div class="fn-occ">
+        <div class="oc-h"><span class="oc-when"><b>Dom 4</b> · 08:00</span><span class="oc-c miss">7/10 · faltan 3</span></div>
+        <div class="people"><span class="chip">Ana L.</span><span class="chip">Célio</span><span class="chip">María G.</span><span class="chip">+4</span><span class="chip vac">+3 vacantes</span></div>
+      </div>
+    </div>
+
+    <div class="fn-group">
+      <div class="fn-h"><span class="fn-dot" style="background:#7cb518"></span><span class="fn-t">Distribución</span></div>
+      <div class="fn-occ">
+        <div class="oc-h"><span class="oc-when"><b>Dom 4</b> · 12:00–16:00</span><span class="oc-c miss">4/6 · faltan 2</span></div>
+        <div class="people"><span class="chip">Carlos R.</span><span class="chip">Marcos</span><span class="chip">Ana L.</span><span class="chip">Daniel</span><span class="chip vac">+2 vacantes</span></div>
+      </div>
+    </div>
+
+    <div class="fn-group">
+      <div class="fn-h"><span class="fn-dot" style="background:#4f9d69"></span><span class="fn-t">Limpieza</span></div>
+      <div class="fn-occ">
+        <div class="oc-h"><span class="oc-when"><b>Dom 4</b> · 16:00</span><span class="oc-c miss">2/4 · faltan 2</span></div>
+        <div class="people"><span class="chip">Everton</span><span class="chip">Sofía</span><span class="chip vac">+2 vacantes</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hint">A (por día): "¿qué necesito cubrir este sábado/domingo?" · B (por función): "¿dónde me faltan conductores / gente de limpieza?"</div>
+</div>
+
+<script>
+  function setView(v){
+    document.getElementById('viewDia').classList.toggle('hidden', v!=='dia');
+    document.getElementById('viewFn').classList.toggle('hidden', v!=='fn');
+    document.getElementById('btnDia').classList.toggle('on', v==='dia');
+    document.getElementById('btnFn').classList.toggle('on', v==='fn');
+  }
+</script>
+</body>
+</html>

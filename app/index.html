@@ -155,29 +155,70 @@
   .estado-espera{ box-shadow:inset 0 0 0 2px var(--warn); }
 
   /* ===== Panel líder ===== */
-  .lider-head{ background:var(--negro); color:#fff; border-radius:var(--raio); padding:16px 18px; margin-bottom:14px; position:relative; overflow:hidden; }
+  .lider-head{ background:var(--negro); color:#fff; border-radius:var(--raio); padding:16px 18px; margin-bottom:12px; position:relative; overflow:hidden; }
   .lider-head::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--oro); }
   .lider-head .lh-cad{ font-family:"Cormorant Garamond",serif; font-style:italic; font-size:24px; }
   .lider-head .lh-sub{ font-size:12px; color:var(--gris-cl); margin-top:4px; }
   .lider-head .lh-kpi{ display:flex; gap:18px; margin-top:12px; }
   .lider-head .lh-kpi div{ font-size:11px; color:var(--gris-cl); } .lider-head .lh-kpi b{ display:block; font-family:"Cormorant Garamond",serif; font-size:24px; color:#fff; }
-  .lider-head .lh-kpi .falta b{ color:var(--t-retirada); }
-  .lcard{ background:var(--blanco); border:1px solid var(--linea); border-radius:var(--raio); margin-bottom:12px; overflow:hidden; }
+  .lider-head .lh-kpi .falta b{ color:var(--oro); }
+
+  /* controles: selector cadena + toggle vista */
+  #liderCtrl{ margin-bottom:14px; }
+  .scope-sel{ display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .scope-sel label{ font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--gris); }
+  .scope-sel select{ flex:1; padding:10px 12px; border:1px solid var(--linea); border-radius:var(--raio); background:#fff; font-family:"Jost",sans-serif; font-size:14px; color:var(--grafito); }
+  .switch{ display:flex; background:#ececec; border-radius:999px; padding:3px; }
+  .switch button{ flex:1; border:0; background:none; padding:9px; border-radius:999px; font-family:"Jost",sans-serif; font-size:12px; font-weight:500; text-transform:uppercase; letter-spacing:.06em; color:var(--gris); cursor:pointer; }
+  .switch button.on{ background:#fff; color:var(--negro); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+
+  /* separador de cadena (vista Todas) */
+  .cad-sep{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin:20px 2px 12px; padding-bottom:6px; border-bottom:2px solid var(--negro); }
+  .cad-sep .cad-name{ font-family:"Cormorant Garamond",serif; font-weight:600; font-size:19px; }
+  .cad-sep .cad-cov{ font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; } .cad-sep .cad-cov.falta{ color:var(--warn); } .cad-sep .cad-cov.ok{ color:var(--t-distri-tx); }
+
+  /* grupo por día */
+  .day{ margin-bottom:18px; }
+  .day-h{ display:flex; align-items:center; gap:10px; margin:0 2px 10px; }
+  .day-badge{ background:var(--negro); color:#fff; border-radius:8px; text-align:center; padding:5px 9px; min-width:46px; }
+  .day-badge .dd{ font-family:"Cormorant Garamond",serif; font-size:20px; font-weight:700; line-height:1; }
+  .day-badge .dw{ font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:var(--oro-cl); }
+  .day-info{ flex:1; min-width:0; }
+  .day-info .dt{ font-family:"Cormorant Garamond",serif; font-size:17px; font-weight:600; text-transform:capitalize; }
+  .day-info .dcov{ font-size:11px; color:var(--gris); }
+  .cov-bar{ height:6px; border-radius:3px; background:#eee; overflow:hidden; margin-top:5px; max-width:160px; }
+  .cov-bar i{ display:block; height:100%; background:var(--t-distri); }
+  .cov-bar.low i{ background:var(--t-retirada); } .cov-bar.mid i{ background:var(--t-prep); }
+  .day-pill{ font-size:10px; font-weight:600; padding:3px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; }
+  .day-pill.ok{ background:var(--t-distri-bg); color:var(--t-distri-tx); } .day-pill.falta{ background:var(--warn-bg); color:var(--warn); }
+
+  /* tarjeta actividad (líder) */
+  .lcard{ background:var(--blanco); border:1px solid var(--linea); border-radius:var(--raio); margin-bottom:10px; overflow:hidden; }
   .lcard.completa{ border-left:4px solid var(--t-distri); } .lcard.falta{ border-left:4px solid var(--t-retirada); }
-  .lcard .lc-h{ padding:12px 14px; border-bottom:1px solid var(--linea); display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
-  .lcard .lc-h .lc-t{ font-family:"Cormorant Garamond",serif; font-weight:600; font-size:18px; } .lcard .lc-h .lc-d{ font-size:11px; color:var(--gris); text-transform:uppercase; letter-spacing:.06em; }
-  .lcard .lc-badge{ font-size:10px; font-weight:600; padding:3px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:.06em; }
-  .lc-badge.ok{ background:var(--t-distri-bg); color:var(--t-distri-tx); } .lc-badge.falta{ background:var(--t-retirada-bg); color:var(--t-retirada-tx); }
-  .lc-role{ padding:11px 14px; border-bottom:1px solid var(--linea); } .lc-role:last-child{ border-bottom:0; }
+  .lcard .lc-h{ padding:11px 14px; border-bottom:1px solid var(--linea); display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .lcard .lc-h .lc-t{ font-family:"Cormorant Garamond",serif; font-weight:600; font-size:17px; } .lcard .lc-h .lc-time{ font-size:11px; color:var(--gris); }
+  .lcard .lc-badge{ font-size:10px; font-weight:600; padding:3px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:.05em; }
+  .lc-badge.ok{ background:var(--t-distri-bg); color:var(--t-distri-tx); } .lc-badge.falta{ background:var(--warn-bg); color:var(--warn); }
+  .lc-role{ padding:10px 14px; border-bottom:1px solid var(--linea); } .lc-role:last-child{ border-bottom:0; }
   .lc-role .lr-h{ display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
   .lc-role .lr-name{ font-weight:500; font-size:13px; } .lc-role .lr-count{ font-size:12px; font-weight:600; }
-  .lc-role .lr-count.full{ color:var(--t-distri-tx); } .lc-role .lr-count.miss{ color:var(--t-retirada-tx); }
-  .lc-people{ display:flex; flex-wrap:wrap; gap:6px; }
+  .lc-role .lr-count.full{ color:var(--t-distri-tx); } .lc-role .lr-count.miss{ color:var(--warn); }
+  .people{ display:flex; flex-wrap:wrap; gap:6px; }
   .chip{ font-size:12px; background:var(--hueso); border:1px solid var(--linea); border-radius:999px; padding:3px 10px; }
-  .chip.vacante{ border-style:dashed; color:var(--t-retirada-tx); background:var(--t-retirada-bg); border-color:transparent; }
-  .lc-espera{ padding:10px 14px; background:#fdf9f0; border-top:1px dashed var(--linea); font-size:12px; }
-  .lc-espera .le-t{ color:var(--warn); font-weight:600; text-transform:uppercase; letter-spacing:.06em; font-size:10px; margin-bottom:5px; }
-  .chip.espera{ background:#fdf4e8; border-color:#ead9bf; }
+  .chip.vac{ border-style:dashed; color:var(--warn); background:var(--warn-bg); border-color:transparent; }
+  .chip.esp{ background:#fdf4e8; border-color:#ead9bf; }
+  .lc-esp{ padding:9px 14px; background:#fdf9f0; border-top:1px dashed var(--linea); font-size:12px; }
+  .lc-esp .et{ color:var(--oro-osc); font-weight:600; text-transform:uppercase; letter-spacing:.05em; font-size:10px; margin-bottom:5px; }
+
+  /* vista por función */
+  .fn-group{ margin-bottom:18px; }
+  .fn-h{ display:flex; align-items:center; gap:8px; margin:0 2px 10px; padding-bottom:6px; border-bottom:2px solid var(--linea); }
+  .fn-dot{ width:12px; height:12px; border-radius:3px; }
+  .fn-t{ font-family:"Oswald",sans-serif; text-transform:uppercase; letter-spacing:.04em; font-size:14px; font-weight:600; }
+  .fn-occ{ background:var(--blanco); border:1px solid var(--linea); border-radius:var(--raio); padding:10px 14px; margin-bottom:8px; }
+  .fn-occ .oc-h{ display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; gap:8px; }
+  .fn-occ .oc-when{ font-size:13px; } .fn-occ .oc-when b{ font-family:"Cormorant Garamond",serif; }
+  .fn-occ .oc-c{ font-size:12px; font-weight:600; white-space:nowrap; } .fn-occ .oc-c.miss{ color:var(--warn); } .fn-occ .oc-c.full{ color:var(--t-distri-tx); }
 </style>
 </head>
 <body>
@@ -272,6 +313,7 @@
 <section class="view" id="v-lider">
   <div class="toolbar"><button id="prevL">‹</button><span class="mes" id="mesLabelL">—</span><button id="nextL">›</button></div>
   <div id="liderHead"></div>
+  <div id="liderCtrl"></div>
   <div id="liderList"></div>
 </section>
 </div>
