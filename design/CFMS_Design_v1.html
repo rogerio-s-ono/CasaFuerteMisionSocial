@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Casa Fuerte Misión Social — Design (validación)</title>
+<style>
+  :root{
+    --dourado:#c08a2d; --dourado-esc:#a5741f; --grafite:#141414;
+    --offwhite:#faf8f4; --linha:#e6e0d6; --cinza:#8a8378;
+    --verde:#329864; --verde-bg:#e7f4ec; --ambar:#d46617; --ambar-bg:#fdeee2;
+    --azul:#1174e6; --azul-bg:#e4eefc; --branco:#fff;
+    --sombra:0 2px 10px rgba(20,20,20,.08); --raio:16px;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family: system-ui,-apple-system,"Segoe UI",sans-serif;
+    background:var(--offwhite); color:var(--grafite);
+    max-width:480px; margin:0 auto; padding-bottom:88px;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* ===== Header ===== */
+  header{ background:var(--grafite); color:#fff; padding:18px 20px 16px; position:sticky; top:0; z-index:20; }
+  header .h-top{ display:flex; align-items:center; justify-content:space-between; }
+  header h1{ margin:0; font-size:17px; font-weight:600; letter-spacing:.2px; }
+  header h1 .dot{ color:var(--dourado); }
+  header .saludo{ margin:2px 0 0; font-size:13px; opacity:.7; }
+  header .avatar{ width:38px; height:38px; border-radius:50%; background:var(--dourado); color:#fff; display:grid; place-items:center; font-weight:700; font-size:15px; }
+
+  /* ===== Views ===== */
+  .view{ display:none; padding:16px 16px 0; animation:fade .25s ease; }
+  .view.active{ display:block; }
+  @keyframes fade{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+  .section-title{ font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--cinza); margin:20px 4px 10px; font-weight:700; }
+
+  /* ===== Dashboard: próxima actividad destacada ===== */
+  .hero{ background:linear-gradient(135deg,#1c1c1c,#2b2b2b); color:#fff; border-radius:var(--raio); padding:18px; box-shadow:var(--sombra); position:relative; overflow:hidden; }
+  .hero::after{ content:""; position:absolute; right:-30px; top:-30px; width:120px; height:120px; background:var(--dourado); opacity:.14; border-radius:50%; }
+  .hero .badge{ display:inline-block; background:var(--dourado); color:#fff; font-size:11px; font-weight:700; padding:4px 10px; border-radius:999px; text-transform:uppercase; letter-spacing:.04em; }
+  .hero h2{ margin:12px 0 4px; font-size:20px; }
+  .hero .meta{ font-size:14px; opacity:.85; }
+  .hero .countdown{ margin-top:12px; font-size:13px; background:rgba(255,255,255,.12); display:inline-block; padding:6px 12px; border-radius:10px; }
+  .hero .cta{ display:block; width:100%; margin-top:16px; background:var(--dourado); color:#fff; border:0; border-radius:12px; padding:15px; font-size:16px; font-weight:700; cursor:pointer; }
+  .hero .cta:active{ background:var(--dourado-esc); }
+
+  /* ===== KPI chips ===== */
+  .kpis{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:14px; }
+  .kpi{ background:#fff; border:1px solid var(--linha); border-radius:14px; padding:12px 8px; text-align:center; box-shadow:var(--sombra); }
+  .kpi .n{ font-size:22px; font-weight:800; color:var(--dourado); }
+  .kpi .l{ font-size:11px; color:var(--cinza); margin-top:2px; }
+
+  /* ===== Selectable / activity cards ===== */
+  .act{ background:#fff; border:1px solid var(--linha); border-radius:var(--raio); padding:16px; margin-bottom:12px; box-shadow:var(--sombra); display:flex; gap:14px; align-items:flex-start; cursor:pointer; transition:.15s; }
+  .act:active{ transform:scale(.99); }
+  .act .fecha{ flex:0 0 56px; text-align:center; background:var(--offwhite); border-radius:12px; padding:8px 4px; }
+  .act .fecha .d{ font-size:22px; font-weight:800; line-height:1; }
+  .act .fecha .m{ font-size:11px; text-transform:uppercase; color:var(--cinza); margin-top:2px; }
+  .act .fecha .w{ font-size:10px; color:var(--dourado); font-weight:700; text-transform:uppercase; }
+  .act .info{ flex:1; min-width:0; }
+  .act .info .t{ font-weight:700; font-size:15px; }
+  .act .info .sub{ font-size:13px; color:var(--cinza); margin-top:2px; }
+  .act .info .tag{ display:inline-block; margin-top:8px; font-size:11px; padding:3px 9px; border-radius:999px; font-weight:600; }
+  .tag.cadA{ background:var(--ambar-bg); color:var(--ambar); }
+  .tag.cadB{ background:var(--azul-bg); color:var(--azul); }
+  .act .vagas{ flex:0 0 auto; text-align:center; }
+  .act .vagas .ring{ font-size:12px; font-weight:700; color:var(--verde); background:var(--verde-bg); border-radius:999px; padding:6px 8px; white-space:nowrap; }
+  .act .vagas .ring.pouco{ color:var(--ambar); background:var(--ambar-bg); }
+  .act .vagas .ring.cheio{ color:var(--cinza); background:#f0eee9; }
+  .estado-inscrito{ border-left:4px solid var(--verde); }
+  .mini-check{ display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--verde); font-weight:700; margin-top:8px; }
+
+  /* ===== Bottom nav ===== */
+  .nav{ position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:#fff; border-top:1px solid var(--linha); display:flex; z-index:30; }
+  .nav button{ flex:1; background:none; border:0; padding:10px 4px 12px; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; color:var(--cinza); font-size:11px; }
+  .nav button.active{ color:var(--dourado); }
+  .nav button .ic{ font-size:22px; line-height:1; }
+
+  /* ===== Wizard ===== */
+  .wz-overlay{ position:fixed; inset:0; background:var(--offwhite); z-index:50; display:none; flex-direction:column; max-width:480px; margin:0 auto; }
+  .wz-overlay.active{ display:flex; }
+  .wz-head{ background:var(--grafite); color:#fff; padding:14px 16px; display:flex; align-items:center; gap:12px; }
+  .wz-head .close{ background:none; border:0; color:#fff; font-size:24px; cursor:pointer; line-height:1; }
+  .wz-head .ttl{ font-size:15px; font-weight:600; }
+  /* stepper honesto nomeado */
+  .stepper{ display:flex; padding:14px 16px 4px; gap:8px; }
+  .stepper .st{ flex:1; }
+  .stepper .st .bar{ height:6px; border-radius:3px; background:var(--linha); }
+  .stepper .st.done .bar,.stepper .st.cur .bar{ background:var(--dourado); }
+  .stepper .st .lbl{ font-size:10px; color:var(--cinza); margin-top:6px; text-align:center; }
+  .stepper .st.cur .lbl{ color:var(--dourado); font-weight:700; }
+  .wz-body{ flex:1; overflow-y:auto; padding:8px 16px 16px; }
+  .wz-step{ display:none; }
+  .wz-step.active{ display:block; animation:fade .2s; }
+  .wz-q{ font-size:19px; font-weight:700; margin:10px 2px 4px; }
+  .wz-hint{ font-size:13px; color:var(--cinza); margin:0 2px 16px; }
+  /* caixas grandes de seleção */
+  .opt{ display:flex; align-items:center; gap:14px; background:#fff; border:2px solid var(--linha); border-radius:16px; padding:18px 16px; margin-bottom:12px; cursor:pointer; transition:.12s; min-height:64px; }
+  .opt:active{ transform:scale(.99); }
+  .opt.sel{ border-color:var(--dourado); background:#fdf8ef; box-shadow:0 0 0 3px rgba(192,138,45,.15); }
+  .opt .oic{ width:46px; height:46px; flex:0 0 46px; border-radius:12px; background:var(--offwhite); display:grid; place-items:center; font-size:24px; }
+  .opt.sel .oic{ background:var(--dourado); color:#fff; }
+  .opt .otxt{ flex:1; }
+  .opt .otxt .ot{ font-weight:700; font-size:16px; }
+  .opt .otxt .os{ font-size:13px; color:var(--cinza); margin-top:2px; }
+  .opt .ocheck{ width:26px; height:26px; flex:0 0 26px; border-radius:50%; border:2px solid var(--linha); display:grid; place-items:center; color:#fff; font-size:15px; }
+  .opt.sel .ocheck{ background:var(--dourado); border-color:var(--dourado); }
+  .opt.disabled{ opacity:.45; pointer-events:none; }
+  /* resumo */
+  .resumo{ background:#fff; border:1px solid var(--linha); border-radius:16px; overflow:hidden; }
+  .resumo .row{ display:flex; justify-content:space-between; align-items:center; padding:15px 16px; border-bottom:1px solid var(--linha); }
+  .resumo .row:last-child{ border-bottom:0; }
+  .resumo .row .k{ font-size:13px; color:var(--cinza); }
+  .resumo .row .v{ font-weight:700; font-size:15px; text-align:right; }
+  .resumo .row .edit{ font-size:12px; color:var(--dourado); background:none; border:0; cursor:pointer; font-weight:700; }
+  /* footer wizard */
+  .wz-foot{ padding:12px 16px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--linha); background:#fff; display:flex; gap:10px; }
+  .wz-foot .back{ flex:0 0 auto; background:none; border:0; color:var(--cinza); font-size:15px; font-weight:600; padding:16px 14px; cursor:pointer; }
+  .wz-foot .next{ flex:1; background:var(--dourado); color:#fff; border:0; border-radius:14px; padding:16px; font-size:17px; font-weight:700; cursor:pointer; }
+  .wz-foot .next:disabled{ background:#d9d2c6; }
+  .wz-foot .next:active:not(:disabled){ background:var(--dourado-esc); }
+  /* sucesso */
+  .ok-scr{ text-align:center; padding:40px 20px; }
+  .ok-scr .circ{ width:90px; height:90px; border-radius:50%; background:var(--verde-bg); color:var(--verde); display:grid; place-items:center; font-size:48px; margin:0 auto 18px; }
+  .ok-scr h2{ margin:0 0 6px; font-size:22px; }
+  .ok-scr p{ color:var(--cinza); margin:0 0 22px; }
+  .ok-scr .resumo{ text-align:left; margin-bottom:20px; }
+
+  .note{ font-size:12px; color:var(--cinza); text-align:center; padding:16px; }
+  .hidden{ display:none !important; }
+</style>
+</head>
+<body>
+
+<!-- ===================== HEADER ===================== -->
+<header>
+  <div class="h-top">
+    <div>
+      <h1>Casa Fuerte <span class="dot">·</span> Misión</h1>
+      <p class="saludo">Hola, Rogério</p>
+    </div>
+    <div class="avatar">R</div>
+  </div>
+</header>
+
+<!-- ===================== VIEW: DASHBOARD ===================== -->
+<section class="view active" id="v-inicio">
+  <div class="hero">
+    <span class="badge">Tu próxima actividad</span>
+    <h2>Distribución (domingo)</h2>
+    <div class="meta">Dom 4 oct · 12:00 — Cadena A (MercaMadrid)</div>
+    <div class="countdown">⏳ En 6 días · confirmado como <b>Distribución</b></div>
+    <button class="cta" onclick="go('v-agenda')">Ver toda la agenda</button>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="n">3</div><div class="l">Mis turnos<br>este mes</div></div>
+    <div class="kpi"><div class="n">9</div><div class="l">Actividades<br>del mes</div></div>
+    <div class="kpi"><div class="n">14</div><div class="l">Plazas por<br>cubrir</div></div>
+  </div>
+
+  <div class="section-title">Necesitan voluntarios</div>
+
+  <div class="act" onclick="openWizard()">
+    <div class="fecha"><div class="w">Sáb</div><div class="d">3</div><div class="m">Oct</div></div>
+    <div class="info">
+      <div class="t">Recogida MercaMadrid</div>
+      <div class="sub">08:00 · Conductor + ayudantes</div>
+      <span class="tag cadA">Cadena A</span>
+    </div>
+    <div class="vagas"><span class="ring pouco">1 / 4</span></div>
+  </div>
+
+  <div class="act" onclick="openWizard()">
+    <div class="fecha"><div class="w">Mié</div><div class="d">7</div><div class="m">Oct</div></div>
+    <div class="info">
+      <div class="t">Preparación</div>
+      <div class="sub">16:00 · Banco de Alimentos</div>
+      <span class="tag cadB">Cadena B</span>
+    </div>
+    <div class="vagas"><span class="ring">6 / 10</span></div>
+  </div>
+
+  <div class="note">— fin del panel (mock de validación) —</div>
+</section>
+
+<!-- ===================== VIEW: AGENDA ===================== -->
+<section class="view" id="v-agenda">
+  <div class="section-title">Octubre 2026 · Cadena A</div>
+
+  <div class="act estado-inscrito" onclick="openWizard()">
+    <div class="fecha"><div class="w">Sáb</div><div class="d">3</div><div class="m">Oct</div></div>
+    <div class="info">
+      <div class="t">Recogida MercaMadrid</div>
+      <div class="sub">08:00 · perecederos</div>
+      <div class="mini-check">✓ Estás apuntado (Ayudante)</div>
+    </div>
+    <div class="vagas"><span class="ring pouco">1 / 4</span></div>
+  </div>
+
+  <div class="act" onclick="openWizard()">
+    <div class="fecha"><div class="w">Dom</div><div class="d">4</div><div class="m">Oct</div></div>
+    <div class="info">
+      <div class="t">Distribución (domingo)</div>
+      <div class="sub">12:00 – 16:00</div>
+      <span class="tag cadA">Cadena A</span>
+    </div>
+    <div class="vagas"><span class="ring">4 / 6</span></div>
+  </div>
+
+  <div class="section-title">Octubre 2026 · Cadena B</div>
+
+  <div class="act" onclick="openWizard()">
+    <div class="fecha"><div class="w">Mié</div><div class="d">7</div><div class="m">Oct</div></div>
+    <div class="info">
+      <div class="t">Recogida Banco de Alimentos</div>
+      <div class="sub">10:00 · Conductor + ayudantes</div>
+      <span class="tag cadB">Cadena B</span>
+    </div>
+    <div class="vagas"><span class="ring cheio">0 / 4</span></div>
+  </div>
+
+  <div class="note">Toca cualquier actividad para apuntarte.</div>
+</section>
+
+<!-- ===================== VIEW: MIS TURNOS ===================== -->
+<section class="view" id="v-mios">
+  <div class="section-title">Mis próximos turnos</div>
+  <div class="act estado-inscrito">
+    <div class="fecha"><div class="w">Sáb</div><div class="d">3</div><div class="m">Oct</div></div>
+    <div class="info"><div class="t">Recogida MercaMadrid</div><div class="sub">08:00 · Ayudante de carga</div>
+      <div class="mini-check">✓ Confirmado</div></div>
+  </div>
+  <div class="act estado-inscrito">
+    <div class="fecha"><div class="w">Dom</div><div class="d">4</div><div class="m">Oct</div></div>
+    <div class="info"><div class="t">Distribución (domingo)</div><div class="sub">12:00 · Distribución</div>
+      <div class="mini-check">✓ Confirmado</div></div>
+  </div>
+  <div class="note">Puedes cancelar tu turno tocándolo (hasta 24h antes).</div>
+</section>
+
+<!-- ===================== BOTTOM NAV ===================== -->
+<nav class="nav">
+  <button class="active" id="n-inicio" onclick="go('v-inicio')"><span class="ic">🏠</span>Inicio</button>
+  <button id="n-agenda" onclick="go('v-agenda')"><span class="ic">🗓️</span>Agenda</button>
+  <button id="n-mios" onclick="go('v-mios')"><span class="ic">✅</span>Mis turnos</button>
+</nav>
+
+<!-- ===================== WIZARD ===================== -->
+<div class="wz-overlay" id="wizard">
+  <div class="wz-head">
+    <button class="close" onclick="closeWizard()">×</button>
+    <span class="ttl">Apuntarme a una actividad</span>
+  </div>
+
+  <div class="stepper" id="stepper">
+    <div class="st cur" data-s="1"><div class="bar"></div><div class="lbl">Actividad</div></div>
+    <div class="st" data-s="2"><div class="bar"></div><div class="lbl">Función</div></div>
+    <div class="st" data-s="3"><div class="bar"></div><div class="lbl">Confirmar</div></div>
+  </div>
+
+  <div class="wz-body">
+    <!-- Paso 1: elegir actividad/fecha -->
+    <div class="wz-step active" data-step="1">
+      <div class="wz-q">¿A qué actividad quieres ir?</div>
+      <div class="wz-hint">Elige una de las próximas actividades con plazas libres.</div>
+
+      <div class="opt sel" onclick="selOpt(this,1)">
+        <div class="oic">🥦</div>
+        <div class="otxt"><div class="ot">Recogida MercaMadrid</div><div class="os">Sáb 3 oct · 08:00 · Cadena A</div></div>
+        <div class="ocheck">✓</div>
+      </div>
+      <div class="opt" onclick="selOpt(this,1)">
+        <div class="oic">📦</div>
+        <div class="otxt"><div class="ot">Preparación (domingo)</div><div class="os">Dom 4 oct · 08:00 · Cadena A</div></div>
+        <div class="ocheck">✓</div>
+      </div>
+      <div class="opt" onclick="selOpt(this,1)">
+        <div class="oic">🤝</div>
+        <div class="otxt"><div class="ot">Distribución (domingo)</div><div class="os">Dom 4 oct · 12:00 · Cadena A</div></div>
+        <div class="ocheck">✓</div>
+      </div>
+    </div>
+
+    <!-- Paso 2: elegir función/rol -->
+    <div class="wz-step" data-step="2">
+      <div class="wz-q">¿En qué quieres ayudar?</div>
+      <div class="wz-hint">Recogida MercaMadrid · Sáb 3 oct 08:00. Elige tu función.</div>
+
+      <div class="opt" onclick="selOpt(this,2)">
+        <div class="oic">🚐</div>
+        <div class="otxt"><div class="ot">Conductor (furgoneta)</div><div class="os">Quedan 1 de 2 · requiere furgoneta</div></div>
+        <div class="ocheck">✓</div>
+      </div>
+      <div class="opt sel" onclick="selOpt(this,2)">
+        <div class="oic">💪</div>
+        <div class="otxt"><div class="ot">Ayudante de carga</div><div class="os">Quedan 2 de 2</div></div>
+        <div class="ocheck">✓</div>
+      </div>
+    </div>
+
+    <!-- Paso 3: revisión + confirmar -->
+    <div class="wz-step" data-step="3">
+      <div class="wz-q">Revisa y confirma</div>
+      <div class="wz-hint">Comprueba que todo esté correcto antes de apuntarte.</div>
+      <div class="resumo">
+        <div class="row"><span class="k">Actividad</span><span class="v">Recogida MercaMadrid</span></div>
+        <div class="row"><span class="k">Fecha y hora</span><span class="v">Sáb 3 oct · 08:00</span></div>
+        <div class="row"><span class="k">Cadena</span><span class="v">A · MercaMadrid</span></div>
+        <div class="row"><span class="k">Tu función</span><span class="v">Ayudante de carga <button class="edit" onclick="gotoStep(2)">Cambiar</button></span></div>
+      </div>
+      <div class="wz-hint" style="margin-top:14px">Recibirás un recordatorio por WhatsApp 24h antes.</div>
+    </div>
+
+    <!-- Éxito -->
+    <div class="wz-step" data-step="ok">
+      <div class="ok-scr">
+        <div class="circ">✓</div>
+        <h2>¡Estás apuntado!</h2>
+        <p>Gracias por servir 💛</p>
+        <div class="resumo">
+          <div class="row"><span class="k">Actividad</span><span class="v">Recogida MercaMadrid</span></div>
+          <div class="row"><span class="k">Cuándo</span><span class="v">Sáb 3 oct · 08:00</span></div>
+          <div class="row"><span class="k">Función</span><span class="v">Ayudante de carga</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wz-foot" id="wzFoot">
+    <button class="back hidden" id="wzBack" onclick="prevStep()">Atrás</button>
+    <button class="next" id="wzNext" onclick="nextStep()">Continuar</button>
+  </div>
+</div>
+
+<script>
+  /* ---- navegación de vistas (bottom nav) ---- */
+  function go(id){
+    document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id===id));
+    document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+    const nb = document.getElementById('n-'+id.split('-')[1]); if(nb) nb.classList.add('active');
+    window.scrollTo(0,0);
+  }
+
+  /* ---- wizard ---- */
+  let step = 1;
+  const steps = [1,2,3];
+  function openWizard(){ step=1; renderStep(); document.getElementById('wizard').classList.add('active'); }
+  function closeWizard(){ document.getElementById('wizard').classList.remove('active'); }
+  function selOpt(el, s){
+    el.parentNode.querySelectorAll('.opt').forEach(o=>o.classList.remove('sel'));
+    el.classList.add('sel');
+  }
+  function gotoStep(s){ step=s; renderStep(); }
+  function renderStep(){
+    document.querySelectorAll('.wz-step').forEach(st=>st.classList.remove('active'));
+    const cur = document.querySelector('.wz-step[data-step="'+step+'"]');
+    if(cur) cur.classList.add('active');
+    // stepper
+    document.querySelectorAll('.stepper .st').forEach(st=>{
+      const n = +st.dataset.s;
+      st.classList.toggle('done', n < step);
+      st.classList.toggle('cur', n === step);
+    });
+    // footer
+    document.getElementById('wzBack').classList.toggle('hidden', step===1);
+    document.getElementById('wzNext').textContent = (step===3) ? 'Confirmar inscripción' : 'Continuar';
+    document.querySelector('.wz-body').scrollTo(0,0);
+  }
+  function nextStep(){
+    if(step < 3){ step++; renderStep(); }
+    else{ // confirmar -> éxito
+      document.querySelectorAll('.wz-step').forEach(st=>st.classList.remove('active'));
+      document.querySelector('.wz-step[data-step="ok"]').classList.add('active');
+      document.getElementById('stepper').style.visibility='hidden';
+      document.getElementById('wzFoot').innerHTML = '<button class="next" onclick="closeWizard();document.getElementById(\'stepper\').style.visibility=\'visible\';go(\'v-mios\')">Listo</button>';
+    }
+  }
+  function prevStep(){ if(step>1){ step--; renderStep(); } }
+</script>
+</body>
+</html>

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Casa Fuerte Misión Social — Design v2 (base institucional)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* --- Tokens do site institucional casafuertechurch.com --- */
+    --naranja:#f97316; --naranja-esc:#ea580c;
+    --magenta:#e11d8f; --morado:#7c3aed;
+    --dorado:#c9a86a; --dorado-cl:#ffd166;
+    --tinta:#1f1a17;         /* texto casi-negro cálido */
+    --tinta-sec:#6b5d54;     /* texto secundario terroso */
+    --crema:#fff7ed;         /* fondo cálido */
+    --crema-2:#fdf2ff;       /* lila muy claro */
+    --linea:#efe4d8;
+    --blanco:#fff;
+    --verde:#2f9e6f; --verde-bg:#e6f5ee;
+    --ambar:#d97706; --ambar-bg:#fef1e0;
+    --gris:#9a8f86; --gris-bg:#f2ece5;
+    --grad: linear-gradient(90deg,#f97316,#e11d8f,#7c3aed);
+    --grad-suave: linear-gradient(180deg,#fff7ed,#fdf2ff 45%,#eef6ff);
+    --sombra:0 4px 18px rgba(74,46,38,.10);
+    --raio:18px;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family:"Jost",system-ui,sans-serif;
+    background:var(--crema); color:var(--tinta);
+    max-width:480px; margin:0 auto; padding-bottom:88px;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.serif{ font-family:"Cormorant Garamond",Georgia,serif; }
+
+  /* ===== Header ===== */
+  header{ background:var(--tinta); color:#fff; padding:20px 20px 18px; position:sticky; top:0; z-index:20; }
+  header .h-top{ display:flex; align-items:center; justify-content:space-between; }
+  header h1{ margin:0; font-size:24px; font-weight:700; letter-spacing:.3px; }
+  header h1 .grad{ background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  header .saludo{ margin:1px 0 0; font-size:13px; opacity:.7; font-weight:300; }
+  header .avatar{ width:40px; height:40px; border-radius:50%; background:var(--grad); color:#fff; display:grid; place-items:center; font-weight:600; font-size:16px; }
+
+  /* ===== Views ===== */
+  .view{ display:none; padding:16px 16px 0; animation:fade .25s ease; }
+  .view.active{ display:block; }
+  @keyframes fade{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+  .section-title{ font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--tinta-sec); margin:22px 4px 12px; font-weight:600; }
+
+  /* ===== Hero: próxima actividad ===== */
+  .hero{ background:var(--grad); color:#fff; border-radius:var(--raio); padding:20px; box-shadow:var(--sombra); position:relative; overflow:hidden; }
+  .hero::after{ content:""; position:absolute; right:-40px; bottom:-40px; width:140px; height:140px; background:rgba(255,255,255,.16); border-radius:50%; }
+  .hero .badge{ display:inline-block; background:rgba(255,255,255,.22); color:#fff; font-size:11px; font-weight:600; padding:5px 12px; border-radius:999px; text-transform:uppercase; letter-spacing:.06em; backdrop-filter:blur(4px); }
+  .hero h2{ margin:12px 0 4px; font-size:30px; font-weight:700; line-height:1.05; position:relative; }
+  .hero .meta{ font-size:15px; opacity:.95; font-weight:300; position:relative; }
+  .hero .countdown{ margin-top:14px; font-size:13px; background:rgba(255,255,255,.20); display:inline-block; padding:7px 13px; border-radius:10px; position:relative; }
+  .hero .cta{ display:block; width:100%; margin-top:18px; background:#fff; color:var(--naranja-esc); border:0; border-radius:12px; padding:16px; font-size:16px; font-weight:600; cursor:pointer; position:relative; font-family:"Jost",sans-serif; }
+  .hero .cta:active{ transform:scale(.99); }
+
+  /* ===== KPIs ===== */
+  .kpis{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:14px; }
+  .kpi{ background:#fff; border:1px solid var(--linea); border-radius:16px; padding:14px 8px; text-align:center; box-shadow:var(--sombra); }
+  .kpi .n{ font-family:"Cormorant Garamond",serif; font-size:30px; font-weight:700; line-height:1; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .kpi .l{ font-size:11px; color:var(--tinta-sec); margin-top:4px; font-weight:400; }
+
+  /* ===== Activity cards ===== */
+  .act{ background:#fff; border:1px solid var(--linea); border-radius:var(--raio); padding:16px; margin-bottom:12px; box-shadow:var(--sombra); display:flex; gap:14px; align-items:flex-start; cursor:pointer; transition:.15s; }
+  .act:active{ transform:scale(.99); }
+  .act .fecha{ flex:0 0 58px; text-align:center; background:var(--crema); border-radius:14px; padding:9px 4px; border:1px solid var(--linea); }
+  .act .fecha .d{ font-family:"Cormorant Garamond",serif; font-size:26px; font-weight:700; line-height:1; }
+  .act .fecha .m{ font-size:11px; text-transform:uppercase; color:var(--tinta-sec); margin-top:2px; }
+  .act .fecha .w{ font-size:10px; color:var(--naranja); font-weight:600; text-transform:uppercase; }
+  .act .info{ flex:1; min-width:0; }
+  .act .info .t{ font-family:"Cormorant Garamond",serif; font-weight:700; font-size:19px; line-height:1.1; }
+  .act .info .sub{ font-size:13px; color:var(--tinta-sec); margin-top:3px; font-weight:300; }
+  .act .info .tag{ display:inline-block; margin-top:9px; font-size:11px; padding:3px 10px; border-radius:999px; font-weight:500; }
+  .tag.cadA{ background:var(--ambar-bg); color:var(--ambar); }
+  .tag.cadB{ background:#f0e9fb; color:var(--morado); }
+  .act .vagas{ flex:0 0 auto; text-align:center; }
+  .act .vagas .ring{ font-size:12px; font-weight:600; color:var(--verde); background:var(--verde-bg); border-radius:999px; padding:6px 9px; white-space:nowrap; }
+  .act .vagas .ring.pouco{ color:var(--ambar); background:var(--ambar-bg); }
+  .act .vagas .ring.cheio{ color:var(--gris); background:var(--gris-bg); }
+  .estado-inscrito{ border-left:4px solid var(--verde); }
+  .mini-check{ display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--verde); font-weight:600; margin-top:8px; }
+
+  /* ===== Bottom nav ===== */
+  .nav{ position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:#fff; border-top:1px solid var(--linea); display:flex; z-index:30; box-shadow:0 -2px 12px rgba(74,46,38,.06); }
+  .nav button{ flex:1; background:none; border:0; padding:10px 4px calc(12px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; color:var(--gris); font-size:11px; font-family:"Jost",sans-serif; }
+  .nav button.active{ color:var(--naranja); }
+  .nav button .ic{ font-size:21px; line-height:1; }
+
+  /* ===== Wizard ===== */
+  .wz-overlay{ position:fixed; inset:0; background:var(--crema); z-index:50; display:none; flex-direction:column; max-width:480px; margin:0 auto; }
+  .wz-overlay.active{ display:flex; }
+  .wz-head{ background:var(--tinta); color:#fff; padding:16px; display:flex; align-items:center; gap:12px; }
+  .wz-head .close{ background:none; border:0; color:#fff; font-size:26px; cursor:pointer; line-height:1; }
+  .wz-head .ttl{ font-family:"Cormorant Garamond",serif; font-size:20px; font-weight:600; }
+  .stepper{ display:flex; padding:16px 16px 4px; gap:8px; background:var(--crema); }
+  .stepper .st{ flex:1; }
+  .stepper .st .bar{ height:6px; border-radius:3px; background:var(--linea); transition:.3s; }
+  .stepper .st.done .bar,.stepper .st.cur .bar{ background:var(--grad); }
+  .stepper .st .lbl{ font-size:10px; color:var(--gris); margin-top:6px; text-align:center; }
+  .stepper .st.cur .lbl{ color:var(--naranja); font-weight:600; }
+  .wz-body{ flex:1; overflow-y:auto; padding:8px 16px 16px; }
+  .wz-step{ display:none; }
+  .wz-step.active{ display:block; animation:fade .2s; }
+  .wz-q{ font-family:"Cormorant Garamond",serif; font-size:26px; font-weight:700; margin:12px 2px 4px; line-height:1.1; }
+  .wz-hint{ font-size:13px; color:var(--tinta-sec); margin:0 2px 18px; font-weight:300; }
+  /* caixas grandes */
+  .opt{ display:flex; align-items:center; gap:14px; background:#fff; border:2px solid var(--linea); border-radius:16px; padding:18px 16px; margin-bottom:12px; cursor:pointer; transition:.12s; min-height:66px; }
+  .opt:active{ transform:scale(.99); }
+  .opt.sel{ border-color:var(--naranja); background:#fff9f4; box-shadow:0 0 0 3px rgba(249,115,22,.14); }
+  .opt .oic{ width:48px; height:48px; flex:0 0 48px; border-radius:14px; background:var(--crema); display:grid; place-items:center; font-size:25px; }
+  .opt.sel .oic{ background:var(--grad); }
+  .opt .otxt{ flex:1; }
+  .opt .otxt .ot{ font-weight:600; font-size:16px; }
+  .opt .otxt .os{ font-size:13px; color:var(--tinta-sec); margin-top:2px; font-weight:300; }
+  .opt .ocheck{ width:27px; height:27px; flex:0 0 27px; border-radius:50%; border:2px solid var(--linea); display:grid; place-items:center; color:#fff; font-size:15px; }
+  .opt.sel .ocheck{ background:var(--naranja); border-color:var(--naranja); }
+  /* resumo */
+  .resumo{ background:#fff; border:1px solid var(--linea); border-radius:16px; overflow:hidden; box-shadow:var(--sombra); }
+  .resumo .row{ display:flex; justify-content:space-between; align-items:center; padding:15px 16px; border-bottom:1px solid var(--linea); }
+  .resumo .row:last-child{ border-bottom:0; }
+  .resumo .row .k{ font-size:13px; color:var(--tinta-sec); font-weight:300; }
+  .resumo .row .v{ font-weight:600; font-size:15px; text-align:right; }
+  .resumo .row .edit{ font-size:12px; color:var(--naranja); background:none; border:0; cursor:pointer; font-weight:600; font-family:"Jost",sans-serif; }
+  /* footer wizard */
+  .wz-foot{ padding:12px 16px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--linea); background:#fff; display:flex; gap:10px; }
+  .wz-foot .back{ flex:0 0 auto; background:none; border:0; color:var(--tinta-sec); font-size:15px; font-weight:500; padding:16px 14px; cursor:pointer; font-family:"Jost",sans-serif; }
+  .wz-foot .next{ flex:1; background:var(--grad); color:#fff; border:0; border-radius:14px; padding:16px; font-size:17px; font-weight:600; cursor:pointer; font-family:"Jost",sans-serif; }
+  .wz-foot .next:disabled{ background:#ddd2c6; }
+  .wz-foot .next:active:not(:disabled){ transform:scale(.99); }
+  /* sucesso */
+  .ok-scr{ text-align:center; padding:40px 20px; }
+  .ok-scr .circ{ width:96px; height:96px; border-radius:50%; background:var(--grad); color:#fff; display:grid; place-items:center; font-size:50px; margin:0 auto 20px; box-shadow:var(--sombra); }
+  .ok-scr h2{ font-family:"Cormorant Garamond",serif; margin:0 0 6px; font-size:30px; font-weight:700; }
+  .ok-scr p{ color:var(--tinta-sec); margin:0 0 24px; font-weight:300; }
+  .ok-scr .resumo{ text-align:left; margin-bottom:20px; }
+
+  .note{ font-size:12px; color:var(--gris); text-align:center; padding:16px; font-weight:300; }
+  .hidden{ display:none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="h-top">
+    <div>
+      <h1>Casa Fuerte <span class="grad">Misión</span></h1>
+      <p class="saludo">Hola, Rogério · sirviendo con amor</p>
+    </div>
+    <div class="avatar">R</div>
+  </div>
+</header>
+
+<!-- DASHBOARD -->
+<section class="view active" id="v-inicio">
+  <div class="hero">
+    <span class="badge">Tu próxima actividad</span>
+    <h2>Distribución</h2>
+    <div class="meta">Domingo 4 oct · 12:00 — Cadena A · MercaMadrid</div>
+    <div class="countdown">En 6 días · confirmado como <b>Distribución</b></div>
+    <button class="cta" onclick="go('v-agenda')">Ver toda la agenda</button>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="n">3</div><div class="l">Mis turnos<br>este mes</div></div>
+    <div class="kpi"><div class="n">9</div><div class="l">Actividades<br>del mes</div></div>
+    <div class="kpi"><div class="n">14</div><div class="l">Plazas por<br>cubrir</div></div>
+  </div>
+
+  <div class="section-title">Necesitan voluntarios</div>
+
+  <div class="act" onclick="openWizard()">
+    <div class="fecha"><div class="w">Sáb</div><div class="d">3</div><div class="m">Oct</div></div>
+    <div class="info"><div class="t">Recogida MercaMadrid</div><div class="sub">08:00 · conductor + ayudantes</div><span class="tag cadA">Cadena A</span></div>
+    <div class="vagas"><span class="ring pouco">1 / 4</span></div>
+  </div>
+  <div class="act" onclick="openWizard()">
+    <div class="fecha"><div class="w">Mié</div><div class="d">7</div><div class="m">Oct</div></div>
+    <div class="info"><div class="t">Preparación</div><div class="sub">16:00 · Banco de Alimentos</div><span class="tag cadB">Cadena B</span></div>
+    <div class="vagas"><span class="ring">6 / 10</span></div>
+  </div>
+  <div class="note">— fin del panel (mock de validación) —</div>
+</section>
+
+<!-- AGENDA -->
+<section class="view" id="v-agenda">
+  <div class="section-title">Octubre 2026 · Cadena A</div>
+  <div class="act estado-inscrito" onclick="openWizard()">
+    <div class="fecha"><div class="w">Sáb</div><div class="d">3</div><div class="m">Oct</div></div>
+    <div class="info"><div class="t">Recogida MercaMadrid</div><div class="sub">08:00 · perecederos</div><div class="mini-check">✓ Estás apuntado (Ayudante)</div></div>
+    <div class="vagas"><span class="ring pouco">1 / 4</span></div>
+  </div>
+  <div class="act" onclick="openWizard()">
+    <div class="fecha"><div class="w">Dom</div><div class="d">4</div><div class="m">Oct</div></div>
+    <div class="info"><div class="t">Distribución</div><div class="sub">12:00 – 16:00</div><span class="tag cadA">Cadena A</span></div>
+    <div class="vagas"><span class="ring">4 / 6</span></div>
+  </div>
+  <div class="section-title">Octubre 2026 · Cadena B</div>
+  <div class="act" onclick="openWizard()">
+    <div class="fecha"><div class="w">Mié</div><div class="d">7</div><div class="m">Oct</div></div>
+    <div class="info"><div class="t">Recogida Banco de Alimentos</div><div class="sub">10:00 · conductor + ayudantes</div><span class="tag cadB">Cadena B</span></div>
+    <div class="vagas"><span class="ring cheio">0 / 4</span></div>
+  </div>
+  <div class="note">Toca cualquier actividad para apuntarte.</div>
+</section>
+
+<!-- MIS TURNOS -->
+<section class="view" id="v-mios">
+  <div class="section-title">Mis próximos turnos</div>
+  <div class="act estado-inscrito">
+    <div class="fecha"><div class="w">Sáb</div><div class="d">3</div><div class="m">Oct</div></div>
+    <div class="info"><div class="t">Recogida MercaMadrid</div><div class="sub">08:00 · Ayudante de carga</div><div class="mini-check">✓ Confirmado</div></div>
+  </div>
+  <div class="act estado-inscrito">
+    <div class="fecha"><div class="w">Dom</div><div class="d">4</div><div class="m">Oct</div></div>
+    <div class="info"><div class="t">Distribución</div><div class="sub">12:00 · Distribución</div><div class="mini-check">✓ Confirmado</div></div>
+  </div>
+  <div class="note">Puedes cancelar tu turno tocándolo (hasta 24h antes).</div>
+</section>
+
+<nav class="nav">
+  <button class="active" id="n-inicio" onclick="go('v-inicio')"><span class="ic">🏠</span>Inicio</button>
+  <button id="n-agenda" onclick="go('v-agenda')"><span class="ic">🗓️</span>Agenda</button>
+  <button id="n-mios" onclick="go('v-mios')"><span class="ic">✅</span>Mis turnos</button>
+</nav>
+
+<!-- WIZARD -->
+<div class="wz-overlay" id="wizard">
+  <div class="wz-head"><button class="close" onclick="closeWizard()">×</button><span class="ttl">Apuntarme</span></div>
+  <div class="stepper" id="stepper">
+    <div class="st cur" data-s="1"><div class="bar"></div><div class="lbl">Actividad</div></div>
+    <div class="st" data-s="2"><div class="bar"></div><div class="lbl">Función</div></div>
+    <div class="st" data-s="3"><div class="bar"></div><div class="lbl">Confirmar</div></div>
+  </div>
+  <div class="wz-body">
+    <div class="wz-step active" data-step="1">
+      <div class="wz-q">¿A qué actividad quieres ir?</div>
+      <div class="wz-hint">Elige una de las próximas actividades con plazas libres.</div>
+      <div class="opt sel" onclick="selOpt(this)"><div class="oic">🥦</div><div class="otxt"><div class="ot">Recogida MercaMadrid</div><div class="os">Sáb 3 oct · 08:00 · Cadena A</div></div><div class="ocheck">✓</div></div>
+      <div class="opt" onclick="selOpt(this)"><div class="oic">📦</div><div class="otxt"><div class="ot">Preparación (domingo)</div><div class="os">Dom 4 oct · 08:00 · Cadena A</div></div><div class="ocheck">✓</div></div>
+      <div class="opt" onclick="selOpt(this)"><div class="oic">🤝</div><div class="otxt"><div class="ot">Distribución (domingo)</div><div class="os">Dom 4 oct · 12:00 · Cadena A</div></div><div class="ocheck">✓</div></div>
+    </div>
+    <div class="wz-step" data-step="2">
+      <div class="wz-q">¿En qué quieres ayudar?</div>
+      <div class="wz-hint">Recogida MercaMadrid · Sáb 3 oct 08:00. Elige tu función.</div>
+      <div class="opt" onclick="selOpt(this)"><div class="oic">🚐</div><div class="otxt"><div class="ot">Conductor (furgoneta)</div><div class="os">Quedan 1 de 2 · requiere furgoneta</div></div><div class="ocheck">✓</div></div>
+      <div class="opt sel" onclick="selOpt(this)"><div class="oic">💪</div><div class="otxt"><div class="ot">Ayudante de carga</div><div class="os">Quedan 2 de 2</div></div><div class="ocheck">✓</div></div>
+    </div>
+    <div class="wz-step" data-step="3">
+      <div class="wz-q">Revisa y confirma</div>
+      <div class="wz-hint">Comprueba que todo esté correcto antes de apuntarte.</div>
+      <div class="resumo">
+        <div class="row"><span class="k">Actividad</span><span class="v">Recogida MercaMadrid</span></div>
+        <div class="row"><span class="k">Fecha y hora</span><span class="v">Sáb 3 oct · 08:00</span></div>
+        <div class="row"><span class="k">Cadena</span><span class="v">A · MercaMadrid</span></div>
+        <div class="row"><span class="k">Tu función</span><span class="v">Ayudante de carga <button class="edit" onclick="gotoStep(2)">Cambiar</button></span></div>
+      </div>
+      <div class="wz-hint" style="margin-top:14px">Recibirás un recordatorio por WhatsApp 24h antes.</div>
+    </div>
+    <div class="wz-step" data-step="ok">
+      <div class="ok-scr">
+        <div class="circ">✓</div>
+        <h2>¡Estás apuntado!</h2>
+        <p>Gracias por servir con amor</p>
+        <div class="resumo">
+          <div class="row"><span class="k">Actividad</span><span class="v">Recogida MercaMadrid</span></div>
+          <div class="row"><span class="k">Cuándo</span><span class="v">Sáb 3 oct · 08:00</span></div>
+          <div class="row"><span class="k">Función</span><span class="v">Ayudante de carga</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="wz-foot" id="wzFoot">
+    <button class="back hidden" id="wzBack" onclick="prevStep()">Atrás</button>
+    <button class="next" id="wzNext" onclick="nextStep()">Continuar</button>
+  </div>
+</div>
+
+<script>
+  function go(id){
+    document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id===id));
+    document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+    const nb=document.getElementById('n-'+id.split('-')[1]); if(nb) nb.classList.add('active');
+    window.scrollTo(0,0);
+  }
+  let step=1;
+  function openWizard(){ step=1; renderStep(); document.getElementById('wizard').classList.add('active'); document.getElementById('stepper').style.visibility='visible'; resetFoot(); }
+  function closeWizard(){ document.getElementById('wizard').classList.remove('active'); }
+  function selOpt(el){ el.parentNode.querySelectorAll('.opt').forEach(o=>o.classList.remove('sel')); el.classList.add('sel'); }
+  function gotoStep(s){ step=s; renderStep(); }
+  function resetFoot(){ document.getElementById('wzFoot').innerHTML='<button class="back hidden" id="wzBack" onclick="prevStep()">Atrás</button><button class="next" id="wzNext" onclick="nextStep()">Continuar</button>'; }
+  function renderStep(){
+    document.querySelectorAll('.wz-step').forEach(st=>st.classList.remove('active'));
+    const cur=document.querySelector('.wz-step[data-step="'+step+'"]'); if(cur) cur.classList.add('active');
+    document.querySelectorAll('.stepper .st').forEach(st=>{ const n=+st.dataset.s; st.classList.toggle('done',n<step); st.classList.toggle('cur',n===step); });
+    document.getElementById('wzBack').classList.toggle('hidden', step===1);
+    document.getElementById('wzNext').textContent=(step===3)?'Confirmar inscripción':'Continuar';
+    document.querySelector('.wz-body').scrollTo(0,0);
+  }
+  function nextStep(){
+    if(step<3){ step++; renderStep(); }
+    else{
+      document.querySelectorAll('.wz-step').forEach(st=>st.classList.remove('active'));
+      document.querySelector('.wz-step[data-step="ok"]').classList.add('active');
+      document.getElementById('stepper').style.visibility='hidden';
+      document.getElementById('wzFoot').innerHTML='<button class="next" onclick="closeWizard();go(\'v-mios\')">Listo</button>';
+    }
+  }
+  function prevStep(){ if(step>1){ step--; renderStep(); } }
+</script>
+</body>
+</html>

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Manos Fuertes · Login v6</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Jost:wght@300;400;500;600&family=Oswald:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --negro:#0f0f0f; --grafito:#1f1f1f; --gris:#767676; --gris-cl:#9a9a9a;
+    --linea:#e7e5e1; --hueso:#f7f7f5; --blanco:#fff;
+    --oro:#f5c518; --oro-osc:#d9a90a; --oro-cl:#ffe27a; --oro-bg:#fdf6dd;
+    --t-retirada:#f2711c; --t-retirada-tx:#c2560c; --t-retirada-bg:#fdeadb;
+    --t-prep:#e8a300; --t-prep-tx:#9a6d00; --t-prep-bg:#fbf1d0;
+    --t-distri:#7cb518; --t-distri-tx:#4e7a0a; --t-distri-bg:#eef7d9;
+    --t-limpieza:#4f9d69; --t-limpieza-tx:#2f6b46; --t-limpieza-bg:#e4f2e9;
+    --ok:#4a7052; --ok-bg:#eaf2ec; --warn:#8a6d3b; --warn-bg:#f4efe4; --full:#8a8a8a; --full-bg:#f0f0f0;
+    --raio:6px;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; padding:0; }
+  body{ font-family:"Jost",system-ui,sans-serif; background:var(--hueso); color:var(--grafito); max-width:480px; margin:0 auto; -webkit-font-smoothing:antialiased; font-weight:300; }
+  .app-shell{ padding-bottom:84px; }
+  .eyebrow{ font-size:11px; text-transform:uppercase; letter-spacing:.22em; color:var(--gris); font-weight:400; }
+
+  /* ============ LOGIN ============ */
+  #loginGate{ position:fixed; inset:0; z-index:200; max-width:480px; margin:0 auto; background:radial-gradient(120% 80% at 50% 0%, #2a2a2a 0%, #161616 45%, #0b0b0b 100%); display:flex; flex-direction:column; overflow-y:auto; }
+  .lg-top{ display:flex; align-items:center; justify-content:center; padding:24px 20px 4px; }
+  .lg-church{ height:56px; width:auto; opacity:.95; }
+  .lg-hero{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:8px 26px 20px; }
+  .lg-emblem{ position:relative; display:flex; align-items:center; justify-content:center; margin-bottom:0; }
+  .lg-emblem::before{ content:""; position:absolute; width:230px; height:230px; border-radius:50%; background:radial-gradient(circle, rgba(245,197,24,.28) 0%, rgba(245,197,24,.06) 45%, transparent 70%); filter:blur(6px); animation:glow 3s ease-in-out infinite; }
+  @keyframes glow{ 0%,100%{ opacity:.7; transform:scale(1);} 50%{ opacity:1; transform:scale(1.05);} }
+  .lg-logo{ position:relative; width:210px; height:auto; filter:drop-shadow(0 6px 20px rgba(0,0,0,.55)); }
+  .lg-divider{ display:flex; align-items:center; gap:8px; width:150px; margin:26px auto 22px; opacity:.55; }
+  .lg-divider .ln{ flex:1; height:1px; background:linear-gradient(90deg, transparent, #6a6a6a); }
+  .lg-divider .ln:last-child{ background:linear-gradient(90deg, #6a6a6a, transparent); }
+  .lg-divider .dt{ width:4px; height:4px; border-radius:50%; background:var(--oro); flex:0 0 auto; }
+  .lg-title{ font-family:"Oswald",sans-serif; font-size:34px; font-weight:600; color:#fff; margin:0; letter-spacing:.05em; text-transform:uppercase; }
+  .lg-sub{ font-family:"Cormorant Garamond",serif; font-style:italic; font-size:15px; color:var(--oro-cl); margin:3px 0 0; }
+
+  /* paso: telefono directo */
+  .lg-panel{ width:100%; max-width:340px; margin:24px auto 0; }
+  .lg-panel.hidden{ display:none; }
+  .lg-field{ margin-bottom:12px; text-align:left; }
+  .lg-field label{ font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:#a8a29a; display:block; margin-bottom:6px; }
+  .lg-field input{ width:100%; padding:16px 14px; border-radius:var(--raio); border:1px solid #3a3a3a; background:#1c1c1c; color:#fff; font-size:16px; font-family:"Jost",sans-serif; }
+  .lg-field input:focus{ outline:none; border-color:var(--oro); }
+  .lg-field input[readonly]{ opacity:.75; }
+  .phone-row{ display:flex; gap:8px; }
+  .ddi{ flex:0 0 auto; width:104px; padding:16px 8px; border-radius:var(--raio); border:1px solid #3a3a3a; background:#1c1c1c; color:#fff; font-size:15px; font-family:"Jost",sans-serif; cursor:pointer; }
+  .ddi:focus{ outline:none; border-color:var(--oro); }
+  .ddi:disabled{ opacity:.6; }
+  .phone-row input{ flex:1; }
+  .lg-btn{ display:flex; align-items:center; justify-content:center; gap:10px; width:100%; border-radius:var(--raio); padding:16px; font-size:15px; font-weight:600; cursor:pointer; font-family:"Jost",sans-serif; border:0; }
+  .lg-btn.primary{ background:var(--oro); color:var(--negro); }
+  .lg-btn.primary:active{ background:var(--oro-osc); }
+  .lg-btn.google{ background:#fff; color:#3c4043; border:1px solid #dadce0; font-weight:500; margin-top:0; }
+  .g-ic{ width:18px; height:18px; }
+  .lg-or{ display:flex; align-items:center; gap:12px; color:#7d786f; font-size:11px; text-transform:uppercase; letter-spacing:.15em; margin:16px 0; }
+  .lg-or::before,.lg-or::after{ content:""; flex:1; height:1px; background:#333; }
+  .lg-hint{ font-size:12px; color:#a8a29a; margin:0 0 12px; font-weight:300; text-align:left; line-height:1.5; }
+  .lg-welcome{ background:rgba(245,197,24,.12); border:1px solid rgba(245,197,24,.3); border-radius:var(--raio); padding:12px 14px; margin-bottom:14px; text-align:left; font-size:14px; color:#efe9d9; }
+  .lg-welcome b{ color:var(--oro-cl); }
+  .lg-back{ background:none; border:0; color:#a8a29a; font-size:12px; text-transform:uppercase; letter-spacing:.1em; cursor:pointer; margin-top:10px; }
+
+  #lgChecking{ display:none; position:relative; align-items:center; justify-content:center; gap:10px; padding:14px 22px; border-radius:14px; background:#151515; color:#efe9d9; font-size:14px; font-weight:500; overflow:hidden; min-height:46px; width:100%; max-width:300px; margin:24px auto 0; }
+  #lgChecking.on{ display:inline-flex; }
+  #lgChecking::before{ content:""; position:absolute; inset:-150%; background:conic-gradient(from 0deg, transparent 0deg, transparent 250deg, var(--oro-osc) 300deg, var(--oro-cl) 330deg, var(--oro-osc) 360deg); animation:lc-spin 1.4s linear infinite; z-index:0; }
+  #lgChecking::after{ content:""; position:absolute; inset:2px; border-radius:12px; background:#151515; z-index:1; }
+  #lgChecking > *{ position:relative; z-index:2; }
+  #lgChecking .dot{ width:9px; height:9px; border-radius:50%; background:var(--oro); box-shadow:0 0 8px rgba(245,197,24,.8); }
+  @keyframes lc-spin{ to{ transform:rotate(360deg);} }
+  @keyframes fade{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+  @media (prefers-reduced-motion: reduce){ #lgChecking::before,.lg-emblem::before{ animation:none; } }
+  .lg-foot{ text-align:center; font-size:10px; color:#6f6a61; letter-spacing:.15em; text-transform:uppercase; padding:16px; }
+  .lg-demo{ font-size:10px; color:#5a564e; text-align:center; margin-top:12px; line-height:1.6; }
+
+  /* ============ HEADER (app) — 3 columnas ============ */
+  header{ background:var(--negro); color:#fff; padding:12px 16px; position:sticky; top:0; z-index:20; }
+  .h-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .h-row img.iglesia{ height:30px; width:auto; opacity:.9; flex:0 0 auto; }
+  .h-center{ flex:1; text-align:center; min-width:0; }
+  .h-center .titulo{ font-family:"Oswald",sans-serif; font-size:22px; font-weight:600; color:#fff; line-height:1; text-transform:uppercase; letter-spacing:.04em; }
+  .h-center .saludo{ font-size:11px; color:var(--gris-cl); margin-top:2px; }
+  .h-center .saludo em{ font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--oro); }
+  .h-mision{ flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .h-mision img{ height:34px; width:auto; }
+  .h-mision .lbl{ display:flex; align-items:baseline; gap:4px; line-height:1; }
+  .h-mision .lbl .m1{ font-family:"Oswald",sans-serif; font-weight:600; font-size:12px; letter-spacing:.04em; color:#fff; text-transform:uppercase; }
+  .h-mision .lbl .m2{ font-family:"Nunito",sans-serif; font-weight:700; font-size:11px; color:#fff; }
+
+  .view{ display:none; padding:18px 16px 0; animation:fade .25s ease; } .view.active{ display:block; }
+  .hero{ background:var(--negro); color:#fff; border-radius:var(--raio); padding:24px 22px; position:relative; overflow:hidden; }
+  .hero::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--oro); }
+  .hero .eyebrow{ color:var(--gris-cl); } .hero h2{ font-family:"Cormorant Garamond",serif; font-style:italic; margin:12px 0 6px; font-size:34px; font-weight:500; line-height:1.05; } .hero .meta{ font-size:14px; color:var(--gris-cl); font-weight:300; }
+  .dots{ display:flex; align-items:center; gap:8px; margin:16px 0; } .dots .ln{ flex:1; height:1px; background:#333; } .dots .dt{ width:4px; height:4px; border-radius:50%; background:var(--oro); }
+  .hero .countdown{ font-size:13px; color:var(--gris-cl); font-weight:300; } .hero .countdown b{ color:var(--oro); font-weight:500; }
+  .hero .cta{ display:block; width:100%; margin-top:20px; background:var(--oro); color:var(--negro); border:0; border-radius:var(--raio); padding:15px; font-size:13px; font-weight:600; cursor:pointer; font-family:"Jost",sans-serif; text-transform:uppercase; letter-spacing:.12em; }
+  .note{ font-size:12px; color:var(--gris-cl); text-align:center; padding:18px; font-weight:300; }
+  .hidden{ display:none !important; }
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="loginGate">
+  <div class="lg-top"><img class="lg-church" src="assets/logo-casafuerte-light.png" alt="Casa Fuerte Church" /></div>
+  <div class="lg-hero">
+    <div class="lg-emblem"><img class="lg-logo" src="assets/logo-mision-social-dark.png" alt="Misión Social" /></div>
+    <div class="lg-divider"><span class="ln"></span><span class="dt"></span><span class="ln"></span></div>
+    <div class="lg-title">Manos Fuertes</div>
+    <div class="lg-sub">Sirviendo con amor cada semana</div>
+
+    <!-- PASO 1: teléfono directo -->
+    <div class="lg-panel" id="panelPhone">
+      <div class="lg-field">
+        <label>Tu teléfono</label>
+        <div class="phone-row">
+          <select class="ddi" id="ddi1"></select>
+          <input type="tel" id="inPhone" placeholder="600 000 000" inputmode="tel" />
+        </div>
+      </div>
+      <button class="lg-btn primary" onclick="submitPhone()">Entrar</button>
+      <div class="lg-or">o</div>
+      <button class="lg-btn google" onclick="loginGoogle()">
+        <svg class="g-ic" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.6 2.4 30.1 0 24 0 14.6 0 6.4 5.4 2.5 13.3l7.9 6.1C12.2 13.7 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 7l7.1 5.5c4.2-3.9 6.6-9.6 6.6-16z"/><path fill="#FBBC05" d="M10.4 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.1.8-4.6l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.5 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.1 0 11.3-2 15-5.5l-7.1-5.5c-2 1.4-4.6 2.2-7.9 2.2-6.4 0-11.8-4.2-13.6-9.9l-7.9 6.1C6.4 42.6 14.6 48 24 48z"/></svg>
+        Entrar con Google
+      </button>
+      <div class="lg-demo">Demo: usa <b>600 111 222</b> (España, María ya registrada)<br>o cualquier otro número (nuevo → registro)</div>
+    </div>
+
+    <!-- PASO 2: registro (nombre) — número ya rellenado -->
+    <div class="lg-panel hidden" id="panelRegister">
+      <div class="lg-welcome" id="regWelcome">Parece que es tu primera vez. <b>¡Bienvenido!</b> Solo necesitamos tu nombre.</div>
+      <div class="lg-field">
+        <label>Tu teléfono</label>
+        <div class="phone-row">
+          <select class="ddi" id="ddi2" disabled></select>
+          <input type="tel" id="regPhone" readonly />
+        </div>
+      </div>
+      <div class="lg-field">
+        <label>Tu nombre</label>
+        <input type="text" id="regName" placeholder="Ej. María González" />
+      </div>
+      <button class="lg-btn primary" onclick="submitRegister()">Confirmar y entrar</button>
+      <button class="lg-back" onclick="backToPhone()">‹ Usar otro teléfono</button>
+    </div>
+
+    <div id="lgChecking"><span class="dot"></span> <span id="lgCheckTxt">Entrando…</span></div>
+  </div>
+  <div class="lg-foot">Manos Fuertes · Misión Social Casa Fuerte</div>
+</div>
+
+<!-- ============ APP ============ -->
+<div class="app-shell">
+<header>
+  <div class="h-row">
+    <img class="iglesia" src="assets/logo-casafuerte-light.png" alt="Casa Fuerte Church" />
+    <div class="h-center">
+      <div class="titulo">Manos Fuertes</div>
+      <div class="saludo">hola, <em id="hdrName">Rogério</em></div>
+    </div>
+    <div class="h-mision">
+      <img src="assets/logo-mision-heart.png" alt="Misión Social" />
+      <span class="lbl"><span class="m1">Misión</span><span class="m2">Social</span></span>
+    </div>
+  </div>
+</header>
+<section class="view active" id="v-inicio">
+  <div class="hero">
+    <span class="eyebrow">Tu próxima actividad</span>
+    <h2>Distribución</h2>
+    <div class="meta">Domingo 4 oct · 12:00 — Cadena A · MercaMadrid</div>
+    <div class="dots"><span class="ln"></span><span class="dt"></span><span class="ln"></span></div>
+    <div class="countdown">En 6 días · confirmado como <b>Distribución</b></div>
+    <button class="cta">Ver toda la agenda</button>
+  </div>
+  <div class="note">— Inicio (mock). Login revisado: teléfono directo → registrado entra / nuevo va a registro con el número ya puesto. —</div>
+</section>
+</div>
+
+<script>
+  /* Mock: "base de datos" de voluntarios por teléfono */
+  const REGISTRADOS = { "+34600111222": "María González" };
+  function normPhone(v){ return (v||"").replace(/[\s\-()]/g,""); }
+
+  /* DDI: España por defecto; Brasil primero en la lista (99% ES o BR) */
+  const DDIS = [
+    { c:"+55", f:"🇧🇷", n:"Brasil" },
+    { c:"+34", f:"🇪🇸", n:"España" },
+    { c:"+351", f:"🇵🇹", n:"Portugal" },
+    { c:"+1", f:"🇺🇸", n:"EE. UU." },
+    { c:"+44", f:"🇬🇧", n:"Reino Unido" },
+    { c:"+33", f:"🇫🇷", n:"Francia" },
+    { c:"+49", f:"🇩🇪", n:"Alemania" },
+    { c:"+39", f:"🇮🇹", n:"Italia" },
+    { c:"+52", f:"🇲🇽", n:"México" },
+    { c:"+54", f:"🇦🇷", n:"Argentina" }
+  ];
+  function fillDdi(sel){
+    sel.innerHTML = DDIS.map(d=>`<option value="${d.c}">${d.f} ${d.c}</option>`).join('');
+    sel.value = "+34"; // España por defecto
+  }
+  fillDdi(document.getElementById('ddi1'));
+  fillDdi(document.getElementById('ddi2'));
+
+  function submitPhone(){
+    const ddi = document.getElementById('ddi1').value;
+    const local = normPhone(document.getElementById('inPhone').value.trim());
+    if(local.length < 6){ document.getElementById('inPhone').focus(); return; }
+    const full = ddi + local;
+    if(REGISTRADOS[full]){
+      enter(REGISTRADOS[full], "Entrando…");
+    } else {
+      document.getElementById('panelPhone').classList.add('hidden');
+      document.getElementById('ddi2').value = ddi;
+      document.getElementById('regPhone').value = local;
+      document.getElementById('regName').value = "";
+      document.getElementById('regWelcome').innerHTML = 'Parece que es tu primera vez. <b>¡Bienvenido!</b> Solo necesitamos tu nombre.';
+      document.getElementById('panelRegister').classList.remove('hidden');
+      setTimeout(()=>document.getElementById('regName').focus(), 200);
+    }
+  }
+  function loginGoogle(){
+    document.getElementById('panelPhone').classList.add('hidden');
+    document.getElementById('ddi2').disabled = false;
+    document.getElementById('ddi2').value = "+34";
+    document.getElementById('regPhone').value = "";
+    document.getElementById('regPhone').removeAttribute('readonly');
+    document.getElementById('regPhone').placeholder = "600 000 000";
+    document.getElementById('regName').value = "Rogério Ono";
+    document.getElementById('regWelcome').innerHTML = 'Primera vez con Google. <b>¡Bienvenido!</b> Confirma tu nombre y añade tu teléfono (para los recordatorios por WhatsApp).';
+    document.getElementById('panelRegister').classList.remove('hidden');
+  }
+  function submitRegister(){
+    const name = document.getElementById('regName').value.trim();
+    const phone = normPhone(document.getElementById('regPhone').value.trim());
+    if(!name || phone.length < 6){ return; }
+    enter(name, "Creando tu perfil…");
+  }
+  function backToPhone(){
+    document.getElementById('panelRegister').classList.add('hidden');
+    document.getElementById('regPhone').setAttribute('readonly','');
+    document.getElementById('ddi2').disabled = true;
+    document.getElementById('panelPhone').classList.remove('hidden');
+  }
+  function enter(name, msg){
+    document.getElementById('panelPhone').classList.add('hidden');
+    document.getElementById('panelRegister').classList.add('hidden');
+    document.getElementById('lgCheckTxt').textContent = msg;
+    document.getElementById('lgChecking').classList.add('on');
+    document.getElementById('hdrName').textContent = name.split(' ')[0];
+    setTimeout(()=>{ document.getElementById('loginGate').style.display='none'; }, 2000);
+  }
+</script>
+</body>
+</html>

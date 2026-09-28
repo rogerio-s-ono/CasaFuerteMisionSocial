@@ -1,12 +1,16 @@
 /* Service Worker — Casa Fuerte Misión Social
    Regra (lição gideao300): version.json SEMPRE da rede; app shell cache-first. */
-const CACHE = 'cfms-v0.1.0';
+const CACHE = 'cfms-v0.2.0';
 const ASSETS = [
   './',
   './index.html',
   './app.js',
+  './ui.js',
   './config.js',
-  './manifest.json'
+  './manifest.json',
+  './assets/logo-casafuerte-light.png',
+  './assets/logo-mision-heart.png',
+  './assets/logo-mision-social-dark.png'
 ];
 
 self.addEventListener('install', (e) => {

@@ -1,95 +1,261 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Casa Fuerte — Misión Social</title>
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#c08a2d" />
-  <style>
-    :root{ --dourado:#c08a2d; --grafite:#141414; --offwhite:#faf8f4; --linha:#e6e0d6; }
-    *{ box-sizing:border-box; }
-    body{ margin:0; font-family: system-ui, -apple-system, sans-serif; background:var(--offwhite); color:var(--grafite); }
-    header{ background:var(--grafite); color:#fff; padding:16px 20px; }
-    header h1{ margin:0; font-size:18px; font-weight:600; }
-    header .accent{ color:var(--dourado); }
-    header .sub{ margin:4px 0 0; font-size:12px; opacity:.75; }
-    .toolbar{ display:flex; gap:8px; align-items:center; padding:12px 20px; border-bottom:1px solid var(--linha); }
-    .toolbar button{ background:#fff; border:1px solid var(--linha); border-radius:8px; padding:6px 12px; cursor:pointer; }
-    .toolbar .mes{ font-weight:600; min-width:160px; text-align:center; }
-    main{ padding:16px 20px; max-width:820px; margin:0 auto; }
-    .card{ background:#fff; border:1px solid var(--linha); border-left:4px solid var(--dourado); border-radius:10px; padding:14px 16px; margin-bottom:12px; }
-    .card .top{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
-    .card .titulo{ font-weight:600; font-size:15px; }
-    .card .quando{ font-size:13px; color:#666; }
-    .card .cadeia{ font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--dourado); }
-    .card .notes{ font-size:12px; color:#777; margin-top:6px; }
-    .roles{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
-    .role{ display:flex; align-items:center; gap:6px; font-size:12px; border:1px solid var(--linha); border-radius:999px; padding:4px 10px; background:#fbf7ef; }
-    .role .cap{ color:#666; }
-    footer{ text-align:center; font-size:11px; color:#999; padding:24px; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+<title>Manos Fuertes · Misión Social Casa Fuerte</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#0f0f0f" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Jost:wght@300;400;500;600&family=Oswald:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --negro:#0f0f0f; --grafito:#1f1f1f; --gris:#767676; --gris-cl:#9a9a9a;
+    --linea:#e7e5e1; --hueso:#f7f7f5; --blanco:#fff;
+    --oro:#f5c518; --oro-osc:#d9a90a; --oro-cl:#ffe27a; --oro-bg:#fdf6dd;
+    --t-retirada:#f2711c; --t-retirada-tx:#c2560c; --t-retirada-bg:#fdeadb;
+    --t-prep:#e8a300; --t-prep-tx:#9a6d00; --t-prep-bg:#fbf1d0;
+    --t-distri:#7cb518; --t-distri-tx:#4e7a0a; --t-distri-bg:#eef7d9;
+    --t-limpieza:#4f9d69; --t-limpieza-tx:#2f6b46; --t-limpieza-bg:#e4f2e9;
+    --ok:#4a7052; --ok-bg:#eaf2ec; --warn:#8a6d3b; --warn-bg:#f4efe4; --full:#8a8a8a; --full-bg:#f0f0f0;
+    --raio:6px;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; padding:0; }
+  body{ font-family:"Jost",system-ui,sans-serif; background:var(--hueso); color:var(--grafito); max-width:480px; margin:0 auto; -webkit-font-smoothing:antialiased; font-weight:300; }
+  .app-shell{ padding-bottom:84px; }
+  .eyebrow{ font-size:11px; text-transform:uppercase; letter-spacing:.22em; color:var(--gris); font-weight:400; }
+  .hidden{ display:none !important; }
+
+  /* ============ LOGIN ============ */
+  #loginGate{ position:fixed; inset:0; z-index:200; max-width:480px; margin:0 auto; background:radial-gradient(120% 80% at 50% 0%, #2a2a2a 0%, #161616 45%, #0b0b0b 100%); display:flex; flex-direction:column; overflow-y:auto; }
+  .lg-top{ display:flex; align-items:center; justify-content:center; padding:24px 20px 4px; }
+  .lg-church{ height:56px; width:auto; opacity:.95; }
+  .lg-hero{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:8px 26px 20px; }
+  .lg-emblem{ position:relative; display:flex; align-items:center; justify-content:center; margin-bottom:0; }
+  .lg-emblem::before{ content:""; position:absolute; width:230px; height:230px; border-radius:50%; background:radial-gradient(circle, rgba(245,197,24,.28) 0%, rgba(245,197,24,.06) 45%, transparent 70%); filter:blur(6px); animation:glow 3s ease-in-out infinite; }
+  @keyframes glow{ 0%,100%{ opacity:.7; transform:scale(1);} 50%{ opacity:1; transform:scale(1.05);} }
+  .lg-logo{ position:relative; width:210px; height:auto; filter:drop-shadow(0 6px 20px rgba(0,0,0,.55)); }
+  .lg-divider{ display:flex; align-items:center; gap:8px; width:150px; margin:26px auto 22px; opacity:.55; }
+  .lg-divider .ln{ flex:1; height:1px; background:linear-gradient(90deg, transparent, #6a6a6a); }
+  .lg-divider .ln:last-child{ background:linear-gradient(90deg, #6a6a6a, transparent); }
+  .lg-divider .dt{ width:4px; height:4px; border-radius:50%; background:var(--oro); flex:0 0 auto; }
+  .lg-title{ font-family:"Oswald",sans-serif; font-size:34px; font-weight:600; color:#fff; margin:0; letter-spacing:.05em; text-transform:uppercase; }
+  .lg-sub{ font-family:"Cormorant Garamond",serif; font-style:italic; font-size:15px; color:var(--oro-cl); margin:3px 0 0; }
+
+  .lg-panel{ width:100%; max-width:340px; margin:24px auto 0; }
+  .lg-field{ margin-bottom:12px; text-align:left; }
+  .lg-field label{ font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:#a8a29a; display:block; margin-bottom:6px; }
+  .lg-field input{ width:100%; padding:16px 14px; border-radius:var(--raio); border:1px solid #3a3a3a; background:#1c1c1c; color:#fff; font-size:16px; font-family:"Jost",sans-serif; }
+  .lg-field input:focus{ outline:none; border-color:var(--oro); }
+  .lg-field input[readonly]{ opacity:.75; }
+  .phone-row{ display:flex; gap:8px; }
+  .ddi{ flex:0 0 auto; width:104px; padding:16px 8px; border-radius:var(--raio); border:1px solid #3a3a3a; background:#1c1c1c; color:#fff; font-size:15px; font-family:"Jost",sans-serif; cursor:pointer; }
+  .ddi:focus{ outline:none; border-color:var(--oro); } .ddi:disabled{ opacity:.6; }
+  .phone-row input{ flex:1; }
+  .lg-btn{ display:flex; align-items:center; justify-content:center; gap:10px; width:100%; border-radius:var(--raio); padding:16px; font-size:15px; font-weight:600; cursor:pointer; font-family:"Jost",sans-serif; border:0; }
+  .lg-btn.primary{ background:var(--oro); color:var(--negro); } .lg-btn.primary:active{ background:var(--oro-osc); }
+  .lg-btn.google{ background:#fff; color:#3c4043; border:1px solid #dadce0; font-weight:500; }
+  .g-ic{ width:18px; height:18px; }
+  .lg-or{ display:flex; align-items:center; gap:12px; color:#7d786f; font-size:11px; text-transform:uppercase; letter-spacing:.15em; margin:16px 0; }
+  .lg-or::before,.lg-or::after{ content:""; flex:1; height:1px; background:#333; }
+  .lg-welcome{ background:rgba(245,197,24,.12); border:1px solid rgba(245,197,24,.3); border-radius:var(--raio); padding:12px 14px; margin-bottom:14px; text-align:left; font-size:14px; color:#efe9d9; } .lg-welcome b{ color:var(--oro-cl); }
+  .lg-back{ background:none; border:0; color:#a8a29a; font-size:12px; text-transform:uppercase; letter-spacing:.1em; cursor:pointer; margin-top:10px; }
+  #lgChecking{ display:none; position:relative; align-items:center; justify-content:center; gap:10px; padding:14px 22px; border-radius:14px; background:#151515; color:#efe9d9; font-size:14px; font-weight:500; overflow:hidden; min-height:46px; width:100%; max-width:300px; margin:24px auto 0; }
+  #lgChecking.on{ display:inline-flex; }
+  #lgChecking::before{ content:""; position:absolute; inset:-150%; background:conic-gradient(from 0deg, transparent 0deg, transparent 250deg, var(--oro-osc) 300deg, var(--oro-cl) 330deg, var(--oro-osc) 360deg); animation:lc-spin 1.4s linear infinite; z-index:0; }
+  #lgChecking::after{ content:""; position:absolute; inset:2px; border-radius:12px; background:#151515; z-index:1; }
+  #lgChecking > *{ position:relative; z-index:2; }
+  #lgChecking .dot{ width:9px; height:9px; border-radius:50%; background:var(--oro); box-shadow:0 0 8px rgba(245,197,24,.8); }
+  @keyframes lc-spin{ to{ transform:rotate(360deg);} }
+  @keyframes fade{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+  @media (prefers-reduced-motion: reduce){ #lgChecking::before,.lg-emblem::before{ animation:none; } }
+  .lg-foot{ text-align:center; font-size:10px; color:#6f6a61; letter-spacing:.15em; text-transform:uppercase; padding:16px; }
+
+  /* ============ HEADER (3 columnas) ============ */
+  header{ background:var(--negro); color:#fff; padding:12px 16px; position:sticky; top:0; z-index:20; }
+  .h-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .h-row img.iglesia{ height:30px; width:auto; opacity:.9; flex:0 0 auto; }
+  .h-center{ flex:1; text-align:center; min-width:0; }
+  .h-center .titulo{ font-family:"Oswald",sans-serif; font-size:22px; font-weight:600; color:#fff; line-height:1; text-transform:uppercase; letter-spacing:.04em; }
+  .h-center .saludo{ font-size:11px; color:var(--gris-cl); margin-top:2px; }
+  .h-center .saludo em{ font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--oro); }
+  .h-mision{ flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .h-mision img{ height:34px; width:auto; }
+  .h-mision .lbl{ display:flex; align-items:baseline; gap:4px; line-height:1; }
+  .h-mision .lbl .m1{ font-family:"Oswald",sans-serif; font-weight:600; font-size:12px; letter-spacing:.04em; color:#fff; text-transform:uppercase; }
+  .h-mision .lbl .m2{ font-family:"Nunito",sans-serif; font-weight:700; font-size:11px; color:#fff; }
+
+  /* ============ VIEWS ============ */
+  .view{ display:none; padding:18px 16px 0; animation:fade .25s ease; } .view.active{ display:block; }
+  .section-title{ font-size:11px; text-transform:uppercase; letter-spacing:.2em; color:var(--gris); margin:26px 4px 12px; font-weight:400; }
+  .hero{ background:var(--negro); color:#fff; border-radius:var(--raio); padding:24px 22px; position:relative; overflow:hidden; }
+  .hero::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--oro); }
+  .hero .eyebrow{ color:var(--gris-cl); }
+  .hero h2{ font-family:"Cormorant Garamond",serif; font-style:italic; margin:12px 0 6px; font-size:32px; font-weight:500; line-height:1.05; }
+  .hero .meta{ font-size:14px; color:var(--gris-cl); font-weight:300; }
+  .dots{ display:flex; align-items:center; gap:8px; margin:16px 0; } .dots .ln{ flex:1; height:1px; background:#333; } .dots .dt{ width:4px; height:4px; border-radius:50%; background:var(--oro); }
+  .hero .countdown{ font-size:13px; color:var(--gris-cl); font-weight:300; } .hero .countdown b{ color:var(--oro); font-weight:500; }
+  .hero .cta{ display:block; width:100%; margin-top:20px; background:var(--oro); color:var(--negro); border:0; border-radius:var(--raio); padding:15px; font-size:13px; font-weight:600; cursor:pointer; font-family:"Jost",sans-serif; text-transform:uppercase; letter-spacing:.12em; }
+  .kpis{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:1px; margin-top:16px; background:var(--linea); border:1px solid var(--linea); border-radius:var(--raio); overflow:hidden; }
+  .kpi{ background:var(--blanco); padding:16px 8px; text-align:center; } .kpi .n{ font-family:"Cormorant Garamond",serif; font-size:34px; font-weight:600; line-height:1; } .kpi:nth-child(3) .n{ color:var(--oro-osc); } .kpi .l{ font-size:10px; color:var(--gris); margin-top:6px; text-transform:uppercase; letter-spacing:.08em; }
+  .leyenda{ display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin:4px 0 6px; } .leyenda span{ font-size:11px; color:var(--gris); display:inline-flex; align-items:center; gap:5px; } .leyenda i{ width:9px; height:9px; border-radius:2px; }
+
+  .act{ background:var(--blanco); border:1px solid var(--linea); border-radius:var(--raio); padding:15px 16px 15px 0; margin-bottom:10px; display:flex; gap:14px; align-items:center; cursor:pointer; overflow:hidden; }
+  .act:active{ background:#fafafa; }
+  .act .tipo-bar{ width:4px; align-self:stretch; flex:0 0 4px; }
+  .t-retirada .tipo-bar{ background:var(--t-retirada); } .t-prep .tipo-bar{ background:var(--t-prep); } .t-distri .tipo-bar{ background:var(--t-distri); } .t-limpieza .tipo-bar{ background:var(--t-limpieza); }
+  .act .fecha{ flex:0 0 50px; text-align:center; } .act .fecha .d{ font-family:"Cormorant Garamond",serif; font-size:29px; font-weight:600; line-height:1; } .act .fecha .m{ font-size:10px; text-transform:uppercase; color:var(--gris); letter-spacing:.1em; } .act .fecha .w{ font-size:10px; color:var(--gris); letter-spacing:.1em; text-transform:uppercase; }
+  .act .info{ flex:1; min-width:0; } .act .info .t{ font-family:"Cormorant Garamond",serif; font-weight:600; font-size:20px; line-height:1.1; } .act .info .sub{ font-size:12px; color:var(--gris); margin-top:3px; }
+  .act .info .tag{ display:inline-block; margin-top:8px; font-size:10px; padding:2px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:.08em; font-weight:500; }
+  .t-retirada .tag{ background:var(--t-retirada-bg); color:var(--t-retirada-tx); } .t-prep .tag{ background:var(--t-prep-bg); color:var(--t-prep-tx); } .t-distri .tag{ background:var(--t-distri-bg); color:var(--t-distri-tx); } .t-limpieza .tag{ background:var(--t-limpieza-bg); color:var(--t-limpieza-tx); }
+  .act .vagas .ring{ font-size:12px; font-weight:500; color:var(--ok); background:var(--ok-bg); border-radius:999px; padding:5px 9px; white-space:nowrap; } .act .vagas .ring.pouco{ color:var(--warn); background:var(--warn-bg); } .act .vagas .ring.cheio{ color:var(--full); background:var(--full-bg); }
+  .estado-inscrito{ box-shadow:inset 0 0 0 2px var(--oro); } .mini-check{ display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--oro-osc); font-weight:500; margin-top:8px; }
+  .empty{ text-align:center; color:var(--gris-cl); font-weight:300; padding:30px 10px; }
+
+  .toolbar{ display:flex; align-items:center; justify-content:center; gap:14px; margin:2px 0 4px; }
+  .toolbar button{ background:#fff; border:1px solid var(--linea); border-radius:var(--raio); width:36px; height:36px; font-size:16px; cursor:pointer; color:var(--grafito); }
+  .toolbar .mes{ font-family:"Cormorant Garamond",serif; font-size:19px; font-weight:600; min-width:150px; text-align:center; }
+
+  /* ============ Bottom nav ============ */
+  .nav{ position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:var(--blanco); border-top:1px solid var(--linea); display:flex; z-index:30; }
+  .nav button{ flex:1; background:none; border:0; padding:11px 4px calc(12px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; color:var(--gris); font-size:10px; font-family:"Jost",sans-serif; text-transform:uppercase; letter-spacing:.08em; } .nav button.active{ color:var(--negro); font-weight:500; } .nav button.active .ic{ color:var(--oro-osc); } .nav button .ic{ font-size:19px; }
+
+  /* ============ Wizard ============ */
+  .wz-overlay{ position:fixed; inset:0; background:var(--hueso); z-index:50; display:none; flex-direction:column; max-width:480px; margin:0 auto; }
+  .wz-overlay.active{ display:flex; }
+  .wz-head{ background:var(--negro); color:#fff; padding:18px 16px; display:flex; align-items:center; gap:12px; } .wz-head .close{ background:none; border:0; color:#fff; font-size:26px; cursor:pointer; } .wz-head .ttl{ font-family:"Cormorant Garamond",serif; font-style:italic; font-size:22px; font-weight:500; }
+  .stepper{ display:flex; padding:18px 16px 4px; gap:10px; } .stepper .st{ flex:1; } .stepper .st .bar{ height:2px; background:var(--linea); transition:.3s; } .stepper .st.done .bar,.stepper .st.cur .bar{ background:var(--oro); } .stepper .st .lbl{ font-size:10px; color:var(--gris); margin-top:8px; text-align:center; text-transform:uppercase; letter-spacing:.1em; } .stepper .st.cur .lbl{ color:var(--oro-osc); font-weight:600; }
+  .wz-body{ flex:1; overflow-y:auto; padding:10px 16px 16px; } .wz-step{ display:none; } .wz-step.active{ display:block; animation:fade .2s; }
+  .wz-q{ font-family:"Cormorant Garamond",serif; font-style:italic; font-size:26px; font-weight:500; margin:14px 2px 6px; line-height:1.1; } .wz-hint{ font-size:13px; color:var(--gris); margin:0 2px 20px; font-weight:300; }
+  .opt{ display:flex; align-items:center; gap:14px; background:var(--blanco); border:1px solid var(--linea); border-radius:var(--raio); padding:18px 16px; margin-bottom:10px; cursor:pointer; transition:.12s; min-height:66px; } .opt:active{ background:#fafafa; }
+  .opt.sel{ border-color:var(--oro); border-width:2px; padding:17px 15px; background:var(--oro-bg); }
+  .opt .oic{ width:46px; height:46px; flex:0 0 46px; border-radius:var(--raio); background:var(--hueso); border:1px solid var(--linea); display:grid; place-items:center; font-size:23px; } .opt.sel .oic{ background:var(--oro); border-color:var(--oro); }
+  .opt .otxt{ flex:1; } .opt .otxt .ot{ font-family:"Cormorant Garamond",serif; font-weight:600; font-size:18px; } .opt .otxt .os{ font-size:12px; color:var(--gris); margin-top:2px; }
+  .opt .ocheck{ width:26px; height:26px; flex:0 0 26px; border-radius:50%; border:1px solid var(--linea); display:grid; place-items:center; color:var(--negro); font-size:14px; } .opt.sel .ocheck{ background:var(--oro); border-color:var(--oro); }
+  .opt.disabled{ opacity:.5; pointer-events:none; }
+  .resumo{ background:var(--blanco); border:1px solid var(--linea); border-radius:var(--raio); overflow:hidden; } .resumo .row{ display:flex; justify-content:space-between; align-items:center; padding:15px 16px; border-bottom:1px solid var(--linea); } .resumo .row:last-child{ border-bottom:0; } .resumo .row .k{ font-size:11px; color:var(--gris); text-transform:uppercase; letter-spacing:.1em; } .resumo .row .v{ font-family:"Cormorant Garamond",serif; font-weight:600; font-size:16px; text-align:right; } .resumo .row .edit{ font-size:10px; color:var(--oro-osc); background:none; border:0; border-bottom:1px solid var(--oro-osc); cursor:pointer; font-family:"Jost",sans-serif; text-transform:uppercase; letter-spacing:.08em; margin-left:8px; }
+  .wz-foot{ padding:12px 16px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--linea); background:var(--blanco); display:flex; gap:10px; } .wz-foot .back{ flex:0 0 auto; background:none; border:0; color:var(--gris); font-size:12px; padding:16px 14px; cursor:pointer; font-family:"Jost",sans-serif; text-transform:uppercase; letter-spacing:.1em; } .wz-foot .next{ flex:1; background:var(--oro); color:var(--negro); border:0; border-radius:var(--raio); padding:16px; font-size:13px; font-weight:600; cursor:pointer; font-family:"Jost",sans-serif; text-transform:uppercase; letter-spacing:.12em; } .wz-foot .next:disabled{ background:#ddd2c6; }
+  .ok-scr{ text-align:center; padding:44px 20px; } .ok-scr .circ{ width:88px; height:88px; border-radius:50%; background:var(--oro); color:var(--negro); display:grid; place-items:center; font-size:44px; margin:0 auto 22px; } .ok-scr h2{ font-family:"Cormorant Garamond",serif; font-style:italic; margin:0 0 8px; font-size:30px; font-weight:500; } .ok-scr p{ color:var(--gris); margin:0 0 26px; font-weight:300; } .ok-scr .resumo{ text-align:left; margin-bottom:20px; }
+  .footver{ text-align:center; font-size:10px; color:var(--gris-cl); padding:10px; }
+</style>
 </head>
 <body>
-  <header>
-    <h1>Casa Fuerte <span class="accent">·</span> Misión Social</h1>
-    <p class="sub">Gestión de voluntarios — piloto Banco de Alimentos</p>
-  </header>
 
-  <div class="toolbar">
-    <button id="prev">‹</button>
-    <span class="mes" id="mesLabel">—</span>
-    <button id="next">›</button>
+<!-- ============ LOGIN ============ -->
+<div id="loginGate">
+  <div class="lg-top"><img class="lg-church" src="assets/logo-casafuerte-light.png" alt="Casa Fuerte Church" /></div>
+  <div class="lg-hero">
+    <div class="lg-emblem"><img class="lg-logo" src="assets/logo-mision-social-dark.png" alt="Misión Social" /></div>
+    <div class="lg-divider"><span class="ln"></span><span class="dt"></span><span class="ln"></span></div>
+    <div class="lg-title">Manos Fuertes</div>
+    <div class="lg-sub">Sirviendo con amor cada semana</div>
+
+    <div class="lg-panel" id="panelPhone">
+      <div class="lg-field">
+        <label>Tu teléfono</label>
+        <div class="phone-row">
+          <select class="ddi" id="ddi1"></select>
+          <input type="tel" id="inPhone" placeholder="600 000 000" inputmode="tel" />
+        </div>
+      </div>
+      <button class="lg-btn primary" onclick="submitPhone()">Entrar</button>
+      <div class="lg-or">o</div>
+      <button class="lg-btn google" onclick="loginGoogle()">
+        <svg class="g-ic" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.6 2.4 30.1 0 24 0 14.6 0 6.4 5.4 2.5 13.3l7.9 6.1C12.2 13.7 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 7l7.1 5.5c4.2-3.9 6.6-9.6 6.6-16z"/><path fill="#FBBC05" d="M10.4 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.1.8-4.6l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.5 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.1 0 11.3-2 15-5.5l-7.1-5.5c-2 1.4-4.6 2.2-7.9 2.2-6.4 0-11.8-4.2-13.6-9.9l-7.9 6.1C6.4 42.6 14.6 48 24 48z"/></svg>
+        Entrar con Google
+      </button>
+    </div>
+
+    <div class="lg-panel hidden" id="panelRegister">
+      <div class="lg-welcome" id="regWelcome">Parece que es tu primera vez. <b>¡Bienvenido!</b> Solo necesitamos tu nombre.</div>
+      <div class="lg-field">
+        <label>Tu teléfono</label>
+        <div class="phone-row"><select class="ddi" id="ddi2" disabled></select><input type="tel" id="regPhone" readonly /></div>
+      </div>
+      <div class="lg-field"><label>Tu nombre</label><input type="text" id="regName" placeholder="Ej. María González" /></div>
+      <button class="lg-btn primary" onclick="submitRegister()">Confirmar y entrar</button>
+      <button class="lg-back" onclick="backToPhone()">‹ Usar otro teléfono</button>
+    </div>
+
+    <div id="lgChecking"><span class="dot"></span> <span id="lgCheckTxt">Entrando…</span></div>
   </div>
+  <div class="lg-foot">Manos Fuertes · Misión Social Casa Fuerte</div>
+</div>
 
-  <main>
-    <div id="agenda"></div>
-  </main>
+<!-- ============ APP ============ -->
+<div class="app-shell hidden" id="appShell">
+<header>
+  <div class="h-row">
+    <img class="iglesia" src="assets/logo-casafuerte-light.png" alt="Casa Fuerte Church" />
+    <div class="h-center">
+      <div class="titulo">Manos Fuertes</div>
+      <div class="saludo">hola, <em id="hdrName">—</em></div>
+    </div>
+    <div class="h-mision">
+      <img src="assets/logo-mision-heart.png" alt="Misión Social" />
+      <span class="lbl"><span class="m1">Misión</span><span class="m2">Social</span></span>
+    </div>
+  </div>
+</header>
 
-  <footer>v<span id="ver"></span> · esqueleto inicial</footer>
+<!-- INICIO -->
+<section class="view active" id="v-inicio">
+  <div id="heroBox"></div>
+  <div class="kpis">
+    <div class="kpi"><div class="n" id="kMios">0</div><div class="l">Mis turnos</div></div>
+    <div class="kpi"><div class="n" id="kActs">0</div><div class="l">Actividades</div></div>
+    <div class="kpi"><div class="n" id="kPlazas">0</div><div class="l">Plazas libres</div></div>
+  </div>
+  <div class="section-title">Necesitan voluntarios</div>
+  <div class="leyenda">
+    <span><i style="background:#f2711c"></i>Recogida</span><span><i style="background:#e8a300"></i>Preparación</span>
+    <span><i style="background:#7cb518"></i>Distribución</span><span><i style="background:#4f9d69"></i>Limpieza</span>
+  </div>
+  <div id="inicioList"></div>
+</section>
 
-  <script src="config.js"></script>
-  <script src="app.js"></script>
-  <script>
-    /* UI inicial: renderiza a agenda gerada a partir dos templates (sem backend ainda). */
-    const LANG = (window.CFMS_CONFIG && window.CFMS_CONFIG.DEFAULT_LANG) || 'es';
-    const MESES = { es:['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
-                    pt:['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'] };
-    let cursor = new Date();
-    cursor.setDate(1);
+<!-- AGENDA -->
+<section class="view" id="v-agenda">
+  <div class="toolbar"><button id="prev">‹</button><span class="mes" id="mesLabel">—</span><button id="next">›</button></div>
+  <div id="agendaList"></div>
+</section>
 
-    document.getElementById('ver').textContent = window.CFMS.APP_VERSION;
+<!-- MIS TURNOS -->
+<section class="view" id="v-mios">
+  <div class="section-title">Mis próximos turnos</div>
+  <div id="miosList"></div>
+</section>
+</div>
 
-    function fmtData(iso){ const d = new Date(iso + 'T00:00:00'); return d.toLocaleDateString(LANG === 'pt' ? 'pt-BR' : 'es-ES', { weekday:'short', day:'2-digit', month:'short' }); }
+<nav class="nav hidden" id="bottomNav">
+  <button class="active" data-v="v-inicio" onclick="go('v-inicio')"><span class="ic">⌂</span>Inicio</button>
+  <button data-v="v-agenda" onclick="go('v-agenda')"><span class="ic">▦</span>Agenda</button>
+  <button data-v="v-mios" onclick="go('v-mios')"><span class="ic">✓</span>Mis turnos</button>
+</nav>
 
-    function render(){
-      const y = cursor.getFullYear(), m = cursor.getMonth();
-      document.getElementById('mesLabel').textContent = MESES[LANG][m] + ' ' + y;
-      const acts = window.CFMS.generateActivities(y, m);
-      const box = document.getElementById('agenda');
-      if(!acts.length){ box.innerHTML = '<p style="color:#999">Sin actividades este mes.</p>'; return; }
-      box.innerHTML = acts.map(a => {
-        const roles = Object.keys(a.roles).map(rid => {
-          const rd = window.CFMS.ROLES[rid];
-          const label = rd ? rd.label[LANG] : rid;
-          const rest = window.CFMS.vagasRestantes(a, rid);
-          return `<span class="role"><b>${label}</b> <span class="cap">${rest} / ${a.roles[rid]}</span></span>`;
-        }).join('');
-        return `<div class="card">
-          <div class="top">
-            <span class="titulo">${a.titulo[LANG]}</span>
-            <span class="cadeia">Cadena ${a.cadeia}</span>
-          </div>
-          <div class="quando">${fmtData(a.data)} · ${a.hora}</div>
-          <div class="notes">${a.notes ? a.notes[LANG] : ''}</div>
-          <div class="roles">${roles}</div>
-        </div>`;
-      }).join('');
-    }
+<!-- WIZARD -->
+<div class="wz-overlay" id="wizard">
+  <div class="wz-head"><button class="close" onclick="closeWizard()">×</button><span class="ttl">Apuntarme</span></div>
+  <div class="stepper" id="stepper">
+    <div class="st cur" data-s="1"><div class="bar"></div><div class="lbl">Actividad</div></div>
+    <div class="st" data-s="2"><div class="bar"></div><div class="lbl">Función</div></div>
+    <div class="st" data-s="3"><div class="bar"></div><div class="lbl">Confirmar</div></div>
+  </div>
+  <div class="wz-body">
+    <div class="wz-step active" data-step="1"><div class="wz-q">¿A qué actividad quieres ir?</div><div class="wz-hint">Elige una de las próximas actividades con plazas libres.</div><div id="wzActs"></div></div>
+    <div class="wz-step" data-step="2"><div class="wz-q">¿En qué quieres ayudar?</div><div class="wz-hint" id="wzRoleHint">Elige tu función.</div><div id="wzRoles"></div></div>
+    <div class="wz-step" data-step="3"><div class="wz-q">Revisa y confirma</div><div class="wz-hint">Comprueba que todo esté correcto antes de apuntarte.</div><div class="resumo" id="wzResumo"></div><div class="wz-hint" style="margin-top:16px">Recibirás un recordatorio por WhatsApp 24h antes.</div></div>
+    <div class="wz-step" data-step="ok"><div class="ok-scr"><div class="circ">✓</div><h2>¡Estás apuntado!</h2><p>Gracias por servir con amor</p><div class="resumo" id="wzOkResumo"></div></div></div>
+  </div>
+  <div class="wz-foot" id="wzFoot"><button class="back hidden" id="wzBack" onclick="prevStep()">Atrás</button><button class="next" id="wzNext" onclick="nextStep()">Continuar</button></div>
+</div>
 
-    document.getElementById('prev').onclick = () => { cursor.setMonth(cursor.getMonth()-1); render(); };
-    document.getElementById('next').onclick = () => { cursor.setMonth(cursor.getMonth()+1); render(); };
-    render();
-  </script>
+<div class="footver">Manos Fuertes v<span id="ver"></span></div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script src="ui.js"></script>
 </body>
 </html>

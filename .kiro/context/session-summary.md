@@ -38,6 +38,23 @@ Plaza Mayor (ter 17h), Villaverde (qui 19h30), Cañada Real (sex 10h30), Jurídi
 - `.gitignore` cobre `*.real`, `config.js`, `*-real.json`, `.env`, chaves.
 - Nenhum dado pessoal real no repo. `config.js` versionado NÃO (só o .example com placeholders).
 
+## Autenticação (DECIDIDO 2026-09-28 — sem auth complexa)
+Login de dois níveis, baixo atrito:
+- **Voluntários:** login SIMPLES — (a) **telefone + nome** (sem senha/SMS; número = identificador natural, evita duplicar cadastro e serve p/ lembrete WhatsApp) OU (b) **Google** (um toque). Sessão persiste no dispositivo.
+  - Primeira vez (número novo): pede nome + telefone. Depois: só o número reconhece (reusa cadastro).
+- **Líderes:** **forçado via Google** (mais controle + gestão de comunicação). Papel de líder concedido por **allowlist** (números/e-mails na planilha) — controla o QUE cada um pode fazer (montar escala, marcar presença), não a barreira de entrada.
+- **Nota de segurança:** telefone+nome é IDENTIFICAÇÃO, não autenticação (qualquer um digita qualquer nome). Aceitável p/ auto-inscrição (baixo risco); por isso ações sensíveis (líder) exigem Google.
+
+## Design / UI (validado iterativamente — mock em design/)
+- Baseline visual = **site institucional casafuertechurch.com** (NÃO o Gideão): **monocromático grafite/branco**, fontes **Cormorant Garamond (títulos, itálico) + Jost (corpo)**, minimalista/elegante, cantos discretos.
+- **Accent = dourado do logo Misión Social `#f5c518`** (resolve o "muito neutro"). Institucional=neutro; missão=neutro+dourado.
+- **Tons por TIPO de atividade** (dessaturados): retirada=azul-ardósia `#3a5a78`; preparação=terroso `#8a6d3b`; distribuição=verde-oliva `#4a7052`; limpeza=ardósia `#5a6570`. Barra lateral + tag + legenda.
+- **Header:** logo **Casa Fuerte à esquerda** (branco via invert) + **Misión Social à direita**, tamanhos coerentes (~44/46px), linha-com-ponto divisória.
+- **Login:** logo igreja acima + **logo missão ao centro** com **glow dourado** + **card "Entrando…" com borda dourada girando** (conic-gradient + lc-spin) — padrão da animação do Gideão 300, recolorido p/ paleta missão.
+- **Logos:** `app/assets/logo-casafuerte.png` (do favicon do site), `logo-mision-social.jpg` (fornecido pelo usuário) + versões processadas `-transp.png` e `-dark.png` (fundo transparente, texto branco + mãos douradas, p/ header escuro; geradas via Pillow).
+- **UX validada:** dashboard "o que vem" (hero próxima atividade + KPIs + cards) · **wizard 3 passos** (Atividade→Função→Confirmar+revisão) com caixas de seleção grandes · nav inferior. Boas práticas pesquisadas (self-signup, stepper honesto, validação por passo, revisão antes de confirmar, alvos ≥44px).
+- **Mocks:** `design/CFMS_Design_v4.html` (app c/ tons+logos), `design/CFMS_Design_v5.html` (login). v1/v2/v3 = iterações (v2 tinha paleta errada laranja-magenta-roxo; descartada). Ícones ainda emoji nos mocks → trocar por SVG na versão real.
+
 ## Próximos passos (backlog)
 1. Implementar backend Apps Script (Sheets: Voluntarios, Frentes/Templates, Atividades, Inscricoes) + doGet/doPost.
 2. Login Google + allowlist (reaproveitar do gideao300).
