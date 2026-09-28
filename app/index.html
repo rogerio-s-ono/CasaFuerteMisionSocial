@@ -142,6 +142,31 @@
   .resumo{ background:var(--blanco); border:1px solid var(--linea); border-radius:var(--raio); overflow:hidden; } .resumo .row{ display:flex; justify-content:space-between; align-items:center; padding:15px 16px; border-bottom:1px solid var(--linea); } .resumo .row:last-child{ border-bottom:0; } .resumo .row .k{ font-size:11px; color:var(--gris); text-transform:uppercase; letter-spacing:.1em; } .resumo .row .v{ font-family:"Cormorant Garamond",serif; font-weight:600; font-size:16px; text-align:right; } .resumo .row .edit{ font-size:10px; color:var(--oro-osc); background:none; border:0; border-bottom:1px solid var(--oro-osc); cursor:pointer; font-family:"Jost",sans-serif; text-transform:uppercase; letter-spacing:.08em; margin-left:8px; }
   .wz-foot{ padding:12px 16px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--linea); background:var(--blanco); display:flex; gap:10px; } .wz-foot .back{ flex:0 0 auto; background:none; border:0; color:var(--gris); font-size:12px; padding:16px 14px; cursor:pointer; font-family:"Jost",sans-serif; text-transform:uppercase; letter-spacing:.1em; } .wz-foot .next{ flex:1; background:var(--oro); color:var(--negro); border:0; border-radius:var(--raio); padding:16px; font-size:13px; font-weight:600; cursor:pointer; font-family:"Jost",sans-serif; text-transform:uppercase; letter-spacing:.12em; } .wz-foot .next:disabled{ background:#ddd2c6; }
   .ok-scr{ text-align:center; padding:44px 20px; } .ok-scr .circ{ width:88px; height:88px; border-radius:50%; background:var(--oro); color:var(--negro); display:grid; place-items:center; font-size:44px; margin:0 auto 22px; } .ok-scr h2{ font-family:"Cormorant Garamond",serif; font-style:italic; margin:0 0 8px; font-size:30px; font-weight:500; } .ok-scr p{ color:var(--gris); margin:0 0 26px; font-weight:300; } .ok-scr .resumo{ text-align:left; margin-bottom:20px; }
+  /* ===== Sheet añadir servidor (líder) ===== */
+  .backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; z-index:40; } .backdrop.on{ display:block; }
+  .sheet{ position:fixed; left:50%; transform:translateX(-50%); bottom:0; width:100%; max-width:480px; background:#fff; border-radius:16px 16px 0 0; z-index:41; padding:18px 16px calc(18px + env(safe-area-inset-bottom)); display:none; }
+  .sheet.on{ display:block; animation:sheetUp .25s ease; } @keyframes sheetUp{ from{transform:translate(-50%,100%);} to{transform:translate(-50%,0);} }
+  .sheet .sh-grab{ width:40px; height:4px; background:var(--linea); border-radius:2px; margin:0 auto 14px; }
+  .sheet h3{ font-family:"Cormorant Garamond",serif; font-style:italic; font-size:22px; margin:0 0 3px; } .sheet .sh-sub{ font-size:12px; color:var(--gris); margin-bottom:16px; }
+  .sheet .fld{ margin-bottom:12px; } .sheet .fld label{ font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--gris); display:block; margin-bottom:6px; }
+  .sheet .fld input{ width:100%; padding:14px; border:1px solid var(--linea); border-radius:var(--raio); font-size:16px; font-family:"Jost",sans-serif; }
+  .sheet .fld input:focus{ outline:none; border-color:var(--oro); }
+  .sheet .phone-row{ display:flex; gap:8px; } .sheet .phone-row select{ width:100px; padding:14px 6px; border:1px solid var(--linea); border-radius:var(--raio); font-size:15px; font-family:"Jost",sans-serif; } .sheet .phone-row input{ flex:1; }
+  .ac{ position:relative; }
+  .ac-list{ position:absolute; left:0; right:0; top:calc(100% + 4px); background:#fff; border:1px solid var(--linea); border-radius:var(--raio); box-shadow:0 6px 20px rgba(0,0,0,.12); overflow:hidden; z-index:2; max-height:260px; overflow-y:auto; }
+  .ac-item{ padding:12px 14px; display:flex; align-items:center; gap:10px; cursor:pointer; border-bottom:1px solid var(--linea); } .ac-item:last-child{ border-bottom:0; } .ac-item:active{ background:var(--hueso); }
+  .ac-item .av{ width:32px; height:32px; border-radius:50%; background:var(--t-distri-bg); color:var(--t-distri-tx); display:grid; place-items:center; font-weight:600; font-size:13px; flex:0 0 32px; }
+  .ac-item .nm{ flex:1; } .ac-item .nm .n1{ font-weight:500; font-size:14px; } .ac-item .nm .n2{ font-size:12px; color:var(--gris); }
+  .ac-item .tag-reg{ font-size:9px; text-transform:uppercase; letter-spacing:.05em; color:var(--t-distri-tx); background:var(--t-distri-bg); border-radius:6px; padding:2px 6px; }
+  .ac-create{ padding:13px 14px; display:flex; align-items:center; gap:10px; cursor:pointer; background:var(--oro-bg); } .ac-create:active{ background:#f8edc9; }
+  .ac-create .plus{ width:32px; height:32px; border-radius:50%; background:var(--oro); color:#111; display:grid; place-items:center; font-size:20px; font-weight:700; flex:0 0 32px; }
+  .ac-create .ct{ font-size:14px; } .ac-create .ct b{ color:var(--grafito); } .ac-create .ct .sub{ font-size:11px; color:var(--gris); }
+  .sh-actions{ display:flex; gap:10px; margin-top:8px; }
+  .btn{ flex:1; border:0; border-radius:var(--raio); padding:15px; font-size:14px; font-weight:600; font-family:"Jost",sans-serif; cursor:pointer; text-transform:uppercase; letter-spacing:.06em; }
+  .btn.primary{ background:var(--oro); color:#111; } .btn.ghost{ background:none; color:var(--gris); flex:0 0 auto; }
+  .temp-note{ background:#efeafa; border:1px solid #d9cdf0; border-radius:var(--raio); padding:10px 12px; font-size:12px; color:#5a4494; margin-bottom:14px; }
+  .temp-note b{ color:#5a4494; }
+
   .footver{ text-align:center; font-size:10px; color:var(--gris-cl); padding:10px; }
 
   /* ===== Barra demo (selector de perfil) ===== */
@@ -204,9 +229,13 @@
   .lc-role .lr-name{ font-weight:500; font-size:13px; } .lc-role .lr-count{ font-size:12px; font-weight:600; }
   .lc-role .lr-count.full{ color:var(--t-distri-tx); } .lc-role .lr-count.miss{ color:var(--warn); }
   .people{ display:flex; flex-wrap:wrap; gap:6px; }
-  .chip{ font-size:12px; background:var(--hueso); border:1px solid var(--linea); border-radius:999px; padding:3px 10px; }
-  .chip.vac{ border-style:dashed; color:var(--warn); background:var(--warn-bg); border-color:transparent; }
-  .chip.esp{ background:#fdf4e8; border-color:#ead9bf; }
+  .chip{ font-size:12px; background:var(--t-distri-bg); border:1px solid #cfe6ad; color:var(--t-distri-tx); border-radius:999px; padding:4px 11px; display:inline-flex; align-items:center; gap:6px; }
+  .chip.vac{ border-style:dashed; color:#c2560c; background:#fdeadb; border-color:transparent; }
+  .chip.esp{ background:#fdf4e8; border-color:#ead9bf; color:#8a6d3b; }
+  .chip.temp{ background:#efeafa; border-color:#d9cdf0; color:#5a4494; }
+  .chip.temp .tg{ font-size:10px; color:#7c5cbf; font-weight:500; }
+  .chip .x{ cursor:pointer; opacity:.5; font-weight:700; margin-left:2px; }
+  .add-btn{ font-size:12px; font-weight:600; color:var(--oro-osc); background:var(--oro-bg); border:1px solid #ecdca6; border-radius:999px; padding:5px 12px; cursor:pointer; font-family:"Jost",sans-serif; }
   .lc-esp{ padding:9px 14px; background:#fdf9f0; border-top:1px dashed var(--linea); font-size:12px; }
   .lc-esp .et{ color:var(--oro-osc); font-weight:600; text-transform:uppercase; letter-spacing:.05em; font-size:10px; margin-bottom:5px; }
 
@@ -324,6 +353,32 @@
   <button data-v="v-mios" onclick="go('v-mios')"><span class="ic">✓</span>Mis turnos</button>
   <button data-v="v-lider" id="navLider" onclick="go('v-lider')" style="display:none"><span class="ic">★</span>Líder</button>
 </nav>
+
+<!-- SHEET AÑADIR SERVIDOR (líder) -->
+<div class="backdrop" id="addBackdrop" onclick="closeAddSheet()"></div>
+<div class="sheet" id="addSheet">
+  <div class="sh-grab"></div>
+  <h3 id="addTitle">Añadir servidor</h3>
+  <div class="sh-sub" id="addSub">Busca un servidor o añade uno temporal.</div>
+  <div id="addStSearch">
+    <div class="fld ac">
+      <label>Nombre</label>
+      <input type="text" id="acInput" placeholder="Escribe un nombre…" oninput="acType(this.value)" autocomplete="off" />
+      <div class="ac-list" id="acList" style="display:none"></div>
+    </div>
+  </div>
+  <div id="addStTemp" style="display:none">
+    <div class="temp-note">Añadirás a <b id="tNameLbl">—</b> como <b>servidor temporal</b> solo para esta actividad. No quedará guardado como servidor registrado.</div>
+    <div class="fld"><label>Nombre</label><input type="text" id="tNameInput" /></div>
+    <div class="fld"><label>Teléfono (opcional)</label>
+      <div class="phone-row"><select id="tDdi"></select><input type="tel" id="tPhone" placeholder="600 000 000" inputmode="tel" /></div>
+    </div>
+    <div class="sh-actions">
+      <button class="btn ghost" onclick="acBackSearch()">‹ Volver</button>
+      <button class="btn primary" onclick="addTemp()">Añadir temporal</button>
+    </div>
+  </div>
+</div>
 
 <!-- WIZARD -->
 <div class="wz-overlay" id="wizard">

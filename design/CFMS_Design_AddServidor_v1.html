@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Manos Fuertes · Añadir servidor (design)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600&family=Jost:wght@300;400;500;600&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --negro:#0f0f0f;--grafito:#1f1f1f;--gris:#767676;--gris-cl:#9a9a9a;--linea:#e7e5e1;--hueso:#f7f7f5;--blanco:#fff;
+    --oro:#f5c518;--oro-osc:#d9a90a;--oro-cl:#ffe27a;--oro-bg:#fdf6dd;--warn:#c2560c;--warn-bg:#fdeadb;--distri:#7cb518;--distri-tx:#4e7a0a;--distri-bg:#eef7d9;
+    --morado:#7c5cbf;--morado-bg:#efeafa;--raio:6px; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0 auto; max-width:480px; font-family:"Jost",system-ui,sans-serif; background:var(--hueso); color:var(--grafito); font-weight:300; -webkit-font-smoothing:antialiased; }
+  header{ background:var(--negro); color:#fff; padding:14px 16px; text-align:center; } header .t{ font-family:"Oswald",sans-serif; text-transform:uppercase; letter-spacing:.05em; font-size:20px; } header .s{ font-size:11px; color:var(--gris-cl); margin-top:2px; }
+  .wrap{ padding:16px; }
+
+  /* tarjeta actividad (líder) */
+  .lcard{ background:var(--blanco); border:1px solid var(--linea); border-radius:var(--raio); margin-bottom:12px; overflow:hidden; border-left:4px solid var(--warn); }
+  .lc-h{ padding:11px 14px; border-bottom:1px solid var(--linea); display:flex; justify-content:space-between; align-items:center; }
+  .lc-t{ font-family:"Cormorant Garamond",serif; font-weight:600; font-size:17px; } .lc-time{ font-size:11px; color:var(--gris); }
+  .lc-badge{ font-size:10px; font-weight:600; padding:3px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:.05em; background:var(--warn-bg); color:var(--warn); }
+  .lc-role{ padding:11px 14px; }
+  .lr-h{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; } .lr-name{ font-weight:500; font-size:13px; } .lr-count{ font-size:12px; font-weight:600; color:var(--warn); }
+  .people{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .chip{ font-size:12px; background:var(--distri-bg); border:1px solid #cfe6ad; border-radius:999px; padding:4px 11px; display:inline-flex; align-items:center; gap:6px; color:var(--distri-tx); }
+  .chip.vac{ border-style:dashed; color:var(--warn); background:var(--warn-bg); border-color:transparent; }
+  .chip.temp{ background:var(--morado-bg); border-color:#d9cdf0; color:#5a4494; }
+  .chip.temp .tg{ font-size:10px; text-transform:none; letter-spacing:0; color:#7c5cbf; font-weight:500; }
+  .chip .x{ cursor:pointer; opacity:.5; font-weight:700; }
+  .add-btn{ font-size:12px; font-weight:600; color:var(--oro-osc); background:var(--oro-bg); border:1px solid #ecdca6; border-radius:999px; padding:5px 12px; cursor:pointer; font-family:"Jost",sans-serif; }
+
+  /* sheet inferior (modal) */
+  .backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; z-index:40; } .backdrop.on{ display:block; }
+  .sheet{ position:fixed; left:50%; transform:translateX(-50%); bottom:0; width:100%; max-width:480px; background:#fff; border-radius:16px 16px 0 0; z-index:41; padding:18px 16px calc(18px + env(safe-area-inset-bottom)); display:none; animation:up .25s ease; }
+  .sheet.on{ display:block; } @keyframes up{ from{transform:translate(-50%,100%);} to{transform:translate(-50%,0);} }
+  .sheet .sh-grab{ width:40px; height:4px; background:var(--linea); border-radius:2px; margin:0 auto 14px; }
+  .sheet h3{ font-family:"Cormorant Garamond",serif; font-style:italic; font-size:22px; margin:0 0 3px; } .sheet .sh-sub{ font-size:12px; color:var(--gris); margin-bottom:16px; }
+  .fld{ margin-bottom:12px; } .fld label{ font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--gris); display:block; margin-bottom:6px; }
+  .fld input{ width:100%; padding:14px; border:1px solid var(--linea); border-radius:var(--raio); font-size:16px; font-family:"Jost",sans-serif; }
+  .fld input:focus{ outline:none; border-color:var(--oro); }
+  .phone-row{ display:flex; gap:8px; } .phone-row select{ width:100px; padding:14px 6px; border:1px solid var(--linea); border-radius:var(--raio); font-size:15px; font-family:"Jost",sans-serif; } .phone-row input{ flex:1; }
+
+  /* autocomplete */
+  .ac{ position:relative; }
+  .ac-list{ position:absolute; left:0; right:0; top:calc(100% + 4px); background:#fff; border:1px solid var(--linea); border-radius:var(--raio); box-shadow:0 6px 20px rgba(0,0,0,.12); overflow:hidden; z-index:2; max-height:260px; overflow-y:auto; }
+  .ac-item{ padding:12px 14px; display:flex; align-items:center; gap:10px; cursor:pointer; border-bottom:1px solid var(--linea); } .ac-item:last-child{ border-bottom:0; } .ac-item:active,.ac-item.hl{ background:var(--hueso); }
+  .ac-item .av{ width:32px; height:32px; border-radius:50%; background:var(--distri-bg); color:var(--distri-tx); display:grid; place-items:center; font-weight:600; font-size:13px; flex:0 0 32px; }
+  .ac-item .nm{ flex:1; } .ac-item .nm .n1{ font-weight:500; font-size:14px; } .ac-item .nm .n2{ font-size:12px; color:var(--gris); }
+  .ac-item .tag-reg{ font-size:9px; text-transform:uppercase; letter-spacing:.05em; color:var(--distri-tx); background:var(--distri-bg); border-radius:6px; padding:2px 6px; }
+  .ac-create{ padding:13px 14px; display:flex; align-items:center; gap:10px; cursor:pointer; background:var(--oro-bg); } .ac-create:active{ background:#f8edc9; }
+  .ac-create .plus{ width:32px; height:32px; border-radius:50%; background:var(--oro); color:#111; display:grid; place-items:center; font-size:20px; font-weight:700; flex:0 0 32px; }
+  .ac-create .ct{ font-size:14px; } .ac-create .ct b{ color:var(--grafito); } .ac-create .ct .sub{ font-size:11px; color:var(--gris); }
+
+  .sh-actions{ display:flex; gap:10px; margin-top:8px; }
+  .btn{ flex:1; border:0; border-radius:var(--raio); padding:15px; font-size:14px; font-weight:600; font-family:"Jost",sans-serif; cursor:pointer; text-transform:uppercase; letter-spacing:.06em; }
+  .btn.primary{ background:var(--oro); color:#111; } .btn.ghost{ background:none; color:var(--gris); flex:0 0 auto; }
+  .temp-note{ background:var(--morado-bg); border:1px solid #d9cdf0; border-radius:var(--raio); padding:10px 12px; font-size:12px; color:#5a4494; margin-bottom:14px; }
+  .temp-note b{ color:#5a4494; }
+  .hint{ font-size:11px; color:var(--gris-cl); text-align:center; padding:16px; }
+</style>
+</head>
+<body>
+<header><div class="t">Manos Fuertes</div><div class="s">Vista Líder · añadir servidor (mock)</div></header>
+
+<div class="wrap">
+  <div class="lcard">
+    <div class="lc-h"><div><span class="lc-t">Distribución</span> <span class="lc-time">Dom 4 · 12:00–16:00</span></div><span class="lc-badge">Faltan 2</span></div>
+    <div class="lc-role">
+      <div class="lr-h"><span class="lr-name">Distribución</span><span class="lr-count">4/6 · faltan 2</span></div>
+      <div class="people" id="people">
+        <span class="chip">Carlos R.</span>
+        <span class="chip">Marcos</span>
+        <span class="chip">Ana L.</span>
+        <span class="chip">Daniel</span>
+        <span class="chip vac">vacante</span>
+        <span class="chip vac">vacante</span>
+        <button class="add-btn" onclick="openSheet()">+ Añadir servidor</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="hint">Toca "+ Añadir servidor" para tapar un hueco de última hora.</div>
+</div>
+
+<!-- SHEET -->
+<div class="backdrop" id="bd" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <div class="sh-grab"></div>
+  <h3>Añadir a Distribución</h3>
+  <div class="sh-sub">Dom 4 oct · 12:00 · busca un servidor o añade uno temporal.</div>
+
+  <!-- estado 1: buscar por nombre -->
+  <div id="stSearch">
+    <div class="fld ac">
+      <label>Nombre</label>
+      <input type="text" id="acInput" placeholder="Escribe un nombre…" oninput="onType(this.value)" autocomplete="off" />
+      <div class="ac-list" id="acList" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- estado 2: crear temporal (nombre ya escrito + teléfono opcional) -->
+  <div id="stTemp" style="display:none">
+    <div class="temp-note">Añadirás a <b id="tName">—</b> como <b>servidor temporal</b> solo para esta actividad. No quedará guardado como servidor registrado.</div>
+    <div class="fld"><label>Nombre</label><input type="text" id="tNameInput" /></div>
+    <div class="fld"><label>Teléfono (opcional)</label>
+      <div class="phone-row"><select id="tDdi"><option>🇪🇸 +34</option><option>🇧🇷 +55</option></select><input type="tel" placeholder="600 000 000" /></div>
+    </div>
+    <div class="sh-actions">
+      <button class="btn ghost" onclick="backSearch()">‹ Volver</button>
+      <button class="btn primary" onclick="addTemp()">Añadir temporal</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // servidores registrados (demo)
+  const REG = [
+    { n:'María González', p:'+34 611 …', ini:'MG' },
+    { n:'Marta Ruiz', p:'+34 622 …', ini:'MR' },
+    { n:'Mario Souza', p:'+34 633 …', ini:'MS' },
+    { n:'Lucía Pérez', p:'+34 644 …', ini:'LP' },
+    { n:'Sofía Lima', p:'+34 655 …', ini:'SL' },
+    { n:'Pedro Alves', p:'+34 666 …', ini:'PA' }
+  ];
+  const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  function openSheet(){ document.getElementById('bd').classList.add('on'); document.getElementById('sheet').classList.add('on'); backSearch(); setTimeout(()=>document.getElementById('acInput').focus(),250); }
+  function closeSheet(){ document.getElementById('bd').classList.remove('on'); document.getElementById('sheet').classList.remove('on'); }
+  function backSearch(){ document.getElementById('stSearch').style.display='block'; document.getElementById('stTemp').style.display='none'; document.getElementById('acInput').value=''; document.getElementById('acList').style.display='none'; }
+
+  function onType(v){
+    const list = document.getElementById('acList');
+    const q = norm(v.trim());
+    if(!q){ list.style.display='none'; return; }
+    const hits = REG.filter(r=>norm(r.n).includes(q)).slice(0,5);
+    let html = hits.map(r=>`<div class="ac-item" onclick="pickReg('${r.n.replace(/'/g,"")}')">
+        <div class="av">${r.ini}</div>
+        <div class="nm"><div class="n1">${r.n}</div><div class="n2">${r.p}</div></div>
+        <span class="tag-reg">registrado</span></div>`).join('');
+    // opción crear temporal SIEMPRE al final
+    html += `<div class="ac-create" onclick="goTemp('${v.replace(/'/g,"")}')">
+        <div class="plus">+</div>
+        <div class="ct"><b>Añadir "${v}"</b><div class="sub">como servidor temporal (solo hoy)</div></div></div>`;
+    list.innerHTML = html; list.style.display='block';
+  }
+  function pickReg(name){ closeSheet(); addChip(name, false); }
+  function goTemp(name){
+    document.getElementById('stSearch').style.display='none';
+    document.getElementById('stTemp').style.display='block';
+    document.getElementById('tName').textContent = name;
+    document.getElementById('tNameInput').value = name;
+  }
+  function addTemp(){ const name=document.getElementById('tNameInput').value.trim()||'Temporal'; closeSheet(); addChip(name, true); }
+  function addChip(name, temp){
+    const people = document.getElementById('people');
+    // quitar una vacante
+    const vac = people.querySelector('.chip.vac'); if(vac) vac.remove();
+    const chip = document.createElement('span');
+    chip.className = 'chip' + (temp?' temp':'');
+    chip.innerHTML = name + (temp?' <span class="tg">· Temp</span>':'') + ' <span class="x" onclick="this.parentNode.remove()">×</span>';
+    people.insertBefore(chip, people.querySelector('.add-btn'));
+  }
+</script>
+</body>
+</html>

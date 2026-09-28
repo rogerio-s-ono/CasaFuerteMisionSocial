@@ -47,6 +47,28 @@ const DEMO_ESPERA = {
   B1:{ motorista:['Andrés'], ajudante:['Paula'] },   // recogida B llena -> hay reservas
   B4:{ limpeza:['Sara'] }
 };
+
+/* servidores registrados (para el autocompletar del líder) — en real: del backend */
+const DEMO_SERVIDORES = [
+  { n:'María González', p:'+34 611 111 111' }, { n:'Marta Ruiz', p:'+34 622 222 222' },
+  { n:'Mario Souza', p:'+34 633 333 333' }, { n:'Lucía Pérez', p:'+34 644 444 444' },
+  { n:'Sofía Lima', p:'+34 655 555 555' }, { n:'Pedro Alves', p:'+34 666 666 666' },
+  { n:'Carlos Ruiz', p:'+34 677 777 777' }, { n:'Elena Torres', p:'+34 688 888 888' }
+];
+/* adiciones hechas por el líder, por activityId -> roleId -> [{name, temp}] */
+let LIDER_ADDS = {};
+function loadAdds(){ try{ LIDER_ADDS = JSON.parse(localStorage.getItem('mf_lider_adds')||'{}'); }catch(e){ LIDER_ADDS={}; } }
+function saveAdds(){ localStorage.setItem('mf_lider_adds', JSON.stringify(LIDER_ADDS)); }
+function addsDe(activityId, roleId){ return (LIDER_ADDS[activityId] && LIDER_ADDS[activityId][roleId]) ? LIDER_ADDS[activityId][roleId] : []; }
+function pushAdd(activityId, roleId, name, temp){
+  LIDER_ADDS[activityId] = LIDER_ADDS[activityId] || {};
+  LIDER_ADDS[activityId][roleId] = LIDER_ADDS[activityId][roleId] || [];
+  LIDER_ADDS[activityId][roleId].push({ name, temp:!!temp });
+  saveAdds();
+}
+function removeAdd(activityId, roleId, idx){
+  if(LIDER_ADDS[activityId] && LIDER_ADDS[activityId][roleId]){ LIDER_ADDS[activityId][roleId].splice(idx,1); saveAdds(); }
+}
 function tmplId(activityId){ return (activityId||'').replace(/-.*/,''); }
 function isLider(){ return DEMO_PROFILE==='lider_A' || DEMO_PROFILE==='lider_B' || DEMO_PROFILE==='lider_AB'; }
 function isAdmin(){ return DEMO_PROFILE==='admin'; }
@@ -63,11 +85,12 @@ function scopeCadenas(){
   if(LIDER_SCOPE==='all') return mias;
   return mias.includes(LIDER_SCOPE) ? [LIDER_SCOPE] : mias;
 }
-/* inscritos (demo + los míos) por actividad/rol */
+/* inscritos (demo + los míos + añadidos por el líder) por actividad/rol */
 function inscritosDe(activity, roleId){
   const t = tmplId(activity.id);
   const base = (DEMO_INSCR[t] && DEMO_INSCR[t][roleId]) ? DEMO_INSCR[t][roleId].slice() : [];
   if(INSCR[activity.id]===roleId && USER){ base.push((USER.name||'Yo') + ' (tú)'); }
+  addsDe(activity.id, roleId).forEach(a=>base.push(a.name));
   return base;
 }
 function esperaDe(activity, roleId){
@@ -100,6 +123,7 @@ function saveUser(){ localStorage.setItem('mf_user', JSON.stringify(USER)); }
 function saveInscr(){ localStorage.setItem('mf_inscr', JSON.stringify(INSCR)); }
 function saveEspera(){ localStorage.setItem('mf_espera', JSON.stringify(MI_ESPERA)); }
 function normPhone(v){ return (v||'').replace(/[\s\-()]/g,''); }
+function norm(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 
 /* ---------- DDI ---------- */
 const DDIS = [
@@ -204,9 +228,21 @@ function applyProfile(){
 /* ---------- VISTA LÍDER ---------- */
 /* helpers de HTML reutilizables */
 function chipsRol(a, r){
-  const cap=a.roles[r]; const gente=inscritosDe(a,r); const falta=Math.max(0,cap-gente.length);
-  return gente.map(n=>`<span class="chip">${n}</span>`).join('')
-    + Array.from({length:falta}).map(()=>`<span class="chip vac">vacante</span>`).join('');
+  const t = tmplId(a.id);
+  const demo = (DEMO_INSCR[t] && DEMO_INSCR[t][r]) ? DEMO_INSCR[t][r].slice() : [];
+  if(INSCR[a.id]===r && USER) demo.push((USER.name||'Yo') + ' (tú)');
+  const adds = addsDe(a.id, r);
+  const cap = a.roles[r];
+  const ocup = demo.length + adds.length;
+  const falta = Math.max(0, cap - ocup);
+  let html = demo.map(n=>`<span class="chip">${n}</span>`).join('');
+  html += adds.map((ad,i)=> ad.temp
+      ? `<span class="chip temp">${ad.name} <span class="tg">· Temp</span> <span class="x" onclick="delAdd('${a.id}','${r}',${i})">×</span></span>`
+      : `<span class="chip">${ad.name} <span class="x" onclick="delAdd('${a.id}','${r}',${i})">×</span></span>`
+    ).join('');
+  html += Array.from({length:falta}).map(()=>`<span class="chip vac">vacante</span>`).join('');
+  if(falta>0){ html += `<button class="add-btn" onclick="openAddSheet('${a.id}','${r}')">+ Añadir servidor</button>`; }
+  return html || '<span class="chip vac">sin inscritos</span>';
 }
 function esperaHtml(a, r){
   const esp = esperaDe(a,r);
@@ -220,7 +256,7 @@ function actCardLider(a){
     const rd=window.CFMS.ROLES[r];
     return `<div class="lc-role">
       <div class="lr-h"><span class="lr-name">${rd?rd.label[LANG]:r}</span><span class="lr-count ${falta>0?'miss':'full'}">${gente.length}/${cap}${falta>0?` · faltan ${falta}`:' · completo'}</span></div>
-      <div class="people">${chipsRol(a,r)||'<span class="chip vac">sin inscritos</span>'}</div>
+      <div class="people">${chipsRol(a,r)}</div>
       ${esperaHtml(a,r)}</div>`;
   }).join('');
   const badge = faltaAct>0 ? `<span class="lc-badge falta">Faltan ${faltaAct}</span>` : `<span class="lc-badge ok">Completa</span>`;
@@ -339,6 +375,56 @@ function renderPorFuncion(acts){
     return `<div class="fn-group"><div class="fn-h"><span class="fn-dot" style="background:${TIPO_COLOR[t]}"></span><span class="fn-t">${TIPO_LABEL[t]}</span></div>${occ}</div>`;
   }).join('');
 }
+
+/* ---------- SHEET: AÑADIR SERVIDOR (líder) ---------- */
+let addCtx = { activityId:null, roleId:null };
+function openAddSheet(activityId, roleId){
+  addCtx = { activityId, roleId };
+  const a = currentActivities().find(x=>x.id===activityId);
+  const rd = window.CFMS.ROLES[roleId];
+  document.getElementById('addTitle').textContent = 'Añadir a ' + (a?a.titulo[LANG]:'');
+  const f = a?fmtFecha(a.data):null;
+  document.getElementById('addSub').textContent = (f?`${f.w} ${f.d} ${f.m} · ${a.hora} · `:'') + (rd?rd.label[LANG]:roleId);
+  acBackSearch();
+  document.getElementById('addBackdrop').classList.add('on');
+  document.getElementById('addSheet').classList.add('on');
+  setTimeout(()=>document.getElementById('acInput').focus(),250);
+}
+function closeAddSheet(){ document.getElementById('addBackdrop').classList.remove('on'); document.getElementById('addSheet').classList.remove('on'); }
+function acBackSearch(){
+  document.getElementById('addStSearch').style.display='block';
+  document.getElementById('addStTemp').style.display='none';
+  document.getElementById('acInput').value=''; document.getElementById('acList').style.display='none';
+}
+function acType(v){
+  const list=document.getElementById('acList'); const q=norm((v||'').trim());
+  if(!q){ list.style.display='none'; return; }
+  const hits = DEMO_SERVIDORES.filter(s=>norm(s.n).includes(q)).slice(0,5);
+  const ini = n => n.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase();
+  let html = hits.map(s=>`<div class="ac-item" onclick="acPick('${s.n.replace(/'/g,"\\'")}')">
+      <div class="av">${ini(s.n)}</div>
+      <div class="nm"><div class="n1">${s.n}</div><div class="n2">${s.p}</div></div>
+      <span class="tag-reg">registrado</span></div>`).join('');
+  html += `<div class="ac-create" onclick="acGoTemp('${(v||'').replace(/'/g,"\\'")}')">
+      <div class="plus">+</div>
+      <div class="ct"><b>Añadir "${v}"</b><div class="sub">como servidor temporal (solo hoy)</div></div></div>`;
+  list.innerHTML = html; list.style.display='block';
+}
+function acPick(name){ pushAdd(addCtx.activityId, addCtx.roleId, name, false); closeAddSheet(); renderLider(); }
+function acGoTemp(name){
+  document.getElementById('addStSearch').style.display='none';
+  document.getElementById('addStTemp').style.display='block';
+  document.getElementById('tNameLbl').textContent = name || '—';
+  document.getElementById('tNameInput').value = name || '';
+}
+function addTemp(){
+  const name = document.getElementById('tNameInput').value.trim() || 'Temporal';
+  pushAdd(addCtx.activityId, addCtx.roleId, name, true);
+  closeAddSheet(); renderLider();
+}
+function delAdd(activityId, roleId, idx){ removeAdd(activityId, roleId, idx); renderLider(); }
+window.openAddSheet=openAddSheet; window.closeAddSheet=closeAddSheet; window.acType=acType; window.acBackSearch=acBackSearch;
+window.acPick=acPick; window.acGoTemp=acGoTemp; window.addTemp=addTemp; window.delAdd=delAdd;
 
 function currentActivities(){ return window.CFMS.generateActivities(cursor.getFullYear(), cursor.getMonth()); }
 
@@ -582,9 +668,11 @@ function confirmInscr(){
 document.getElementById('ver').textContent = window.CFMS.APP_VERSION;
 fillDdi(document.getElementById('ddi1'));
 fillDdi(document.getElementById('ddi2'));
+fillDdi(document.getElementById('tDdi'));
 document.getElementById('prev').onclick = ()=>{ cursor.setMonth(cursor.getMonth()-1); renderAll(); };
 document.getElementById('next').onclick = ()=>{ cursor.setMonth(cursor.getMonth()+1); renderAll(); };
 document.getElementById('prevL').onclick = ()=>{ cursor.setMonth(cursor.getMonth()-1); renderAll(); };
 document.getElementById('nextL').onclick = ()=>{ cursor.setMonth(cursor.getMonth()+1); renderAll(); };
 loadState();
+loadAdds();
 if(USER){ document.getElementById('loginGate').style.display='none'; startApp(); }
