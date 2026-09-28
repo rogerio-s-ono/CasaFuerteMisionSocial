@@ -1,0 +1,14 @@
+{
+  "name": "Casa Fuerte — Misión Social",
+  "short_name": "CF Misión",
+  "description": "Gestión de voluntarios de las misiones sociales de Casa Fuerte Church",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#faf8f4",
+  "theme_color": "#c08a2d",
+  "lang": "es",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

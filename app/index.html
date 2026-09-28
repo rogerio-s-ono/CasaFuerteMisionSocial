@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Casa Fuerte — Misión Social</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#c08a2d" />
+  <style>
+    :root{ --dourado:#c08a2d; --grafite:#141414; --offwhite:#faf8f4; --linha:#e6e0d6; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family: system-ui, -apple-system, sans-serif; background:var(--offwhite); color:var(--grafite); }
+    header{ background:var(--grafite); color:#fff; padding:16px 20px; }
+    header h1{ margin:0; font-size:18px; font-weight:600; }
+    header .accent{ color:var(--dourado); }
+    header .sub{ margin:4px 0 0; font-size:12px; opacity:.75; }
+    .toolbar{ display:flex; gap:8px; align-items:center; padding:12px 20px; border-bottom:1px solid var(--linha); }
+    .toolbar button{ background:#fff; border:1px solid var(--linha); border-radius:8px; padding:6px 12px; cursor:pointer; }
+    .toolbar .mes{ font-weight:600; min-width:160px; text-align:center; }
+    main{ padding:16px 20px; max-width:820px; margin:0 auto; }
+    .card{ background:#fff; border:1px solid var(--linha); border-left:4px solid var(--dourado); border-radius:10px; padding:14px 16px; margin-bottom:12px; }
+    .card .top{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+    .card .titulo{ font-weight:600; font-size:15px; }
+    .card .quando{ font-size:13px; color:#666; }
+    .card .cadeia{ font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--dourado); }
+    .card .notes{ font-size:12px; color:#777; margin-top:6px; }
+    .roles{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .role{ display:flex; align-items:center; gap:6px; font-size:12px; border:1px solid var(--linha); border-radius:999px; padding:4px 10px; background:#fbf7ef; }
+    .role .cap{ color:#666; }
+    footer{ text-align:center; font-size:11px; color:#999; padding:24px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Casa Fuerte <span class="accent">·</span> Misión Social</h1>
+    <p class="sub">Gestión de voluntarios — piloto Banco de Alimentos</p>
+  </header>
+
+  <div class="toolbar">
+    <button id="prev">‹</button>
+    <span class="mes" id="mesLabel">—</span>
+    <button id="next">›</button>
+  </div>
+
+  <main>
+    <div id="agenda"></div>
+  </main>
+
+  <footer>v<span id="ver"></span> · esqueleto inicial</footer>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    /* UI inicial: renderiza a agenda gerada a partir dos templates (sem backend ainda). */
+    const LANG = (window.CFMS_CONFIG && window.CFMS_CONFIG.DEFAULT_LANG) || 'es';
+    const MESES = { es:['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
+                    pt:['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'] };
+    let cursor = new Date();
+    cursor.setDate(1);
+
+    document.getElementById('ver').textContent = window.CFMS.APP_VERSION;
+
+    function fmtData(iso){ const d = new Date(iso + 'T00:00:00'); return d.toLocaleDateString(LANG === 'pt' ? 'pt-BR' : 'es-ES', { weekday:'short', day:'2-digit', month:'short' }); }
+
+    function render(){
+      const y = cursor.getFullYear(), m = cursor.getMonth();
+      document.getElementById('mesLabel').textContent = MESES[LANG][m] + ' ' + y;
+      const acts = window.CFMS.generateActivities(y, m);
+      const box = document.getElementById('agenda');
+      if(!acts.length){ box.innerHTML = '<p style="color:#999">Sin actividades este mes.</p>'; return; }
+      box.innerHTML = acts.map(a => {
+        const roles = Object.keys(a.roles).map(rid => {
+          const rd = window.CFMS.ROLES[rid];
+          const label = rd ? rd.label[LANG] : rid;
+          const rest = window.CFMS.vagasRestantes(a, rid);
+          return `<span class="role"><b>${label}</b> <span class="cap">${rest} / ${a.roles[rid]}</span></span>`;
+        }).join('');
+        return `<div class="card">
+          <div class="top">
+            <span class="titulo">${a.titulo[LANG]}</span>
+            <span class="cadeia">Cadena ${a.cadeia}</span>
+          </div>
+          <div class="quando">${fmtData(a.data)} · ${a.hora}</div>
+          <div class="notes">${a.notes ? a.notes[LANG] : ''}</div>
+          <div class="roles">${roles}</div>
+        </div>`;
+      }).join('');
+    }
+
+    document.getElementById('prev').onclick = () => { cursor.setMonth(cursor.getMonth()-1); render(); };
+    document.getElementById('next').onclick = () => { cursor.setMonth(cursor.getMonth()+1); render(); };
+    render();
+  </script>
+</body>
+</html>

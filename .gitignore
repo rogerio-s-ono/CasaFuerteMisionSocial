@@ -1,0 +1,27 @@
+# === Segredos — NUNCA versionar (lição do gideao300) ===
+# Config real com tokens/URLs/e-mails fica só local; o repo versiona só o .example.
+app/config.js
+config.js
+*.real
+*.local
+
+# Credenciais / chaves
+*.key
+*.pem
+.env
+.env.*
+service-account*.json
+credentials*.json
+
+# Dados pessoais reais de voluntários/beneficiários — nunca no repo
+app/data-real.json
+*-real.json
+
+# === Sistema / editor ===
+.DS_Store
+Thumbs.db
+*.log
+node_modules/
+.vscode/
+.idea/
+*.swp
