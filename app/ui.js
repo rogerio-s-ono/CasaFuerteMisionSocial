@@ -10,8 +10,60 @@ const MESES = { es:['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Ag
                 pt:['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'] };
 const cursor = new Date(); cursor.setDate(1);
 let USER = null;                 // { name, phone } ou { name, email }
-let INSCR = {};                  // { activityId: roleId }  (mis inscripciones, local)
+let INSCR = {};                  // { activityId: roleId }  (mis inscripciones confirmadas, local)
+let MI_ESPERA = {};              // { activityId: roleId }  (mis inscripciones en lista de espera)
 let wzState = { step:1, activity:null, role:null };
+
+/* =========================================================================
+   MODO DEMO — datos de ejemplo (simulan lo que vendrá del backend compartido)
+   Perfiles: voluntario / líder de una cadena / admin.
+   ========================================================================= */
+let DEMO_PROFILE = 'voluntario';   // 'voluntario' | 'lider_A' | 'lider_B' | 'admin'
+/* líderes autorizados por el admin, por cadena (en real: allowlist en la planilha) */
+const DEMO_LIDERES = {
+  A: { name:'Rogério Ono', email:'rogerio.s.ono@gmail.com' },
+  B: { name:'Tânia Ono',   email:'tania.eustaqui@gmail.com' }
+};
+/* inscripciones de ejemplo de OTROS voluntarios, por templateId+rol.
+   En real esto vendrá del backend (todas las inscripciones de todos). */
+const DEMO_INSCR = {
+  // Cadena A
+  A1:{ motorista:['Carlos R.'], ajudante:['Marcos','Alessandra'] },      // retirada sáb (2 mot / 2 ayu) -> falta 1 motorista
+  A2:{ preparacao:['Débora M.','Everton','Daniel'] },                     // prep sáb (6) -> faltan 3
+  A3:{ preparacao:['Ana L.','Célio','María G.','Sofía','Lucas','Pedro','Marta'] }, // prep dom (10) -> faltan 3
+  A4:{ distribuicao:['Carlos R.','Marcos','Ana L.','Daniel'] },          // distri (6) -> faltan 2
+  A5:{ limpeza:['Everton','Sofía'] },                                    // limpieza (4) -> faltan 2
+  // Cadena B
+  B1:{ motorista:['João','Ricardo'], ajudante:['Bruno','Tiago'] },       // retirada (2/2) -> LLENO
+  B2:{ preparacao:['Cláudia','Beatriz','Rafael','Inés','Nuria','Hugo','Elena','Diego'] }, // prep (10) -> faltan 2
+  B3:{ distribuicao:['Cláudia','Rafael','Hugo'] },                       // distri (6) -> faltan 3
+  B4:{ limpeza:['Beatriz','Diego','Inés','Nuria'] }                      // limpieza (4) -> LLENO
+};
+/* lista de espera de ejemplo, por templateId+rol */
+const DEMO_ESPERA = {
+  B1:{ motorista:['Andrés'], ajudante:['Paula'] },   // recogida B llena -> hay reservas
+  B4:{ limpeza:['Sara'] }
+};
+function tmplId(activityId){ return (activityId||'').replace(/-.*/,''); }
+function isLider(){ return DEMO_PROFILE==='lider_A' || DEMO_PROFILE==='lider_B'; }
+function isAdmin(){ return DEMO_PROFILE==='admin'; }
+function liderCadena(){ return DEMO_PROFILE==='lider_A' ? 'A' : DEMO_PROFILE==='lider_B' ? 'B' : null; }
+/* inscritos (demo + los míos) por actividad/rol */
+function inscritosDe(activity, roleId){
+  const t = tmplId(activity.id);
+  const base = (DEMO_INSCR[t] && DEMO_INSCR[t][roleId]) ? DEMO_INSCR[t][roleId].slice() : [];
+  if(INSCR[activity.id]===roleId && USER){ base.push((USER.name||'Yo') + ' (tú)'); }
+  return base;
+}
+function esperaDe(activity, roleId){
+  const t = tmplId(activity.id);
+  const base = (DEMO_ESPERA[t] && DEMO_ESPERA[t][roleId]) ? DEMO_ESPERA[t][roleId].slice() : [];
+  if(MI_ESPERA[activity.id]===roleId && USER){ base.push((USER.name||'Yo') + ' (tú)'); }
+  return base;
+}
+/* ocupación considerando demo: cuántos inscritos reales hay en un rol */
+function ocupados(activity, roleId){ return inscritosDe(activity, roleId).length; }
+function libresRol(activity, roleId){ return Math.max(0, (activity.roles[roleId]||0) - ocupados(activity, roleId)); }
 
 /* mapear templateId -> tipo (para el color/tono) */
 function tipoDe(templateId){
@@ -27,9 +79,11 @@ const ICON_TIPO = { retirada:'🚐', prep:'📦', distri:'🤝', limpieza:'🧹'
 function loadState(){
   try{ USER = JSON.parse(localStorage.getItem('mf_user')||'null'); }catch(e){ USER=null; }
   try{ INSCR = JSON.parse(localStorage.getItem('mf_inscr')||'{}'); }catch(e){ INSCR={}; }
+  try{ MI_ESPERA = JSON.parse(localStorage.getItem('mf_espera')||'{}'); }catch(e){ MI_ESPERA={}; }
 }
 function saveUser(){ localStorage.setItem('mf_user', JSON.stringify(USER)); }
 function saveInscr(){ localStorage.setItem('mf_inscr', JSON.stringify(INSCR)); }
+function saveEspera(){ localStorage.setItem('mf_espera', JSON.stringify(MI_ESPERA)); }
 function normPhone(v){ return (v||'').replace(/[\s\-()]/g,''); }
 
 /* ---------- DDI ---------- */
@@ -103,31 +157,107 @@ function startApp(){
   document.getElementById('appShell').classList.remove('hidden');
   document.getElementById('bottomNav').classList.remove('hidden');
   document.getElementById('hdrName').textContent = (USER && USER.name) ? USER.name.split(' ')[0] : '—';
+  renderDemoBar();
   renderAll();
 }
+
+/* ---------- MODO DEMO: selector de perfil ---------- */
+function renderDemoBar(){
+  const bar = document.getElementById('demoBar');
+  bar.innerHTML = `<b>Demo · perfil:</b>
+    <select id="demoSel" onchange="setProfile(this.value)">
+      <option value="voluntario">Voluntario</option>
+      <option value="lider_A">Líder · Cadena MercaMadrid</option>
+      <option value="lider_B">Líder · Cadena Banco de Alimentos</option>
+      <option value="admin">Admin</option>
+    </select>`;
+  document.getElementById('demoSel').value = DEMO_PROFILE;
+  applyProfile();
+}
+function setProfile(p){ DEMO_PROFILE=p; applyProfile(); renderAll();
+  // si dejo de ser líder y estoy en su vista, vuelvo a inicio
+  if(!isLider() && document.getElementById('v-lider').classList.contains('active')) go('v-inicio');
+}
+window.setProfile=setProfile;
+function applyProfile(){
+  const nav = document.getElementById('navLider');
+  nav.style.display = isLider() ? 'flex' : 'none';
+  // admin ve un aviso simple (autoriza líderes; gestión real en backend)
+}
+
+/* ---------- VISTA LÍDER ---------- */
+function renderLider(){
+  if(!isLider()){ document.getElementById('liderList').innerHTML=''; document.getElementById('liderHead').innerHTML=''; return; }
+  const cad = liderCadena();
+  document.getElementById('mesLabelL').textContent = MESES[LANG][cursor.getMonth()] + ' ' + cursor.getFullYear();
+  const acts = currentActivities().filter(a=>a.cadeia===cad);
+  // KPIs de la cadena
+  let plazas=0, cubiertas=0, esperaTot=0;
+  acts.forEach(a=>Object.keys(a.roles).forEach(r=>{ plazas+=a.roles[r]; cubiertas+=Math.min(a.roles[r], ocupados(a,r)); esperaTot+=esperaDe(a,r).length; }));
+  const faltan = Math.max(0, plazas-cubiertas);
+  document.getElementById('liderHead').innerHTML = `<div class="lider-head">
+    <div class="lh-cad">${window.CFMS.cadenaLabel(cad)}</div>
+    <div class="lh-sub">Líder: ${DEMO_LIDERES[cad].name} · ${acts.length} actividades este mes</div>
+    <div class="lh-kpi">
+      <div><b>${cubiertas}/${plazas}</b>Plazas cubiertas</div>
+      <div class="falta"><b>${faltan}</b>Faltan</div>
+      <div><b>${esperaTot}</b>En espera</div>
+    </div></div>`;
+  // tarjeta por actividad
+  document.getElementById('liderList').innerHTML = acts.map(a=>{
+    const f=fmtFecha(a.data);
+    const roleIds=Object.keys(a.roles);
+    const faltaAct = roleIds.reduce((s,r)=>s+libresRol(a,r),0);
+    const roles = roleIds.map(r=>{
+      const cap=a.roles[r]; const gente=inscritosDe(a,r); const falta=Math.max(0,cap-gente.length);
+      const rd=window.CFMS.ROLES[r];
+      const chips = gente.map(n=>`<span class="chip">${n}</span>`).join('')
+        + Array.from({length:falta}).map(()=>`<span class="chip vacante">vacante</span>`).join('');
+      const esp = esperaDe(a,r);
+      const espHtml = esp.length ? `<div class="lc-espera"><div class="le-t">⏳ Lista de espera</div><div class="lc-people">${esp.map(n=>`<span class="chip espera">${n}</span>`).join('')}</div></div>` : '';
+      return `<div class="lc-role">
+        <div class="lr-h"><span class="lr-name">${rd?rd.label[LANG]:r}</span><span class="lr-count ${falta>0?'miss':'full'}">${gente.length}/${cap}${falta>0?` · faltan ${falta}`:' · completo'}</span></div>
+        <div class="lc-people">${chips||'<span class="chip vacante">sin inscritos</span>'}</div>
+        ${espHtml}</div>`;
+    }).join('');
+    const badge = faltaAct>0 ? `<span class="lc-badge falta">Faltan ${faltaAct}</span>` : `<span class="lc-badge ok">Completa</span>`;
+    return `<div class="lcard ${faltaAct>0?'falta':'completa'}">
+      <div class="lc-h"><div><span class="lc-t">${a.titulo[LANG]}</span> <span class="lc-d">${f.w} ${f.d} ${f.m} · ${a.hora}</span></div>${badge}</div>
+      ${roles}</div>`;
+  }).join('');
+}
+
 function currentActivities(){ return window.CFMS.generateActivities(cursor.getFullYear(), cursor.getMonth()); }
 
 function fmtFecha(iso){ const d=new Date(iso+'T12:00:00'); return { w:d.toLocaleDateString(LANG==='pt'?'pt-BR':'es-ES',{weekday:'short'}), d:d.getDate(), m:d.toLocaleDateString(LANG==='pt'?'pt-BR':'es-ES',{month:'short'}) }; }
 function ringClass(rest,cap){ if(rest<=0) return 'cheio'; if(rest<=Math.max(1,Math.floor(cap*0.3))) return 'pouco'; return ''; }
 function totalCap(a){ return Object.values(a.roles).reduce((s,c)=>s+c,0); }
-function totalLibres(a){ return Object.keys(a.roles).reduce((s,r)=>s+Math.max(0,window.CFMS.vagasRestantes(a,r)),0); }
+function totalLibres(a){ return Object.keys(a.roles).reduce((s,r)=>s+libresRol(a,r),0); }
 
 function actCardHTML(a, opts={}){
   const tipo = tipoDe(a.templateId); const f = fmtFecha(a.data);
   const libres = totalLibres(a); const cap = totalCap(a);
   const mine = INSCR[a.id];
-  const ring = mine ? '' : `<div class="vagas"><span class="ring ${ringClass(libres,cap)}">${libres} / ${cap}</span></div>`;
-  const roleLabel = mine ? (window.CFMS.ROLES[mine] ? window.CFMS.ROLES[mine].label[LANG] : mine) : '';
-  const check = mine ? `<div class="mini-check">✓ ${opts.mios?'Confirmado':'Estás apuntado'} (${roleLabel})</div>` : '';
-  const tag = mine ? '' : `<span class="tag">${a.titulo[LANG].split(' ')[0]} · Cadena ${a.cadeia}</span>`;
-  return `<div class="act t-${tipo} ${mine?'estado-inscrito':''}" onclick="openWizard('${a.id}')">
+  const enEspera = opts.espera && MI_ESPERA[a.id];
+  const roleId = mine || MI_ESPERA[a.id];
+  const roleLabel = roleId ? (window.CFMS.ROLES[roleId] ? window.CFMS.ROLES[roleId].label[LANG] : roleId) : '';
+  let right = '', check = '', tag = '';
+  if(enEspera){
+    check = `<div class="mini-check" style="color:var(--warn)">⏳ En lista de espera (${roleLabel})</div>`;
+  } else if(mine){
+    check = `<div class="mini-check">✓ ${opts.mios?'Confirmado':'Estás apuntado'} (${roleLabel})</div>`;
+  } else {
+    tag = `<span class="tag">${a.titulo[LANG].split(" ")[0]} · ${window.CFMS.cadenaLabel(a.cadeia)}</span>`;
+    right = `<div class="vagas"><span class="ring ${ringClass(libres,cap)}">${libres} / ${cap}</span></div>`;
+  }
+  return `<div class="act t-${tipo} ${mine?'estado-inscrito':''} ${enEspera?'estado-espera':''}" onclick="openWizard('${a.id}')">
     <div class="tipo-bar"></div>
     <div class="fecha"><div class="w">${f.w}</div><div class="d">${f.d}</div><div class="m">${f.m}</div></div>
     <div class="info"><div class="t">${a.titulo[LANG]}</div><div class="sub">${a.hora} · ${a.notes?a.notes[LANG]:''}</div>${check||tag}</div>
-    ${ring}</div>`;
+    ${right}</div>`;
 }
 
-function renderAll(){ renderInicio(); renderAgenda(); renderMios(); }
+function renderAll(){ renderInicio(); renderAgenda(); renderMios(); renderLider(); }
 
 function renderInicio(){
   const acts = currentActivities();
@@ -143,7 +273,7 @@ function renderInicio(){
     const dias = Math.max(0, Math.ceil((new Date(hero.data+'T12:00:00') - hoy)/86400000));
     heroBox.innerHTML = `<div class="hero"><span class="eyebrow">${mine?'Tu próxima actividad':'Próxima actividad'}</span>
       <h2>${hero.titulo[LANG]}</h2>
-      <div class="meta">${f.w} ${f.d} ${f.m} · ${hero.hora} — Cadena ${hero.cadeia}</div>
+      <div class="meta">${f.w} ${f.d} ${f.m} · ${hero.hora} — ${window.CFMS.cadenaLabel(hero.cadeia)}</div>
       <div class="dots"><span class="ln"></span><span class="dt"></span><span class="ln"></span></div>
       <div class="countdown">En ${dias} día${dias===1?'':'s'}${mine?` · confirmado como <b>${window.CFMS.ROLES[mine]?window.CFMS.ROLES[mine].label[LANG]:mine}</b>`:''}</div>
       <button class="cta" onclick="go('v-agenda')">Ver toda la agenda</button></div>`;
@@ -164,8 +294,16 @@ function renderAgenda(){
 }
 
 function renderMios(){
-  const acts = currentActivities().filter(a=>INSCR[a.id]);
-  document.getElementById('miosList').innerHTML = acts.length ? acts.map(a=>actCardHTML(a,{mios:true})).join('') : '<div class="empty">Aún no estás apuntado a ninguna actividad este mes.</div>';
+  const acts = currentActivities();
+  const confirmadas = acts.filter(a=>INSCR[a.id]);
+  const espera = acts.filter(a=>MI_ESPERA[a.id]);
+  let html = '';
+  if(confirmadas.length) html += confirmadas.map(a=>actCardHTML(a,{mios:true})).join('');
+  if(espera.length){
+    html += '<div class="section-title" style="margin-top:18px">En lista de espera</div>';
+    html += espera.map(a=>actCardHTML(a,{mios:true, espera:true})).join('');
+  }
+  document.getElementById('miosList').innerHTML = html || '<div class="empty">Aún no estás apuntado a ninguna actividad este mes.</div>';
 }
 
 /* ---------- navegación ---------- */
@@ -200,10 +338,12 @@ function renderWzActs(){
   document.getElementById('wzActs').innerHTML = acts.map(x=>{
     const tipo=tipoDe(x.templateId); const f=fmtFecha(x.data); const libres=totalLibres(x);
     const sel = wzState.acts.includes(x.id) ? 'sel':'';
-    const dis = (libres<=0 && !INSCR[x.id] && !wzState.acts.includes(x.id)) ? 'disabled':'';
-    return `<div class="opt ${sel} ${dis}" data-act="${x.id}" onclick="wzToggleAct('${x.id}')">
-      <div class="oic">${ICON_TIPO[tipo]}</div>
-      <div class="otxt"><div class="ot">${x.titulo[LANG]}</div><div class="os">${f.w} ${f.d} ${f.m} · ${x.hora} · Cadena ${x.cadeia}</div></div>
+    const lleno = libres<=0;
+    const estado = lleno ? '<span style="color:var(--warn)">Completo · lista de espera</span>'
+                         : `${f.w} ${f.d} ${f.m} · ${x.hora} · ${window.CFMS.cadenaLabel(x.cadeia)}`;
+    return `<div class="opt ${sel} ${lleno?'espera':''}" data-act="${x.id}" onclick="wzToggleAct('${x.id}')">
+      <div class="oic">${lleno?'⏳':ICON_TIPO[tipo]}</div>
+      <div class="otxt"><div class="ot">${x.titulo[LANG]}</div><div class="os">${estado}</div></div>
       <div class="ocheck">✓</div></div>`;
   }).join('');
 }
@@ -235,13 +375,16 @@ function buildRoles(){
   document.getElementById('wzRoles').innerHTML = sel.map(a=>{
     const f=fmtFecha(a.data);
     const opts = Object.keys(a.roles).map(rid=>{
-      const rd=window.CFMS.ROLES[rid]; const rest=window.CFMS.vagasRestantes(a,rid);
+      const rd=window.CFMS.ROLES[rid]; const rest=libresRol(a,rid);
       const chosen = wzState.roles[a.id]===rid ? 'sel':'';
-      const dis = (rest<=0 && wzState.roles[a.id]!==rid) ? 'disabled':'';
       const req = rd&&rd.requiresFurgoneta ? ' · requiere furgoneta' : '';
-      return `<div class="opt ${chosen} ${dis}" data-act="${a.id}" data-role="${rid}" onclick="wzPickRole('${a.id}','${rid}')">
-        <div class="oic">${ICON_TIPO[tipoDe(a.templateId)]}</div>
-        <div class="otxt"><div class="ot">${rd?rd.label[LANG]:rid}</div><div class="os">Quedan ${Math.max(0,rest)} de ${a.roles[rid]}${req}</div></div>
+      const lleno = rest<=0;
+      const estado = lleno
+        ? `<span style="color:var(--warn)">Completo · entrarás en lista de espera</span>`
+        : `Quedan ${rest} de ${a.roles[rid]}${req}`;
+      return `<div class="opt ${chosen} ${lleno?'espera':''}" data-act="${a.id}" data-role="${rid}" onclick="wzPickRole('${a.id}','${rid}')">
+        <div class="oic">${lleno?'⏳':ICON_TIPO[tipoDe(a.templateId)]}</div>
+        <div class="otxt"><div class="ot">${rd?rd.label[LANG]:rid}</div><div class="os">${estado}</div></div>
         <div class="ocheck">✓</div></div>`;
     }).join('');
     return `<div class="role-group"><div class="role-group-h"><span class="rg-t">${a.titulo[LANG]}</span><span class="rg-d">${f.w} ${f.d} ${f.m} · ${a.hora}</span></div>${opts}</div>`;
@@ -303,17 +446,22 @@ window.nextStep=nextStep; window.prevStep=prevStep;
 
 function confirmInscr(){
   const sel = selectedActsSorted();
-  sel.forEach(a=>{ INSCR[a.id] = wzState.roles[a.id]; });
-  saveInscr();
+  sel.forEach(a=>{
+    const r = wzState.roles[a.id];
+    if(libresRol(a,r) > 0){ INSCR[a.id]=r; delete MI_ESPERA[a.id]; }   // hay plaza -> confirmado
+    else { MI_ESPERA[a.id]=r; delete INSCR[a.id]; }                    // lleno -> lista de espera
+  });
+  saveInscr(); saveEspera();
   document.querySelectorAll('.wz-step').forEach(s=>s.classList.remove('active'));
   document.querySelector('.wz-step[data-step="ok"]').classList.add('active');
   document.getElementById('stepper').style.visibility='hidden';
   document.getElementById('wzOkResumo').innerHTML = sel.map(a=>{
-    const f=fmtFecha(a.data); const r=wzState.roles[a.id];
-    return `<div class="row"><span class="k">${a.titulo[LANG]}<br><span style="text-transform:none;letter-spacing:0;font-size:12px">${f.w} ${f.d} ${f.m} · ${a.hora}</span></span><span class="v">${window.CFMS.ROLES[r]?window.CFMS.ROLES[r].label[LANG]:r}</span></div>`;
+    const f=fmtFecha(a.data); const r=wzState.roles[a.id]; const espera = !!MI_ESPERA[a.id];
+    return `<div class="row"><span class="k">${a.titulo[LANG]}<br><span style="text-transform:none;letter-spacing:0;font-size:12px">${f.w} ${f.d} ${f.m} · ${a.hora}</span></span><span class="v">${window.CFMS.ROLES[r]?window.CFMS.ROLES[r].label[LANG]:r}${espera?' <span style="color:var(--warn);font-size:11px">· en espera</span>':''}</span></div>`;
   }).join('');
+  const anyEspera = sel.some(a=>MI_ESPERA[a.id]);
   const okTitle = document.querySelector('.wz-step[data-step="ok"] h2');
-  if(okTitle) okTitle.textContent = sel.length>1 ? '¡Estás apuntado!' : '¡Estás apuntado!';
+  if(okTitle) okTitle.textContent = anyEspera ? '¡Estás en la lista!' : '¡Estás apuntado!';
   document.getElementById('wzFoot').innerHTML='<button class="next" onclick="closeWizard();renderAll();go(\'v-mios\')">Listo</button>';
 }
 
@@ -323,5 +471,7 @@ fillDdi(document.getElementById('ddi1'));
 fillDdi(document.getElementById('ddi2'));
 document.getElementById('prev').onclick = ()=>{ cursor.setMonth(cursor.getMonth()-1); renderAll(); };
 document.getElementById('next').onclick = ()=>{ cursor.setMonth(cursor.getMonth()+1); renderAll(); };
+document.getElementById('prevL').onclick = ()=>{ cursor.setMonth(cursor.getMonth()-1); renderAll(); };
+document.getElementById('nextL').onclick = ()=>{ cursor.setMonth(cursor.getMonth()+1); renderAll(); };
 loadState();
 if(USER){ document.getElementById('loginGate').style.display='none'; startApp(); }

@@ -5,7 +5,7 @@
 
 'use strict';
 
-const APP_VERSION = '0.2.2';
+const APP_VERSION = '0.3.0';
 const CFG = window.CFMS_CONFIG || {};
 
 /* =========================================================================
@@ -17,6 +17,13 @@ const CFG = window.CFMS_CONFIG || {};
    VOLUNTÁRIO (perfil) — contato, papéis preferidos/aprovados, furgoneta?
    INSCRIÇÃO — voluntário × atividade × papel × status
    ========================================================================= */
+
+/** Cadenas (frentes operacionais) — nomes exibidos. */
+const CADENAS = {
+  A: { id:'A', label:'Cadena MercaMadrid' },
+  B: { id:'B', label:'Cadena Banco de Alimentos' }
+};
+function cadenaLabel(c){ return (CADENAS[c] && CADENAS[c].label) || ('Cadena ' + c); }
 
 /** Papéis do piloto. 'furgoneta' marca requisito (motorista precisa de furgoneta). */
 const ROLES = {
@@ -170,7 +177,7 @@ function vagasRestantes(activity, roleId) {
 
 /* Exportar para uso no index.html / testes (quando houver módulos/ferramentas). */
 window.CFMS = {
-  APP_VERSION, ROLES, RECURRENCE, SEED_TEMPLATES,
+  APP_VERSION, ROLES, RECURRENCE, SEED_TEMPLATES, CADENAS, cadenaLabel,
   nthWeekdayOfMonth, toISODateLocal, generateActivities, countByRole, vagasRestantes
 };
 

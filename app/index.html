@@ -143,6 +143,41 @@
   .wz-foot{ padding:12px 16px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--linea); background:var(--blanco); display:flex; gap:10px; } .wz-foot .back{ flex:0 0 auto; background:none; border:0; color:var(--gris); font-size:12px; padding:16px 14px; cursor:pointer; font-family:"Jost",sans-serif; text-transform:uppercase; letter-spacing:.1em; } .wz-foot .next{ flex:1; background:var(--oro); color:var(--negro); border:0; border-radius:var(--raio); padding:16px; font-size:13px; font-weight:600; cursor:pointer; font-family:"Jost",sans-serif; text-transform:uppercase; letter-spacing:.12em; } .wz-foot .next:disabled{ background:#ddd2c6; }
   .ok-scr{ text-align:center; padding:44px 20px; } .ok-scr .circ{ width:88px; height:88px; border-radius:50%; background:var(--oro); color:var(--negro); display:grid; place-items:center; font-size:44px; margin:0 auto 22px; } .ok-scr h2{ font-family:"Cormorant Garamond",serif; font-style:italic; margin:0 0 8px; font-size:30px; font-weight:500; } .ok-scr p{ color:var(--gris); margin:0 0 26px; font-weight:300; } .ok-scr .resumo{ text-align:left; margin-bottom:20px; }
   .footver{ text-align:center; font-size:10px; color:var(--gris-cl); padding:10px; }
+
+  /* ===== Barra demo (selector de perfil) ===== */
+  #demoBar{ background:#2b2b2b; color:#eee; font-size:11px; padding:8px 12px; display:flex; align-items:center; gap:8px; justify-content:center; flex-wrap:wrap; }
+  #demoBar b{ color:var(--oro); letter-spacing:.08em; text-transform:uppercase; font-size:10px; }
+  #demoBar select{ background:#1c1c1c; color:#fff; border:1px solid #444; border-radius:6px; padding:5px 8px; font-family:"Jost",sans-serif; font-size:12px; }
+
+  /* ===== Opción/estado lista de espera ===== */
+  .opt.espera{ border-style:dashed; }
+  .opt.espera.sel{ border-color:var(--warn); background:#fdf4e8; }
+  .estado-espera{ box-shadow:inset 0 0 0 2px var(--warn); }
+
+  /* ===== Panel líder ===== */
+  .lider-head{ background:var(--negro); color:#fff; border-radius:var(--raio); padding:16px 18px; margin-bottom:14px; position:relative; overflow:hidden; }
+  .lider-head::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--oro); }
+  .lider-head .lh-cad{ font-family:"Cormorant Garamond",serif; font-style:italic; font-size:24px; }
+  .lider-head .lh-sub{ font-size:12px; color:var(--gris-cl); margin-top:4px; }
+  .lider-head .lh-kpi{ display:flex; gap:18px; margin-top:12px; }
+  .lider-head .lh-kpi div{ font-size:11px; color:var(--gris-cl); } .lider-head .lh-kpi b{ display:block; font-family:"Cormorant Garamond",serif; font-size:24px; color:#fff; }
+  .lider-head .lh-kpi .falta b{ color:var(--t-retirada); }
+  .lcard{ background:var(--blanco); border:1px solid var(--linea); border-radius:var(--raio); margin-bottom:12px; overflow:hidden; }
+  .lcard.completa{ border-left:4px solid var(--t-distri); } .lcard.falta{ border-left:4px solid var(--t-retirada); }
+  .lcard .lc-h{ padding:12px 14px; border-bottom:1px solid var(--linea); display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .lcard .lc-h .lc-t{ font-family:"Cormorant Garamond",serif; font-weight:600; font-size:18px; } .lcard .lc-h .lc-d{ font-size:11px; color:var(--gris); text-transform:uppercase; letter-spacing:.06em; }
+  .lcard .lc-badge{ font-size:10px; font-weight:600; padding:3px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:.06em; }
+  .lc-badge.ok{ background:var(--t-distri-bg); color:var(--t-distri-tx); } .lc-badge.falta{ background:var(--t-retirada-bg); color:var(--t-retirada-tx); }
+  .lc-role{ padding:11px 14px; border-bottom:1px solid var(--linea); } .lc-role:last-child{ border-bottom:0; }
+  .lc-role .lr-h{ display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .lc-role .lr-name{ font-weight:500; font-size:13px; } .lc-role .lr-count{ font-size:12px; font-weight:600; }
+  .lc-role .lr-count.full{ color:var(--t-distri-tx); } .lc-role .lr-count.miss{ color:var(--t-retirada-tx); }
+  .lc-people{ display:flex; flex-wrap:wrap; gap:6px; }
+  .chip{ font-size:12px; background:var(--hueso); border:1px solid var(--linea); border-radius:999px; padding:3px 10px; }
+  .chip.vacante{ border-style:dashed; color:var(--t-retirada-tx); background:var(--t-retirada-bg); border-color:transparent; }
+  .lc-espera{ padding:10px 14px; background:#fdf9f0; border-top:1px dashed var(--linea); font-size:12px; }
+  .lc-espera .le-t{ color:var(--warn); font-weight:600; text-transform:uppercase; letter-spacing:.06em; font-size:10px; margin-bottom:5px; }
+  .chip.espera{ background:#fdf4e8; border-color:#ead9bf; }
 </style>
 </head>
 <body>
@@ -190,6 +225,7 @@
 
 <!-- ============ APP ============ -->
 <div class="app-shell hidden" id="appShell">
+<div id="demoBar"></div>
 <header>
   <div class="h-row">
     <img class="iglesia" src="assets/logo-casafuerte-light.png" alt="Casa Fuerte Church" />
@@ -231,12 +267,20 @@
   <div class="section-title">Mis próximos turnos</div>
   <div id="miosList"></div>
 </section>
+
+<!-- LÍDER -->
+<section class="view" id="v-lider">
+  <div class="toolbar"><button id="prevL">‹</button><span class="mes" id="mesLabelL">—</span><button id="nextL">›</button></div>
+  <div id="liderHead"></div>
+  <div id="liderList"></div>
+</section>
 </div>
 
 <nav class="nav hidden" id="bottomNav">
   <button class="active" data-v="v-inicio" onclick="go('v-inicio')"><span class="ic">⌂</span>Inicio</button>
   <button data-v="v-agenda" onclick="go('v-agenda')"><span class="ic">▦</span>Agenda</button>
   <button data-v="v-mios" onclick="go('v-mios')"><span class="ic">✓</span>Mis turnos</button>
+  <button data-v="v-lider" id="navLider" onclick="go('v-lider')" style="display:none"><span class="ic">★</span>Líder</button>
 </nav>
 
 <!-- WIZARD -->
