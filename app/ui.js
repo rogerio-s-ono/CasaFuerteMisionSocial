@@ -181,8 +181,12 @@ window.go=go;
    wzState.roles = { activityId: roleId }  (función elegida por actividad) */
 function openWizard(actId){
   wzState = { step:1, acts: actId ? [actId] : [], roles:{} };
-  // precargar función ya inscrita si la hay
-  if(actId && INSCR[actId]) wzState.roles[actId] = INSCR[actId];
+  if(actId){
+    const a = currentActivities().find(x=>x.id===actId);
+    const roleIds = a ? Object.keys(a.roles) : [];
+    if(INSCR[actId]) wzState.roles[actId] = INSCR[actId];      // función ya inscrita
+    else if(roleIds.length===1) wzState.roles[actId] = roleIds[0]; // función única -> auto
+  }
   renderWzActs();
   document.getElementById('wizard').classList.add('active');
   document.getElementById('stepper').style.visibility='visible';
@@ -206,18 +210,28 @@ function renderWzActs(){
 function wzToggleAct(id){
   const i = wzState.acts.indexOf(id);
   if(i>=0){ wzState.acts.splice(i,1); delete wzState.roles[id]; }
-  else { wzState.acts.push(id); }
+  else {
+    wzState.acts.push(id);
+    // si la actividad tiene UNA sola función, se asigna automáticamente
+    const a = currentActivities().find(x=>x.id===id);
+    const roleIds = a ? Object.keys(a.roles) : [];
+    if(roleIds.length===1) wzState.roles[id] = roleIds[0];
+  }
   document.querySelector(`#wzActs .opt[data-act="${id}"]`).classList.toggle('sel', wzState.acts.includes(id));
+}
+
+/* actividades seleccionadas que requieren ELECCIÓN de función (más de 1 rol) */
+function actsNeedingRole(){
+  const acts = currentActivities();
+  return wzState.acts.map(id=>acts.find(a=>a.id===id)).filter(a=>a && Object.keys(a.roles).length>1);
 }
 
 /* PASO 2 — función por cada actividad seleccionada (una sección por actividad) */
 function buildRoles(){
-  const acts = currentActivities();
-  const sel = wzState.acts.map(id=>acts.find(a=>a.id===id)).filter(Boolean)
-    .sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));
+  const sel = actsNeedingRole().sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));
   document.getElementById('wzRoleHint').textContent = sel.length>1
-    ? `Elige tu función en cada una de las ${sel.length} actividades.`
-    : 'Elige tu función.';
+    ? `Estas actividades tienen varias funciones. Elige la tuya en cada una.`
+    : 'Esta actividad tiene varias funciones. Elige la tuya.';
   document.getElementById('wzRoles').innerHTML = sel.map(a=>{
     const f=fmtFecha(a.data);
     const opts = Object.keys(a.roles).map(rid=>{
@@ -240,9 +254,14 @@ function wzPickRole(actId, rid){
 window.openWizard=openWizard; window.closeWizard=closeWizard; window.wzToggleAct=wzToggleAct; window.wzPickRole=wzPickRole;
 
 function resetFoot(){ document.getElementById('wzFoot').innerHTML='<button class="back hidden" id="wzBack" onclick="prevStep()">Atrás</button><button class="next" id="wzNext" onclick="nextStep()">Continuar</button>'; }
+function needsRoleStep(){ return actsNeedingRole().length > 0; }
 function renderStep(){
   document.querySelectorAll('.wz-step').forEach(s=>s.classList.remove('active'));
   document.querySelector('.wz-step[data-step="'+wzState.step+'"]').classList.add('active');
+  // stepper: ocultar el paso "Función" si no hace falta elegir
+  const showRole = needsRoleStep();
+  const stFuncion = document.querySelector('.stepper .st[data-s="2"]');
+  if(stFuncion) stFuncion.style.display = showRole ? '' : 'none';
   document.querySelectorAll('.stepper .st').forEach(st=>{ const n=+st.dataset.s; st.classList.toggle('done',n<wzState.step); st.classList.toggle('cur',n===wzState.step); });
   document.getElementById('wzBack').classList.toggle('hidden', wzState.step===1);
   document.getElementById('wzNext').textContent = (wzState.step===3)?'Confirmar':'Continuar';
@@ -259,21 +278,27 @@ function fillResumo(){
   document.getElementById('wzResumo').innerHTML = sel.map(a=>{
     const f=fmtFecha(a.data); const r=wzState.roles[a.id];
     return `<div class="row"><span class="k">${a.titulo[LANG]}<br><span style="text-transform:none;letter-spacing:0;font-size:12px">${f.w} ${f.d} ${f.m} · ${a.hora}</span></span>
-      <span class="v">${window.CFMS.ROLES[r]?window.CFMS.ROLES[r].label[LANG]:'—'} <button class="edit" onclick="gotoStep(2)">Cambiar</button></span></div>`;
+      <span class="v">${window.CFMS.ROLES[r]?window.CFMS.ROLES[r].label[LANG]:'—'}${actsNeedingRole().some(x=>x.id===a.id)?` <button class="edit" onclick="gotoStep(2)">Cambiar</button>`:''}</span></div>`;
   }).join('');
 }
 function gotoStep(s){ wzState.step=s; renderStep(); } window.gotoStep=gotoStep;
 function nextStep(){
-  if(wzState.step===1){ if(wzState.acts.length===0) return; wzState.step=2; renderStep(); }
+  if(wzState.step===1){
+    if(wzState.acts.length===0) return;
+    wzState.step = needsRoleStep() ? 2 : 3;   // salta Función si no hace falta
+    renderStep();
+  }
   else if(wzState.step===2){
-    // todas las actividades seleccionadas deben tener función
-    const faltan = wzState.acts.filter(id=>!wzState.roles[id]);
+    const faltan = actsNeedingRole().filter(a=>!wzState.roles[a.id]);
     if(faltan.length){ return; }
     wzState.step=3; renderStep();
   }
   else { confirmInscr(); }
 }
-function prevStep(){ if(wzState.step>1){ wzState.step--; renderStep(); } }
+function prevStep(){
+  if(wzState.step===3){ wzState.step = needsRoleStep() ? 2 : 1; renderStep(); }
+  else if(wzState.step>1){ wzState.step--; renderStep(); }
+}
 window.nextStep=nextStep; window.prevStep=prevStep;
 
 function confirmInscr(){
