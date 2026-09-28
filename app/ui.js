@@ -176,48 +176,68 @@ function go(id){
 }
 window.go=go;
 
-/* ---------- WIZARD ---------- */
+/* ---------- WIZARD (multi-selección) ----------
+   wzState.acts = [activityId,...]  (varias actividades)
+   wzState.roles = { activityId: roleId }  (función elegida por actividad) */
 function openWizard(actId){
-  const a = currentActivities().find(x=>x.id===actId);
-  if(!a) return;
-  wzState = { step:1, activity:a, role: INSCR[a.id]||null };
-  // paso 1: mostrar actividades del mes con plazas (preseleccionar la clicada)
-  const acts = currentActivities();
-  document.getElementById('wzActs').innerHTML = acts.map(x=>{
-    const tipo=tipoDe(x.templateId); const f=fmtFecha(x.data); const libres=totalLibres(x);
-    const sel = x.id===a.id ? 'sel':''; const dis = (libres<=0 && !INSCR[x.id]) ? 'disabled':'';
-    return `<div class="opt ${sel} ${dis}" data-act="${x.id}" onclick="wzPickAct('${x.id}')">
-      <div class="oic">${ICON_TIPO[tipo]}</div>
-      <div class="otxt"><div class="ot">${x.titulo[LANG]}</div><div class="os">${f.w} ${f.d} ${f.m} · ${x.hora} · Cadena ${x.cadeia}</div></div>
-      <div class="ocheck">✓</div></div>`;
-  }).join('');
-  buildRoles();
+  wzState = { step:1, acts: actId ? [actId] : [], roles:{} };
+  // precargar función ya inscrita si la hay
+  if(actId && INSCR[actId]) wzState.roles[actId] = INSCR[actId];
+  renderWzActs();
   document.getElementById('wizard').classList.add('active');
   document.getElementById('stepper').style.visibility='visible';
   resetFoot(); wzState.step=1; renderStep();
 }
 function closeWizard(){ document.getElementById('wizard').classList.remove('active'); }
-function wzPickAct(id){
-  wzState.activity = currentActivities().find(x=>x.id===id);
-  wzState.role = null;
-  document.querySelectorAll('#wzActs .opt').forEach(o=>o.classList.toggle('sel', o.dataset.act===id));
-  buildRoles();
-}
-function buildRoles(){
-  const a = wzState.activity; if(!a) return;
-  document.getElementById('wzRoleHint').textContent = `${a.titulo[LANG]} · ${fmtFecha(a.data).d} ${fmtFecha(a.data).m} ${a.hora}. Elige tu función.`;
-  document.getElementById('wzRoles').innerHTML = Object.keys(a.roles).map(rid=>{
-    const rd = window.CFMS.ROLES[rid]; const rest = window.CFMS.vagasRestantes(a,rid);
-    const dis = rest<=0 ? 'disabled':''; const sel = wzState.role===rid ? 'sel':'';
-    const req = rd&&rd.requiresFurgoneta ? ' · requiere furgoneta' : '';
-    return `<div class="opt ${sel} ${dis}" data-role="${rid}" onclick="wzPickRole('${rid}')">
-      <div class="oic">${ICON_TIPO[tipoDe(a.templateId)]}</div>
-      <div class="otxt"><div class="ot">${rd?rd.label[LANG]:rid}</div><div class="os">Quedan ${Math.max(0,rest)} de ${a.roles[rid]}${req}</div></div>
+
+/* PASO 1 — multi-selección de actividades (checkbox) */
+function renderWzActs(){
+  const acts = currentActivities();
+  document.getElementById('wzActs').innerHTML = acts.map(x=>{
+    const tipo=tipoDe(x.templateId); const f=fmtFecha(x.data); const libres=totalLibres(x);
+    const sel = wzState.acts.includes(x.id) ? 'sel':'';
+    const dis = (libres<=0 && !INSCR[x.id] && !wzState.acts.includes(x.id)) ? 'disabled':'';
+    return `<div class="opt ${sel} ${dis}" data-act="${x.id}" onclick="wzToggleAct('${x.id}')">
+      <div class="oic">${ICON_TIPO[tipo]}</div>
+      <div class="otxt"><div class="ot">${x.titulo[LANG]}</div><div class="os">${f.w} ${f.d} ${f.m} · ${x.hora} · Cadena ${x.cadeia}</div></div>
       <div class="ocheck">✓</div></div>`;
   }).join('');
 }
-function wzPickRole(rid){ wzState.role=rid; document.querySelectorAll('#wzRoles .opt').forEach(o=>o.classList.toggle('sel', o.dataset.role===rid)); }
-window.openWizard=openWizard; window.closeWizard=closeWizard; window.wzPickAct=wzPickAct; window.wzPickRole=wzPickRole;
+function wzToggleAct(id){
+  const i = wzState.acts.indexOf(id);
+  if(i>=0){ wzState.acts.splice(i,1); delete wzState.roles[id]; }
+  else { wzState.acts.push(id); }
+  document.querySelector(`#wzActs .opt[data-act="${id}"]`).classList.toggle('sel', wzState.acts.includes(id));
+}
+
+/* PASO 2 — función por cada actividad seleccionada (una sección por actividad) */
+function buildRoles(){
+  const acts = currentActivities();
+  const sel = wzState.acts.map(id=>acts.find(a=>a.id===id)).filter(Boolean)
+    .sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));
+  document.getElementById('wzRoleHint').textContent = sel.length>1
+    ? `Elige tu función en cada una de las ${sel.length} actividades.`
+    : 'Elige tu función.';
+  document.getElementById('wzRoles').innerHTML = sel.map(a=>{
+    const f=fmtFecha(a.data);
+    const opts = Object.keys(a.roles).map(rid=>{
+      const rd=window.CFMS.ROLES[rid]; const rest=window.CFMS.vagasRestantes(a,rid);
+      const chosen = wzState.roles[a.id]===rid ? 'sel':'';
+      const dis = (rest<=0 && wzState.roles[a.id]!==rid) ? 'disabled':'';
+      const req = rd&&rd.requiresFurgoneta ? ' · requiere furgoneta' : '';
+      return `<div class="opt ${chosen} ${dis}" data-act="${a.id}" data-role="${rid}" onclick="wzPickRole('${a.id}','${rid}')">
+        <div class="oic">${ICON_TIPO[tipoDe(a.templateId)]}</div>
+        <div class="otxt"><div class="ot">${rd?rd.label[LANG]:rid}</div><div class="os">Quedan ${Math.max(0,rest)} de ${a.roles[rid]}${req}</div></div>
+        <div class="ocheck">✓</div></div>`;
+    }).join('');
+    return `<div class="role-group"><div class="role-group-h"><span class="rg-t">${a.titulo[LANG]}</span><span class="rg-d">${f.w} ${f.d} ${f.m} · ${a.hora}</span></div>${opts}</div>`;
+  }).join('');
+}
+function wzPickRole(actId, rid){
+  wzState.roles[actId]=rid;
+  document.querySelectorAll(`#wzRoles .opt[data-act="${actId}"]`).forEach(o=>o.classList.toggle('sel', o.dataset.role===rid));
+}
+window.openWizard=openWizard; window.closeWizard=closeWizard; window.wzToggleAct=wzToggleAct; window.wzPickRole=wzPickRole;
 
 function resetFoot(){ document.getElementById('wzFoot').innerHTML='<button class="back hidden" id="wzBack" onclick="prevStep()">Atrás</button><button class="next" id="wzNext" onclick="nextStep()">Continuar</button>'; }
 function renderStep(){
@@ -226,36 +246,49 @@ function renderStep(){
   document.querySelectorAll('.stepper .st').forEach(st=>{ const n=+st.dataset.s; st.classList.toggle('done',n<wzState.step); st.classList.toggle('cur',n===wzState.step); });
   document.getElementById('wzBack').classList.toggle('hidden', wzState.step===1);
   document.getElementById('wzNext').textContent = (wzState.step===3)?'Confirmar':'Continuar';
+  if(wzState.step===2) buildRoles();
   if(wzState.step===3) fillResumo();
   document.querySelector('.wz-body').scrollTo(0,0);
 }
+function selectedActsSorted(){
+  const acts=currentActivities();
+  return wzState.acts.map(id=>acts.find(a=>a.id===id)).filter(Boolean).sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));
+}
 function fillResumo(){
-  const a=wzState.activity, r=wzState.role, f=fmtFecha(a.data);
-  document.getElementById('wzResumo').innerHTML =
-    `<div class="row"><span class="k">Actividad</span><span class="v">${a.titulo[LANG]}</span></div>
-     <div class="row"><span class="k">Fecha y hora</span><span class="v">${f.w} ${f.d} ${f.m} · ${a.hora}</span></div>
-     <div class="row"><span class="k">Cadena</span><span class="v">${a.cadeia}</span></div>
-     <div class="row"><span class="k">Tu función</span><span class="v">${window.CFMS.ROLES[r]?window.CFMS.ROLES[r].label[LANG]:r} <button class="edit" onclick="gotoStep(2)">Cambiar</button></span></div>`;
+  const sel = selectedActsSorted();
+  document.getElementById('wzResumo').innerHTML = sel.map(a=>{
+    const f=fmtFecha(a.data); const r=wzState.roles[a.id];
+    return `<div class="row"><span class="k">${a.titulo[LANG]}<br><span style="text-transform:none;letter-spacing:0;font-size:12px">${f.w} ${f.d} ${f.m} · ${a.hora}</span></span>
+      <span class="v">${window.CFMS.ROLES[r]?window.CFMS.ROLES[r].label[LANG]:'—'} <button class="edit" onclick="gotoStep(2)">Cambiar</button></span></div>`;
+  }).join('');
 }
 function gotoStep(s){ wzState.step=s; renderStep(); } window.gotoStep=gotoStep;
 function nextStep(){
-  if(wzState.step===1){ if(!wzState.activity) return; wzState.step=2; renderStep(); }
-  else if(wzState.step===2){ if(!wzState.role) return; wzState.step=3; renderStep(); }
+  if(wzState.step===1){ if(wzState.acts.length===0) return; wzState.step=2; renderStep(); }
+  else if(wzState.step===2){
+    // todas las actividades seleccionadas deben tener función
+    const faltan = wzState.acts.filter(id=>!wzState.roles[id]);
+    if(faltan.length){ return; }
+    wzState.step=3; renderStep();
+  }
   else { confirmInscr(); }
 }
 function prevStep(){ if(wzState.step>1){ wzState.step--; renderStep(); } }
 window.nextStep=nextStep; window.prevStep=prevStep;
 
 function confirmInscr(){
-  const a=wzState.activity, r=wzState.role, f=fmtFecha(a.data);
-  INSCR[a.id]=r; saveInscr();
+  const sel = selectedActsSorted();
+  sel.forEach(a=>{ INSCR[a.id] = wzState.roles[a.id]; });
+  saveInscr();
   document.querySelectorAll('.wz-step').forEach(s=>s.classList.remove('active'));
   document.querySelector('.wz-step[data-step="ok"]').classList.add('active');
   document.getElementById('stepper').style.visibility='hidden';
-  document.getElementById('wzOkResumo').innerHTML =
-    `<div class="row"><span class="k">Actividad</span><span class="v">${a.titulo[LANG]}</span></div>
-     <div class="row"><span class="k">Cuándo</span><span class="v">${f.w} ${f.d} ${f.m} · ${a.hora}</span></div>
-     <div class="row"><span class="k">Función</span><span class="v">${window.CFMS.ROLES[r]?window.CFMS.ROLES[r].label[LANG]:r}</span></div>`;
+  document.getElementById('wzOkResumo').innerHTML = sel.map(a=>{
+    const f=fmtFecha(a.data); const r=wzState.roles[a.id];
+    return `<div class="row"><span class="k">${a.titulo[LANG]}<br><span style="text-transform:none;letter-spacing:0;font-size:12px">${f.w} ${f.d} ${f.m} · ${a.hora}</span></span><span class="v">${window.CFMS.ROLES[r]?window.CFMS.ROLES[r].label[LANG]:r}</span></div>`;
+  }).join('');
+  const okTitle = document.querySelector('.wz-step[data-step="ok"] h2');
+  if(okTitle) okTitle.textContent = sel.length>1 ? '¡Estás apuntado!' : '¡Estás apuntado!';
   document.getElementById('wzFoot').innerHTML='<button class="next" onclick="closeWizard();renderAll();go(\'v-mios\')">Listo</button>';
 }
 

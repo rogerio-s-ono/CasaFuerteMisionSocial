@@ -1,6 +1,6 @@
 /* Service Worker — Casa Fuerte Misión Social
    Regra (lição gideao300): version.json SEMPRE da rede; app shell cache-first. */
-const CACHE = 'cfms-v0.2.0';
+const CACHE = 'cfms-v0.2.1';
 const ASSETS = [
   './',
   './index.html',
