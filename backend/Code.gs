@@ -61,6 +61,7 @@ function doPost(e) {
       case 'setPermiso':      return _json(_setPermiso(body, email));
       case 'delPermiso':      return _json(_delPermiso(body, email));
       case 'upsertVoluntario':return _json(_upsertVoluntario(body, email));
+      case 'delVoluntario':   return _json(_delVoluntario(body, email));
       case 'dedupeVoluntarios':return _json(_dedupeVoluntarios(body, email));
       case 'inscribir':       return _json(_inscribir(body, email));
       case 'cancelar':        return _json(_cancelar(body, email));
@@ -164,6 +165,20 @@ function _upsertVoluntario(body, email) {
   var rec = { telefono:telText, nombre:v.nombre, email:(email||v.email||''), idioma:(v.idioma||'es'), actualizadoEm:new Date().toISOString() };
   if (idx >= 0) _updateRow(sh, idx, rec); else _appendRow(sh, rec);
   _audit(email||v.telefono, 'upsertVoluntario', 'voluntario', telKey);
+  return { ok:true };
+}
+
+function _delVoluntario(body, email){
+  if (!_isAdmin(email)) return { ok:false, error:'forbidden_admin' };
+  var telKey = _normTel(body.telefono);
+  if (!telKey) return { ok:false, error:'sin_telefono' };
+  var sh = _sheet(SHEETS.VOLUNTARIOS);
+  var rows = _readRows(SHEETS.VOLUNTARIOS);
+  for (var i = rows.length - 1; i >= 0; i--) {
+    if (_normTel(rows[i].telefono) === telKey) sh.deleteRow(i + 2);
+  }
+  SpreadsheetApp.flush();
+  _audit(email, 'delVoluntario', 'voluntario', telKey);
   return { ok:true };
 }
 
