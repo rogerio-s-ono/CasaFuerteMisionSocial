@@ -1267,15 +1267,27 @@ function renderSyncBadge(s){
 }
 if(window.MFSync){
   window.MFSync.onStatus(renderSyncBadge);
-  window.MFSync.init().then(function(res){
-    if(res && res.data){
-      if(res.data.permisos) setPermisos(res.data.permisos);
-      if(res.data.voluntarios) setServerVols(res.data.voluntarios);
-      if(res.data.config && res.data.config.misiones){
-        window.CFMS.setConfig(res.data.config);
-        localStorage.setItem('mf_config', JSON.stringify(res.data.config));
-      }
-      if(USER){ renderDemoBar(); renderAll(); }
+  // aplica los datos de un pull (config/permisos/voluntarios) y re-renderiza si procede
+  function applyPull(res, forceRender){
+    if(!(res && res.data)) return;
+    if(res.data.permisos) setPermisos(res.data.permisos);
+    if(res.data.voluntarios) setServerVols(res.data.voluntarios);
+    if(res.data.config && res.data.config.misiones){
+      window.CFMS.setConfig(res.data.config);
+      localStorage.setItem('mf_config', JSON.stringify(res.data.config));
     }
-  });
+    // no re-renderizar si el usuario está en medio de una edición (evita perder foco/estado)
+    var editing = ACC_BUSY
+      || (document.activeElement && /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName))
+      || document.getElementById('wizard').classList.contains('active')
+      || document.getElementById('chkOverlay').classList.contains('active')
+      || document.getElementById('asgSheet').classList.contains('on');
+    if(USER && (forceRender || !editing)){ renderDemoBar(); renderAll(); }
+  }
+  window.MFSync.init().then(function(res){ applyPull(res, true); });
+  // PULL periódico y al volver el foco (para ver cambios de otros dispositivos)
+  function refreshFromServer(){ if(document.hidden) return; window.MFSync.pull().then(function(r){ applyPull(r, false); }); }
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) refreshFromServer(); });
+  window.addEventListener('online', refreshFromServer);
+  setInterval(refreshFromServer, 3*60*1000);   // cada 3 min
 }
