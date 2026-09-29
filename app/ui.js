@@ -76,7 +76,16 @@ function tmplId(activityId){
 }
 /* permisos reales del servidor (del pull): { admins:[email], lideres:{email:[misionId]} } */
 let PERMISOS = null;
+let SERVER_VOLS = [];   // voluntarios del servidor (pestaña Voluntarios)
 function setPermisos(p){ PERMISOS = p || null; }
+function setServerVols(v){ SERVER_VOLS = Array.isArray(v)?v:[]; }
+/* busca un voluntario del servidor por email (para reconocer login Google entre dispositivos) */
+function volByEmail(email){
+  if(!email) return null;
+  email = email.toLowerCase();
+  var v = SERVER_VOLS.find(function(r){ return String(r.email||'').toLowerCase()===email; });
+  return v ? { name:v.nombre, phone:String(v.telefono), email:email } : null;
+}
 function myEmail(){ return (USER && USER.email) ? USER.email.toLowerCase() : ''; }
 /* si estoy logado con email y hay permisos del servidor, mandan ELLOS; si no, cae al modo demo (DEMO_PROFILE) */
 function isAdmin(){
@@ -206,10 +215,26 @@ function _onGoogleCredential(resp){
   var claims = _decodeJwt(jwt) || {};
   var email = (claims.email||'').toLowerCase();
   var nombre = claims.name || claims.given_name || '';
-  // ¿ya tiene teléfono vinculado localmente por este email?
+  // 1) ¿ya está en el SERVIDOR (pestaña Voluntarios) por este email? → entra en cualquier dispositivo
+  var srv = volByEmail(email);
+  if(srv && srv.phone){ USER={ name:srv.name||nombre, phone:srv.phone, email:email }; enter('Entrando…'); return; }
+  // 2) ¿vínculo local (este dispositivo)?
   var vinc = _emailPhone(email);
   if(vinc){ USER={ name:vinc.name||nombre, phone:vinc.phone, email:email }; enter('Entrando…'); return; }
-  // 1ª vez con Google → pide teléfono (nombre pre-llenado del Google)
+  // 3) por si el pull inicial aún no trajo voluntarios: pull fresco y reintenta
+  if(window.MFSync && window.MFSync.enabled){
+    document.getElementById('lgCheckTxt') && (document.getElementById('lgCheckTxt').textContent='Comprobando…');
+    document.getElementById('lgChecking').classList.add('on');
+    window.MFSync.pull().then(function(res){
+      document.getElementById('lgChecking').classList.remove('on');
+      if(res && res.data && res.data.voluntarios){ setServerVols(res.data.voluntarios); if(res.data.permisos) setPermisos(res.data.permisos); }
+      var s2 = volByEmail(email);
+      if(s2 && s2.phone){ USER={ name:s2.name||nombre, phone:s2.phone, email:email }; enter('Entrando…'); }
+      else { _googleFirstTime(nombre, email); }
+    });
+    return;
+  }
+  // 4) sin servidor → pide teléfono (1ª vez)
   _googleFirstTime(nombre, email);
 }
 function _googleFirstTime(nombre, email){
@@ -1097,6 +1122,7 @@ if(window.MFSync){
   window.MFSync.init().then(function(res){
     if(res && res.data){
       if(res.data.permisos) setPermisos(res.data.permisos);
+      if(res.data.voluntarios) setServerVols(res.data.voluntarios);
       if(res.data.config && res.data.config.misiones){
         window.CFMS.setConfig(res.data.config);
         localStorage.setItem('mf_config', JSON.stringify(res.data.config));
