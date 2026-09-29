@@ -1093,8 +1093,46 @@ function confirmInscr(){
   document.getElementById('wzFoot').innerHTML='<button class="next" onclick="closeWizard();renderAll();go(\'v-mios\')">Listo</button>';
 }
 
+/* ---------- ACTUALIZACIÓN DE VERSIÓN (patrón Gideão) ---------- */
+var newVersionAvail = null, bannerShown = false, updating = false;
+function applyUpdate(btn){
+  if(updating) return; updating = true;
+  if(btn){ btn.disabled = true; btn.textContent = 'Actualizando…'; }
+  (async function(){
+    try{
+      if('caches' in window){ var keys = await caches.keys(); await Promise.all(keys.map(function(k){ return caches.delete(k); })); }
+      if('serviceWorker' in navigator){ var regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(function(r){ return r.update().catch(function(){}); })); }
+    }catch(e){}
+    setTimeout(function(){ location.reload(); }, 300);
+  })();
+}
+function dismissUpdate(){
+  var b=document.getElementById('updateBanner'); if(b) b.style.display='none'; bannerShown=false;
+  try{ if(newVersionAvail) sessionStorage.setItem('mf_dismissedVer', newVersionAvail); }catch(e){}
+}
+window.applyUpdate=applyUpdate; window.dismissUpdate=dismissUpdate;
+function showUpdateBanner(ver){
+  if(bannerShown) return;
+  try{ if(ver && sessionStorage.getItem('mf_dismissedVer')===ver) return; }catch(e){}
+  bannerShown = true;
+  document.getElementById('updateMsg').textContent = 'Nueva versión disponible' + (ver?(' ('+ver+')'):'');
+  document.getElementById('updateBanner').style.display = 'flex';
+  // en la pantalla de login también mostramos el aviso
+  var nv=document.getElementById('loginNewVer'); if(nv){ nv.textContent = 'Nueva versión disponible — toca para actualizar'; nv.onclick=function(){ applyUpdate(); }; }
+}
+function checkVersion(){
+  fetch('version.json?ts=' + Date.now(), { cache:'no-store' })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){ if(d && d.version && d.version !== window.CFMS.APP_VERSION){ newVersionAvail = d.version; showUpdateBanner(d.version); } })
+    .catch(function(){ /* offline: ignora */ });
+}
+
 /* ---------- init ---------- */
 document.getElementById('ver').textContent = window.CFMS.APP_VERSION;
+var lv=document.getElementById('loginVer'); if(lv) lv.textContent = 'v' + window.CFMS.APP_VERSION;
+checkVersion();
+document.addEventListener('visibilitychange', function(){ if(!document.hidden) checkVersion(); });
+setInterval(checkVersion, 30*60*1000);
 fillDdi(document.getElementById('ddi1'));
 fillDdi(document.getElementById('ddi2'));
 fillDdi(document.getElementById('tDdi'));

@@ -224,6 +224,12 @@
   #asgSheet .opt .av{ width:30px; height:30px; border-radius:50%; background:var(--t-distri-bg); color:var(--t-distri-tx); display:grid; place-items:center; font-size:12px; font-weight:600; } #asgSheet .opt .av.t{ background:#efeafa; color:#5a4494; } #asgSheet .opt .av.n{ background:var(--hueso); color:var(--gris); }
 
   .footver{ text-align:center; font-size:10px; color:var(--gris-cl); padding:10px; }
+  .update-banner{ position:fixed; top:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; z-index:250; background:var(--oro); color:#111; display:flex; align-items:center; gap:10px; padding:10px 14px; font-size:13px; font-weight:500; box-shadow:0 2px 10px rgba(0,0,0,.2); }
+  .update-banner #updateMsg{ flex:1; }
+  .update-banner button{ border:0; border-radius:6px; padding:7px 12px; font-family:"Jost",sans-serif; font-weight:600; font-size:12px; cursor:pointer; }
+  .update-banner #updateBtn{ background:#111; color:var(--oro); text-transform:uppercase; letter-spacing:.05em; }
+  .update-banner .ub-x{ background:transparent; color:#111; font-size:18px; padding:2px 6px; }
+  #loginNewVer{ display:block; margin-top:6px; color:var(--oro-cl); font-size:11px; cursor:pointer; }
   #mfToast{ position:fixed; left:50%; bottom:96px; transform:translateX(-50%) translateY(20px); background:var(--negro); color:#fff; font-size:13px; padding:11px 18px; border-radius:999px; z-index:300; opacity:0; pointer-events:none; transition:.25s; max-width:90%; text-align:center; }
   #mfToast.on{ opacity:1; transform:translateX(-50%) translateY(0); }
 
@@ -309,6 +315,11 @@
 </style>
 </head>
 <body>
+<div id="updateBanner" class="update-banner" style="display:none">
+  <span id="updateMsg">Nueva versión disponible</span>
+  <button id="updateBtn" onclick="applyUpdate(this)">Actualizar</button>
+  <button id="updateDismiss" class="ub-x" onclick="dismissUpdate()">×</button>
+</div>
 
 <!-- ============ LOGIN ============ -->
 <div id="loginGate">
@@ -348,7 +359,7 @@
 
     <div id="lgChecking"><span class="dot"></span> <span id="lgCheckTxt">Entrando…</span></div>
   </div>
-  <div class="lg-foot">Manos Fuertes · Misión Social Casa Fuerte</div>
+  <div class="lg-foot">Manos Fuertes · Misión Social Casa Fuerte<br><span id="loginVer" style="opacity:.7"></span><span id="loginNewVer"></span></div>
 </div>
 
 <!-- ============ APP ============ -->
