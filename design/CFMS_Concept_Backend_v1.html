@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Manos Fuertes · Arquitectura de backend (concepto)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600&family=Jost:wght@300;400;500;600&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --negro:#0f0f0f;--grafito:#1f1f1f;--gris:#767676;--gris-cl:#9a9a9a;--linea:#e7e5e1;--hueso:#f7f7f5;--blanco:#fff;
+    --oro:#f5c518;--oro-osc:#d9a90a;--oro-bg:#fdf6dd;--azul:#3a5a78;--azul-bg:#eaf0f5;--verde:#4f9d69;--verde-bg:#e4f2e9;--verde-tx:#2f6b46;
+    --morado:#7c5cbf;--morado-bg:#efeafa;--rojo:#c2560c;--rojo-bg:#fdeadb;--raio:8px; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:"Jost",system-ui,sans-serif; background:var(--hueso); color:var(--grafito); font-weight:300; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  .page{ max-width:900px; margin:0 auto; padding:0 18px 60px; }
+  header{ background:var(--negro); color:#fff; padding:26px 18px; text-align:center; margin-bottom:24px; }
+  header .t{ font-family:"Oswald",sans-serif; text-transform:uppercase; letter-spacing:.05em; font-size:24px; }
+  header .s{ font-size:13px; color:var(--gris-cl); margin-top:6px; }
+  h2{ font-family:"Cormorant Garamond",serif; font-size:26px; font-weight:600; margin:34px 0 6px; }
+  h2 .n{ color:var(--oro-osc); font-family:"Oswald",sans-serif; font-size:15px; vertical-align:middle; margin-right:8px; }
+  .lead{ color:var(--gris); font-size:14px; margin:0 0 16px; max-width:720px; }
+  code{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; background:#efece6; padding:1px 6px; border-radius:4px; color:#5a4a2a; }
+  pre{ background:#1c1a17; color:#e8e2d6; border-radius:var(--raio); padding:16px; overflow-x:auto; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; line-height:1.55; }
+  pre .k{ color:#f5c518; } pre .s{ color:#9fd19f; } pre .c{ color:#7d786f; font-style:italic; } pre .n{ color:#d9a0f0; }
+  table{ width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--linea); border-radius:var(--raio); overflow:hidden; font-size:13px; }
+  th{ background:#242424; color:#fff; text-align:left; padding:9px 12px; font-weight:600; font-size:12px; }
+  td{ padding:9px 12px; border-top:1px solid var(--linea); vertical-align:top; }
+  tr:nth-child(even) td{ background:#faf9f7; }
+  .card{ background:#fff; border:1px solid var(--linea); border-left:4px solid var(--oro); border-radius:var(--raio); padding:14px 16px; margin:10px 0; }
+  .card h4{ margin:0 0 6px; font-family:"Oswald",sans-serif; font-size:13px; text-transform:uppercase; letter-spacing:.04em; }
+  ul{ margin:6px 0; padding-left:20px; } li{ margin:5px 0; font-size:14px; }
+  .note{ background:var(--azul-bg); border:1px solid #cfe0ee; border-radius:var(--raio); padding:12px 14px; font-size:13px; color:var(--azul); margin:12px 0; }
+  .warn{ background:var(--rojo-bg); border:1px solid #f0cbb0; border-radius:var(--raio); padding:12px 14px; font-size:13px; color:var(--rojo); margin:12px 0; }
+  .q{ background:var(--oro-bg); border:1px solid #ecdca6; border-radius:var(--raio); padding:12px 14px; font-size:13px; margin:10px 0; } .q b{ color:#8a6d1a; }
+  /* diagrama de capas */
+  .flow{ display:flex; flex-direction:column; gap:0; align-items:stretch; margin:16px 0; }
+  .layer{ border:2px solid var(--linea); border-radius:var(--raio); padding:14px 16px; background:#fff; }
+  .layer .lt{ font-family:"Oswald",sans-serif; text-transform:uppercase; letter-spacing:.04em; font-size:13px; font-weight:600; margin-bottom:4px; }
+  .layer .ld{ font-size:13px; color:var(--gris); }
+  .layer.client{ border-color:var(--oro); } .layer.client .lt{ color:var(--oro-osc); }
+  .layer.cache{ border-color:var(--verde); } .layer.cache .lt{ color:var(--verde-tx); }
+  .layer.api{ border-color:var(--azul); } .layer.api .lt{ color:var(--azul); }
+  .layer.data{ border-color:var(--morado); } .layer.data .lt{ color:#5a4494; }
+  .conn{ text-align:center; color:var(--gris-cl); font-size:20px; padding:4px; }
+  .pill{ display:inline-block; font-size:11px; font-weight:600; padding:2px 9px; border-radius:999px; margin:2px 3px; }
+  .p-get{ background:var(--verde-bg); color:var(--verde-tx); } .p-post{ background:var(--azul-bg); color:var(--azul); }
+</style>
+</head>
+<body>
+<header>
+  <div class="t">Manos Fuertes</div>
+  <div class="s">Arquitectura de backend — concepto para validar antes de implementar</div>
+</header>
+<div class="page">
+
+  <p class="lead">Hoy todo vive en el <code>localStorage</code> de cada dispositivo (nada se comparte). El backend hace que la <b>configuración, voluntarios, inscripciones, lista de espera y checklists</b> vivan en un lugar central y se sincronicen entre todos los dispositivos — manteniendo el app <b>offline-first</b> (rápido y usable sin red).</p>
+
+  <div class="card"><h4>Decisión de stack (recomendada)</h4>
+    <b>Google Apps Script (Web App) + Google Sheets</b> como backend — la misma stack del proyecto Gideão 300, que ya dominas y funciona. <b>Coste 0</b>, sin servidor que mantener, y la planilla es legible/editable a mano si hace falta. Login con <b>Google</b> (ya decidido para líderes/admin).</p>
+  </div>
+
+  <!-- 1. CAPAS -->
+  <h2><span class="n">01</span>Las 4 capas</h2>
+  <div class="flow">
+    <div class="layer client"><div class="lt">1 · App (PWA en el móvil)</div><div class="ld">La UI que ya construimos. Lee y escribe <b>siempre primero en el caché local</b> → respuesta instantánea, funcione o no la red.</div></div>
+    <div class="conn">▲ ▼ sincroniza</div>
+    <div class="layer cache"><div class="lt">2 · Caché local (localStorage / IndexedDB)</div><div class="ld">Copia local de los datos + una <b>cola de cambios pendientes</b> (lo que aún no llegó al servidor). Es lo que hace el app offline-first.</div></div>
+    <div class="conn">▲ ▼ HTTPS (pull / push)</div>
+    <div class="layer api"><div class="lt">3 · API — Apps Script Web App</div><div class="ld">Un endpoint <code>/exec</code>. <span class="pill p-get">GET pull</span> devuelve todo el estado; <span class="pill p-post">POST</span> aplica cambios (inscribir, config, checklist…). Valida permisos (Google + allowlist) y reglas (no pasar del cupo).</div></div>
+    <div class="conn">▲ ▼ lee/escribe</div>
+    <div class="layer data"><div class="lt">4 · Datos — Google Sheets</div><div class="ld">Una hoja por entidad (pestañas). La fuente de verdad compartida.</div></div>
+  </div>
+
+  <!-- 2. PESTAÑAS -->
+  <h2><span class="n">02</span>Las pestañas de la planilla</h2>
+  <table>
+    <tr><th>Pestaña</th><th>Qué guarda</th><th>Quién escribe</th></tr>
+    <tr><td><code>Config</code></td><td>La configuración (misiones, actividades, plazas, roles, checklist templates) — como JSON o filas</td><td>Admin</td></tr>
+    <tr><td><code>Voluntarios</code></td><td>teléfono (clave), nombre, email, idioma, consentimiento</td><td>cada voluntario (su perfil)</td></tr>
+    <tr><td><code>Inscripciones</code></td><td>voluntario × actividad(fecha) × rol × estado (confirmado / espera / temporal), quién, cuándo</td><td>voluntarios y líderes</td></tr>
+    <tr><td><code>Checklists</code></td><td>por ocurrencia: ítem, hecho, hechoPor, asignadoA, suelto</td><td>líderes</td></tr>
+    <tr><td><code>Auditoría</code></td><td>timestamp · usuario · acción (registro inmutable)</td><td>servidor</td></tr>
+  </table>
+  <div class="note">La <b>Config</b> puede guardarse como <b>un JSON en una celda</b> (simple, como ya la tenemos) o desglosada en filas (más “planilla”). Recomiendo empezar con JSON en una celda — migración trivial desde <code>mf_config</code>.</div>
+
+  <!-- 3. SINCRONIZACIÓN -->
+  <h2><span class="n">03</span>Cómo sincroniza (offline-first)</h2>
+  <p class="lead">Patrón <b>pull + push</b>, el mismo del Gideão 300:</p>
+  <pre><span class="c">// Al abrir / al reconectar / cada X min:</span>
+1. PULL   GET /exec?action=pull&token&idToken
+          → { config, voluntarios, inscripciones, checklists }
+          → guarda en caché local, refresca la UI
+
+<span class="c">// Al hacer una acción (inscribirse, asignar, editar config…):</span>
+2. Escribe YA en el caché local (UI responde al instante) + marca "pendiente"
+3. PUSH   POST /exec  { action:'inscribir', activityId, rol, ... }
+          → si hay red: aplica en Sheets, confirma
+          → si no hay red: queda en la cola; se reintenta al reconectar</pre>
+  <div class="card"><h4>Estado de sync (visible en el app)</h4>
+    Un indicador: <b>✓ sincronizado</b> · <b>⏳ pendiente</b> (hay cambios sin subir) · <b>⚠ error</b> · <b>sin conexión</b>. Igual que el Gideão.</div>
+
+  <!-- 4. CONFLICTOS -->
+  <h2><span class="n">04</span>Conflictos y reglas críticas</h2>
+  <p class="lead">La mayoría de los datos aquí NO son colaborativos (cada voluntario edita lo suyo), así que <b>los conflictos son raros</b>. Pero hay UN caso crítico:</p>
+  <div class="warn"><b>El cupo de plazas.</b> Dos voluntarios podrían tomar la última plaza a la vez. Solución: la regla de cupo se valida <b>en el servidor</b> (no en el móvil). El servidor, al recibir la inscripción, comprueba el cupo con <code>LockService</code> (bloqueo) y, si ya está lleno, responde <b>“a lista de espera”</b>. El móvil ajusta. Así no hay sobrecupo.</div>
+  <table>
+    <tr><th>Dato</th><th>Estrategia de conflicto</th></tr>
+    <tr><td>Perfil, mis inscripciones, checklist marcado</td><td>Last-write-wins por campo (raro chocar; bajo impacto)</td></tr>
+    <tr><td><b>Cupo de una plaza</b></td><td><b>Validación en el servidor</b> (LockService) → confirmado o espera</td></tr>
+    <tr><td>Config (solo Admin la edita)</td><td>Un solo editor → sin conflicto real</td></tr>
+  </table>
+
+  <!-- 5. SEGURIDAD -->
+  <h2><span class="n">05</span>Seguridad y permisos</h2>
+  <ul>
+    <li><b>Login Google</b> (líderes/admin obligatorio; voluntarios teléfono o Google). El servidor valida el <code>idToken</code>.</li>
+    <li><b>Allowlist en la planilla</b>: quién es admin, quién es líder de qué misión. El servidor comprueba antes de aceptar una escritura sensible (editar config = solo admin; checklist/escala = solo líder de esa misión).</li>
+    <li><b>Lección del gideao300 (ya en el backlog):</b> en un frontend público el token compartido no es secreto. Aquí la seguridad real es el login Google + allowlist en el servidor. <b>Datos personales de voluntarios viven solo en la planilla</b> (protegida por login), nunca en el repo.</li>
+  </ul>
+
+  <!-- 6. PLAN -->
+  <h2><span class="n">06</span>Plan de implementación (por fases)</h2>
+  <ul>
+    <li><b>Fase 1 — Config compartida:</b> subir <code>CONFIG</code> a la pestaña Config; el app hace pull al abrir. (El Admin edita → se guarda en el servidor → todos lo ven.)</li>
+    <li><b>Fase 2 — Voluntarios + login Google real:</b> perfil en la planilla; allowlist de admin/líderes.</li>
+    <li><b>Fase 3 — Inscripciones + lista de espera:</b> con validación de cupo en el servidor (LockService).</li>
+    <li><b>Fase 4 — Checklists:</b> plantilla (en Config) + instancia (pestaña Checklists).</li>
+    <li><b>Fase 5 — Sync robusto:</b> cola de pendientes, reintentos, indicador de estado, caché offline.</li>
+  </ul>
+
+  <div class="q"><b>Para validar / decidir:</b>
+    <ul>
+      <li>¿Confirmas <b>Apps Script + Sheets</b> (stack del Gideão) como backend?</li>
+      <li>Config como <b>JSON en una celda</b> (rápido) o <b>desglosada en filas</b> (más manual)? — recomiendo JSON.</li>
+      <li>¿Reutilizamos la <b>misma planilla/base</b> del Gideão o una <b>nueva planilla</b> propia de Manos Fuertes? — recomiendo nueva, separada.</li>
+      <li>¿Empezamos por la <b>Fase 1 (config compartida)</b>, que es la que da valor inmediato y prueba todo el circuito pull/push?</li>
+    </ul>
+  </div>
+
+  <div class="card" style="border-left-color:var(--verde)"><h4 style="color:#2f6b46">Ventaja</h4>El app ya está construido y probado sobre <code>localStorage</code>. El backend <b>reemplaza la capa de almacenamiento</b> (load/save) por pull/push — la UI, la lógica, las pantallas <b>no cambian</b>. Es una migración de la capa de datos, no una reescritura.</div>
+
+</div>
+</body>
+</html>
