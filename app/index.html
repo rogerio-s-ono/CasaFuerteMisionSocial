@@ -74,18 +74,18 @@
   .lg-foot{ text-align:center; font-size:10px; color:#6f6a61; letter-spacing:.15em; text-transform:uppercase; padding:16px; }
 
   /* ============ HEADER (3 columnas) ============ */
-  header{ background:var(--negro); color:#fff; padding:12px 16px; position:sticky; top:0; z-index:20; }
-  .h-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
-  .h-row img.iglesia{ height:30px; width:auto; opacity:.9; flex:0 0 auto; }
+  header{ background:var(--negro); color:#fff; padding:12px 14px; position:sticky; top:0; z-index:20; }
+  .h-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .h-row img.iglesia{ height:24px; width:auto; opacity:.9; flex:0 0 auto; cursor:pointer; }
   .h-center{ flex:1; text-align:center; min-width:0; }
-  .h-center .titulo{ font-family:"Oswald",sans-serif; font-size:22px; font-weight:600; color:#fff; line-height:1; text-transform:uppercase; letter-spacing:.04em; }
-  .h-center .saludo{ font-size:11px; color:var(--gris-cl); margin-top:2px; }
+  .h-center .titulo{ font-family:"Oswald",sans-serif; font-size:20px; font-weight:600; color:#fff; line-height:1; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+  .h-center .saludo{ font-size:11px; color:var(--gris-cl); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .h-center .saludo em{ font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--oro); }
   .h-mision{ flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:2px; }
-  .h-mision img{ height:34px; width:auto; }
-  .h-mision .lbl{ display:flex; align-items:baseline; gap:4px; line-height:1; }
-  .h-mision .lbl .m1{ font-family:"Oswald",sans-serif; font-weight:600; font-size:12px; letter-spacing:.04em; color:#fff; text-transform:uppercase; }
-  .h-mision .lbl .m2{ font-family:"Nunito",sans-serif; font-weight:700; font-size:11px; color:#fff; }
+  .h-mision img{ height:28px; width:auto; }
+  .h-mision .lbl{ display:flex; align-items:baseline; gap:3px; line-height:1; }
+  .h-mision .lbl .m1{ font-family:"Oswald",sans-serif; font-weight:600; font-size:10px; letter-spacing:.03em; color:#fff; text-transform:uppercase; }
+  .h-mision .lbl .m2{ font-family:"Nunito",sans-serif; font-weight:700; font-size:9px; color:#fff; }
 
   /* ============ VIEWS ============ */
   .view{ display:none; padding:18px 16px 0; animation:fade .25s ease; } .view.active{ display:block; }
@@ -166,6 +166,57 @@
   .btn.primary{ background:var(--oro); color:#111; } .btn.ghost{ background:none; color:var(--gris); flex:0 0 auto; }
   .temp-note{ background:#efeafa; border:1px solid #d9cdf0; border-radius:var(--raio); padding:10px 12px; font-size:12px; color:#5a4494; margin-bottom:14px; }
   .temp-note b{ color:#5a4494; }
+
+  /* ===== Admin ===== */
+  #v-admin{ padding-top:14px; }
+  .adm-head{ display:flex; align-items:center; gap:12px; margin:0 2px 8px; }
+  .adm-head .back{ background:none; border:0; font-size:22px; cursor:pointer; color:var(--grafito); width:22px; }
+  .adm-head .ah-t{ font-family:"Oswald",sans-serif; text-transform:uppercase; letter-spacing:.04em; font-size:18px; }
+  .adm-head .ah-s{ font-size:11px; color:var(--gris); }
+  #v-admin .sec-t{ font-size:11px; text-transform:uppercase; letter-spacing:.14em; color:var(--gris); margin:20px 2px 10px; font-weight:500; }
+  #v-admin .card{ background:#fff; border:1px solid var(--linea); border-radius:var(--raio); margin-bottom:10px; overflow:hidden; }
+  #v-admin .card .row{ display:flex; align-items:center; gap:12px; padding:14px 15px; cursor:pointer; }
+  #v-admin .card .dot{ width:12px; height:12px; border-radius:3px; flex:0 0 12px; }
+  #v-admin .card .rt{ flex:1; min-width:0; } #v-admin .card .rt .n{ font-family:"Cormorant Garamond",serif; font-weight:600; font-size:17px; } #v-admin .card .rt .s{ font-size:12px; color:var(--gris); margin-top:1px; }
+  #v-admin .card .chev{ color:var(--gris-cl); font-size:18px; }
+  #v-admin .pill{ font-size:10px; font-weight:600; padding:3px 8px; border-radius:999px; text-transform:uppercase; letter-spacing:.04em; } .pill.on{ background:var(--t-distri-bg); color:var(--t-distri-tx); } .pill.off{ background:#f0eee9; color:var(--gris); }
+  #v-admin .btn{ border:0; border-radius:var(--raio); padding:14px; font-size:13px; font-weight:600; font-family:"Jost",sans-serif; cursor:pointer; text-transform:uppercase; letter-spacing:.06em; } #v-admin .btn.primary{ background:var(--oro); color:#111; width:100%; } #v-admin .btn.primary.sm{ width:auto; padding:10px 16px; }
+  #v-admin .fld{ margin-bottom:12px; } #v-admin .fld label{ font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--gris); display:block; margin-bottom:6px; }
+  #v-admin .fld input, #v-admin .fld textarea, #v-admin .fld select{ width:100%; padding:12px; border:1px solid var(--linea); border-radius:var(--raio); font-size:15px; font-family:"Jost",sans-serif; background:#fff; }
+  #v-admin .two{ display:flex; gap:10px; } #v-admin .two .fld{ flex:1; }
+  #v-admin .admhint{ font-size:11px; color:var(--gris-cl); margin-top:4px; } #v-admin .admnote{ font-size:11px; color:var(--gris-cl); text-align:center; padding:14px; }
+  #v-admin .colordots{ display:flex; gap:8px; flex-wrap:wrap; } #v-admin .colordots i{ width:28px; height:28px; border-radius:50%; cursor:pointer; border:2px solid transparent; } #v-admin .colordots i.sel{ border-color:#111; }
+  #v-admin .chips{ display:flex; flex-wrap:wrap; gap:6px; } #v-admin .chip{ font-size:12px; background:var(--hueso); border:1px solid var(--linea); border-radius:999px; padding:4px 10px; color:var(--grafito); display:inline-flex; gap:6px; align-items:center; } #v-admin .chip .x{ opacity:.5; cursor:pointer; font-weight:700; } #v-admin .chip.add{ background:var(--oro-bg); border-color:#ecdca6; color:var(--oro-osc); cursor:pointer; }
+  #v-admin .acc{ background:#fff; border:1px solid var(--linea); border-radius:var(--raio); margin-bottom:10px; overflow:hidden; }
+  #v-admin .acc-h{ display:flex; align-items:center; gap:10px; padding:13px 15px; cursor:pointer; } #v-admin .acc-h .at{ flex:1; } #v-admin .acc-h .at .n{ font-family:"Cormorant Garamond",serif; font-weight:600; font-size:16px; } #v-admin .acc-h .at .s{ font-size:11px; color:var(--gris); } #v-admin .acc-h .caret{ color:var(--gris-cl); transition:.2s; } #v-admin .acc.open .acc-h .caret{ transform:rotate(180deg); }
+  #v-admin .acc-body{ display:none; padding:6px 15px 15px; border-top:1px solid var(--linea); } #v-admin .acc.open .acc-body{ display:block; }
+  #v-admin .slot{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--linea); } #v-admin .slot .sn{ flex:1; font-size:14px; } #v-admin .slot .cap{ display:flex; align-items:center; gap:8px; } #v-admin .slot .cap input{ width:56px; padding:7px; text-align:center; border:1px solid var(--linea); border-radius:6px; font-family:"Jost",sans-serif; font-size:14px; } #v-admin .slot .cap .lbl{ font-size:10px; color:var(--gris); text-transform:uppercase; }
+  #v-admin .rolerow{ display:flex; gap:8px; margin-top:8px; align-items:center; } #v-admin .rolerow select{ flex:1; padding:9px; border:1px solid var(--linea); border-radius:var(--raio); font-family:"Jost",sans-serif; }
+  #v-admin .miniadd{ font-size:12px; color:var(--oro-osc); background:var(--oro-bg); border:1px solid #ecdca6; border-radius:999px; padding:8px 12px; cursor:pointer; font-family:"Jost",sans-serif; white-space:nowrap; }
+  #v-admin .recedit{ display:flex; gap:8px; } #v-admin .recedit select{ flex:1; }
+  #v-admin .acc-actions{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; } #v-admin .acc-actions .del{ background:none; border:0; color:#c2560c; font-size:12px; cursor:pointer; font-family:"Jost",sans-serif; text-transform:uppercase; letter-spacing:.05em; } #v-admin .tgl{ font-size:13px; display:inline-flex; align-items:center; gap:6px; }
+
+  /* ===== Checklist del líder ===== */
+  .lc-foot{ padding:10px 14px; border-top:1px solid var(--linea); }
+  .chk-btn{ background:var(--hueso); border:1px solid var(--linea); border-radius:999px; padding:7px 14px; font-size:12px; font-weight:500; font-family:"Jost",sans-serif; cursor:pointer; color:var(--grafito); }
+  .chk-n{ color:var(--oro-osc); font-weight:600; }
+  #chkOverlay .switch button{ flex:1; border:0; background:none; padding:9px; border-radius:999px; font-family:"Jost",sans-serif; font-size:12px; font-weight:500; text-transform:uppercase; letter-spacing:.05em; color:var(--gris); cursor:pointer; } #chkOverlay .switch button.on{ background:#fff; color:var(--negro); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+  .chk-ctx{ font-size:12px; color:var(--gris); text-align:center; margin:6px 2px 14px; }
+  .prog{ display:flex; align-items:center; gap:10px; margin-bottom:12px; } .prog .bar{ flex:1; height:8px; background:#eee; border-radius:4px; overflow:hidden; } .prog .bar i{ display:block; height:100%; background:var(--t-distri); } .prog .txt{ font-size:12px; font-weight:600; color:var(--t-distri-tx); }
+  .item{ background:#fff; border:1px solid var(--linea); border-radius:var(--raio); padding:12px 14px; margin-bottom:8px; display:flex; align-items:flex-start; gap:12px; }
+  .item .box{ width:22px; height:22px; border:2px solid var(--linea); border-radius:6px; flex:0 0 22px; display:grid; place-items:center; font-size:14px; color:#fff; cursor:pointer; margin-top:1px; } .item.done .box{ background:var(--t-distri); border-color:var(--t-distri); }
+  .item .body{ flex:1; min-width:0; } .item .txt{ font-size:15px; } .item.done .txt{ text-decoration:line-through; color:var(--gris); }
+  .item .meta{ display:flex; align-items:center; gap:6px; margin-top:7px; flex-wrap:wrap; }
+  .assign{ font-size:11px; padding:3px 10px; border-radius:999px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; }
+  .assign.serv{ background:var(--t-distri-bg); color:var(--t-distri-tx); border:1px solid #cfe6ad; }
+  .assign.temp{ background:#efeafa; color:#5a4494; border:1px solid #d9cdf0; }
+  .assign.none{ background:var(--hueso); color:var(--gris); border:1px dashed var(--linea); }
+  .tagsuelto{ font-size:9px; text-transform:uppercase; letter-spacing:.04em; background:var(--oro-bg); color:var(--oro-osc); border:1px solid #ecdca6; border-radius:6px; padding:1px 6px; }
+  .doneby{ font-size:11px; color:var(--gris-cl); }
+  .addrow{ display:flex; gap:8px; margin-top:10px; } .addrow input{ flex:1; padding:13px; border:1px solid var(--linea); border-radius:var(--raio); font-size:15px; font-family:"Jost",sans-serif; } .addrow button{ border:0; background:var(--oro); color:#111; border-radius:var(--raio); padding:0 16px; font-weight:600; font-family:"Jost",sans-serif; cursor:pointer; }
+  .tpl-note{ background:var(--oro-bg); border:1px solid #ecdca6; border-radius:var(--raio); padding:10px 12px; font-size:12px; color:#8a6d1a; margin-bottom:14px; }
+  #asgSheet .opt{ display:flex; align-items:center; gap:10px; padding:12px 8px; border-bottom:1px solid var(--linea); cursor:pointer; } #asgSheet .opt:last-child{ border-bottom:0; }
+  #asgSheet .opt .av{ width:30px; height:30px; border-radius:50%; background:var(--t-distri-bg); color:var(--t-distri-tx); display:grid; place-items:center; font-size:12px; font-weight:600; } #asgSheet .opt .av.t{ background:#efeafa; color:#5a4494; } #asgSheet .opt .av.n{ background:var(--hueso); color:var(--gris); }
 
   .footver{ text-align:center; font-size:10px; color:var(--gris-cl); padding:10px; }
 
@@ -298,7 +349,7 @@
 <div id="demoBar"></div>
 <header>
   <div class="h-row">
-    <img class="iglesia" src="assets/logo-casafuerte-light.png" alt="Casa Fuerte Church" />
+    <img class="iglesia" src="assets/logo-casafuerte-light.png" alt="Casa Fuerte Church" onclick="goLogin()" title="Volver al inicio de sesión" />
     <div class="h-center">
       <div class="titulo">Manos Fuertes</div>
       <div class="saludo">hola, <em id="hdrName">—</em></div>
@@ -345,6 +396,11 @@
   <div id="liderCtrl"></div>
   <div id="liderList"></div>
 </section>
+
+<!-- ADMIN -->
+<section class="view" id="v-admin">
+  <div id="adminBody"></div>
+</section>
 </div>
 
 <nav class="nav hidden" id="bottomNav">
@@ -352,6 +408,7 @@
   <button data-v="v-agenda" onclick="go('v-agenda')"><span class="ic">▦</span>Agenda</button>
   <button data-v="v-mios" onclick="go('v-mios')"><span class="ic">✓</span>Mis turnos</button>
   <button data-v="v-lider" id="navLider" onclick="go('v-lider')" style="display:none"><span class="ic">★</span>Líder</button>
+  <button data-v="v-admin" id="navAdmin" onclick="go('v-admin')" style="display:none"><span class="ic">⚙</span>Admin</button>
 </nav>
 
 <!-- SHEET AÑADIR SERVIDOR (líder) -->
@@ -378,6 +435,24 @@
       <button class="btn primary" onclick="addTemp()">Añadir temporal</button>
     </div>
   </div>
+</div>
+
+<!-- CHECKLIST DEL LÍDER (overlay) -->
+<div class="wz-overlay" id="chkOverlay">
+  <div class="wz-head"><button class="close" onclick="closeChecklist()">×</button><span class="ttl" id="chkTitle">Checklist</span></div>
+  <div class="stepper" style="padding-bottom:0"><div style="width:100%"><div class="switch" id="chkSwitch" style="display:flex;background:#ececec;border-radius:999px;padding:3px;margin:0 0 4px">
+    <button class="on" id="chkBInst" onclick="chkSetView('inst')">Esta ocurrencia</button>
+    <button id="chkBTpl" onclick="chkSetView('tpl')">Plantilla</button>
+  </div></div></div>
+  <div class="wz-body" id="chkBody"></div>
+</div>
+
+<!-- sheet asignar tarea -->
+<div class="backdrop" id="asgBackdrop" onclick="closeAsg()"></div>
+<div class="sheet" id="asgSheet">
+  <div class="sh-grab"></div>
+  <h3 style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:20px;margin:0 0 12px">Asignar tarea</h3>
+  <div id="asgList"></div>
 </div>
 
 <!-- WIZARD -->

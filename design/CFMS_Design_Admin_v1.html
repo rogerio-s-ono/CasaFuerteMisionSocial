@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Manos Fuertes · Admin — Configuración (mock)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@300;400;500;600&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --negro:#0f0f0f;--grafito:#1f1f1f;--gris:#767676;--gris-cl:#9a9a9a;--linea:#e7e5e1;--hueso:#f7f7f5;--blanco:#fff;
+    --oro:#f5c518;--oro-osc:#d9a90a;--oro-bg:#fdf6dd;--verde:#4f9d69;--verde-bg:#e4f2e9;--verde-tx:#2f6b46;
+    --morado:#7c5cbf;--morado-bg:#efeafa;--rojo:#c2560c;--rojo-bg:#fdeadb;--raio:8px; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0 auto; max-width:480px; font-family:"Jost",system-ui,sans-serif; background:var(--hueso); color:var(--grafito); font-weight:300; -webkit-font-smoothing:antialiased; padding-bottom:40px; }
+  header{ background:var(--negro); color:#fff; padding:14px 16px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:10; }
+  header .back{ background:none; border:0; color:#fff; font-size:22px; cursor:pointer; line-height:1; width:24px; }
+  header .htxt{ flex:1; } header .htitle{ font-family:"Oswald",sans-serif; text-transform:uppercase; letter-spacing:.04em; font-size:16px; } header .hsub{ font-size:11px; color:var(--gris-cl); }
+  .wrap{ padding:16px; }
+  .screen{ display:none; } .screen.on{ display:block; animation:fade .2s; } @keyframes fade{ from{opacity:0} to{opacity:1} }
+
+  .sec-t{ font-size:11px; text-transform:uppercase; letter-spacing:.14em; color:var(--gris); margin:20px 2px 10px; font-weight:500; }
+  .card{ background:#fff; border:1px solid var(--linea); border-radius:var(--raio); margin-bottom:10px; overflow:hidden; }
+  .row{ display:flex; align-items:center; gap:12px; padding:14px 15px; cursor:pointer; }
+  .row .dot{ width:12px; height:12px; border-radius:3px; flex:0 0 12px; }
+  .row .rt{ flex:1; min-width:0; } .row .rt .n{ font-family:"Cormorant Garamond",serif; font-weight:600; font-size:17px; } .row .rt .s{ font-size:12px; color:var(--gris); margin-top:1px; }
+  .row .chev{ color:var(--gris-cl); font-size:18px; }
+  .pill{ font-size:10px; font-weight:600; padding:3px 8px; border-radius:999px; text-transform:uppercase; letter-spacing:.04em; }
+  .pill.on{ background:var(--verde-bg); color:var(--verde-tx); } .pill.off{ background:#f0eee9; color:var(--gris); }
+  .addbar{ display:flex; gap:10px; margin-top:6px; }
+  .btn{ border:0; border-radius:var(--raio); padding:14px; font-size:13px; font-weight:600; font-family:"Jost",sans-serif; cursor:pointer; text-transform:uppercase; letter-spacing:.06em; }
+  .btn.primary{ background:var(--oro); color:#111; width:100%; } .btn.ghost{ background:#fff; border:1px solid var(--linea); color:var(--grafito); flex:1; }
+  .btn.sm{ padding:8px 12px; font-size:11px; }
+
+  .fld{ margin-bottom:12px; } .fld label{ font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--gris); display:block; margin-bottom:6px; }
+  .fld input, .fld textarea, .fld select{ width:100%; padding:13px; border:1px solid var(--linea); border-radius:var(--raio); font-size:15px; font-family:"Jost",sans-serif; background:#fff; }
+  .fld .hint{ font-size:11px; color:var(--gris-cl); margin-top:4px; }
+  .two{ display:flex; gap:10px; } .two .fld{ flex:1; }
+  .colordots{ display:flex; gap:8px; } .colordots i{ width:28px; height:28px; border-radius:50%; cursor:pointer; border:2px solid transparent; } .colordots i.sel{ border-color:#111; }
+  .chips{ display:flex; flex-wrap:wrap; gap:6px; } .chip{ font-size:12px; background:var(--hueso); border:1px solid var(--linea); border-radius:999px; padding:4px 10px; display:inline-flex; gap:6px; align-items:center; } .chip .x{ opacity:.5; cursor:pointer; font-weight:700; } .chip.add{ background:var(--oro-bg); border-color:#ecdca6; color:var(--oro-osc); cursor:pointer; }
+
+  /* accordion actividad */
+  .acc{ background:#fff; border:1px solid var(--linea); border-radius:var(--raio); margin-bottom:10px; overflow:hidden; }
+  .acc-h{ display:flex; align-items:center; gap:10px; padding:13px 15px; cursor:pointer; }
+  .acc-h .at{ flex:1; } .acc-h .at .n{ font-family:"Cormorant Garamond",serif; font-weight:600; font-size:16px; } .acc-h .at .s{ font-size:11px; color:var(--gris); }
+  .acc-h .caret{ color:var(--gris-cl); transition:.2s; } .acc.open .acc-h .caret{ transform:rotate(180deg); }
+  .acc-body{ display:none; padding:4px 15px 15px; border-top:1px solid var(--linea); } .acc.open .acc-body{ display:block; }
+  .slot{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--linea); } .slot:last-of-type{ border-bottom:0; }
+  .slot .sn{ flex:1; font-size:14px; } .slot .cap{ display:flex; align-items:center; gap:8px; } .slot .cap input{ width:52px; padding:7px; text-align:center; border:1px solid var(--linea); border-radius:6px; font-family:"Jost",sans-serif; font-size:14px; }
+  .slot .cap .lbl{ font-size:10px; color:var(--gris); text-transform:uppercase; letter-spacing:.04em; }
+  .rec-line{ font-size:12px; color:var(--gris); margin:6px 0 10px; }
+  .miniadd{ font-size:12px; color:var(--oro-osc); background:var(--oro-bg); border:1px solid #ecdca6; border-radius:999px; padding:5px 11px; cursor:pointer; font-family:"Jost",sans-serif; margin-top:8px; }
+  .note{ font-size:11px; color:var(--gris-cl); text-align:center; padding:14px; }
+</style>
+</head>
+<body>
+
+<!-- ===== S1: LISTA DE MISIONES ===== -->
+<div class="screen on" id="s1">
+  <header><span class="back" style="visibility:hidden">‹</span><div class="htxt"><div class="htitle">Configuración</div><div class="hsub">Admin · Manos Fuertes</div></div></header>
+  <div class="wrap">
+    <div class="sec-t">Misiones</div>
+    <div class="card"><div class="row" onclick="show('s2')"><span class="dot" style="background:#f2711c"></span><div class="rt"><div class="n">Misión MercaMadrid</div><div class="s">5 actividades · 1 líder</div></div><span class="pill on">Activa</span><span class="chev">›</span></div></div>
+    <div class="card"><div class="row" onclick="show('s2')"><span class="dot" style="background:#3a5a78"></span><div class="rt"><div class="n">Misión Banco de Alimentos</div><div class="s">4 actividades · 1 líder</div></div><span class="pill on">Activa</span><span class="chev">›</span></div></div>
+    <div class="card"><div class="row" onclick="show('s2')"><span class="dot" style="background:#7cb518"></span><div class="rt"><div class="n">Misión Plaza Mayor</div><div class="s">1 actividad · sin líder</div></div><span class="pill off">Inactiva</span><span class="chev">›</span></div></div>
+    <button class="btn primary" onclick="show('s2')">+ Nueva misión</button>
+
+    <div class="sec-t">Catálogo</div>
+    <div class="card"><div class="row" onclick="show('s3')"><span class="dot" style="background:#7c5cbf"></span><div class="rt"><div class="n">Roles</div><div class="s">5 roles definidos</div></div><span class="chev">›</span></div></div>
+    <div class="note">El Admin configura la estructura. Los líderes operan el día a día (escala + checklist).</div>
+  </div>
+</div>
+
+<!-- ===== S2: EDITAR MISIÓN ===== -->
+<div class="screen" id="s2">
+  <header><span class="back" onclick="show('s1')">‹</span><div class="htxt"><div class="htitle">Editar misión</div><div class="hsub">Misión MercaMadrid</div></div></header>
+  <div class="wrap">
+    <div class="fld"><label>Nombre</label><input value="Misión MercaMadrid" /></div>
+    <div class="fld"><label>Descripción</label><textarea rows="2">Recogida de perecederos en MercaMadrid y reparto dominical.</textarea></div>
+    <div class="two">
+      <div class="fld"><label>Color</label><div class="colordots"><i class="sel" style="background:#f2711c"></i><i style="background:#3a5a78"></i><i style="background:#7cb518"></i><i style="background:#e8a300"></i><i style="background:#7c5cbf"></i></div></div>
+      <div class="fld"><label>Estado</label><select><option>Activa</option><option>Inactiva</option></select></div>
+    </div>
+    <div class="fld"><label>Líderes (entran con Google)</label>
+      <div class="chips"><span class="chip">Rogério Ono <span class="x">×</span></span><span class="chip add">+ Añadir líder</span></div>
+      <div class="hint">Autorizados por el Admin. Gestionan escala y checklist de esta misión.</div>
+    </div>
+
+    <div class="sec-t">Actividades</div>
+
+    <div class="acc open">
+      <div class="acc-h" onclick="toggleAcc(this)"><div class="at"><div class="n">Recogida MercaMadrid</div><div class="s">1er sábado · 08:00–10:00</div></div><span class="caret">▾</span></div>
+      <div class="acc-body">
+        <div class="two"><div class="fld"><label>Hora inicio</label><input value="08:00" /></div><div class="fld"><label>Duración</label><input value="2 h" /></div></div>
+        <div class="fld"><label>Recurrencia</label><select><option>Mensual · 1er sábado</option><option>Semanal · sábado</option><option>Mensual · día fijo</option><option>Fechas sueltas</option></select></div>
+        <div class="sec-t" style="margin-top:8px">Plazas por rol</div>
+        <div class="slot"><span class="sn">Conductor (furgoneta)</span><span class="cap"><input value="2" /><span class="lbl">plazas</span><span class="x" style="opacity:.4;cursor:pointer">×</span></span></div>
+        <div class="slot"><span class="sn">Ayudante de carga</span><span class="cap"><input value="2" /><span class="lbl">plazas</span><span class="x" style="opacity:.4;cursor:pointer">×</span></span></div>
+        <div class="miniadd">+ Añadir plaza-rol</div>
+      </div>
+    </div>
+
+    <div class="acc">
+      <div class="acc-h" onclick="toggleAcc(this)"><div class="at"><div class="n">Preparación (sábado)</div><div class="s">1er sábado · 15:00–18:00 · 6 plazas</div></div><span class="caret">▾</span></div>
+      <div class="acc-body"><div class="rec-line">Preparación · 6 plazas · toca para editar</div><div class="miniadd">+ Añadir plaza-rol</div></div>
+    </div>
+    <div class="acc">
+      <div class="acc-h" onclick="toggleAcc(this)"><div class="at"><div class="n">Preparación (domingo)</div><div class="s">1er domingo · 08:00–11:00 · 10 plazas</div></div><span class="caret">▾</span></div>
+      <div class="acc-body"><div class="rec-line">Preparación · 10 plazas</div></div>
+    </div>
+    <div class="acc">
+      <div class="acc-h" onclick="toggleAcc(this)"><div class="at"><div class="n">Distribución</div><div class="s">1er domingo · 12:00–16:00 · 6 plazas</div></div><span class="caret">▾</span></div>
+      <div class="acc-body"><div class="rec-line">Distribución · 6 plazas</div></div>
+    </div>
+    <div class="acc">
+      <div class="acc-h" onclick="toggleAcc(this)"><div class="at"><div class="n">Limpieza</div><div class="s">1er domingo · 16:00–17:30 · 4 plazas</div></div><span class="caret">▾</span></div>
+      <div class="acc-body"><div class="rec-line">Limpieza · 4 plazas</div></div>
+    </div>
+
+    <button class="btn primary" style="margin-top:6px">+ Añadir actividad</button>
+    <div class="addbar" style="margin-top:14px"><button class="btn ghost" onclick="show('s1')">Cancelar</button><button class="btn primary" onclick="show('s1')">Guardar misión</button></div>
+  </div>
+</div>
+
+<!-- ===== S3: CATÁLOGO DE ROLES ===== -->
+<div class="screen" id="s3">
+  <header><span class="back" onclick="show('s1')">‹</span><div class="htxt"><div class="htitle">Roles</div><div class="hsub">Catálogo global · reutilizable</div></div></header>
+  <div class="wrap">
+    <div class="card"><div class="row"><div class="rt"><div class="n">Conductor</div><div class="s">Requisito: furgoneta</div></div><span class="chev">›</span></div></div>
+    <div class="card"><div class="row"><div class="rt"><div class="n">Ayudante de carga</div><div class="s">Sin requisito</div></div><span class="chev">›</span></div></div>
+    <div class="card"><div class="row"><div class="rt"><div class="n">Preparación</div><div class="s">Sin requisito</div></div><span class="chev">›</span></div></div>
+    <div class="card"><div class="row"><div class="rt"><div class="n">Distribución</div><div class="s">Sin requisito</div></div><span class="chev">›</span></div></div>
+    <div class="card"><div class="row"><div class="rt"><div class="n">Limpieza</div><div class="s">Sin requisito</div></div><span class="chev">›</span></div></div>
+    <button class="btn primary">+ Nuevo rol</button>
+    <div class="note">Los roles se reutilizan entre misiones. Editar un rol lo actualiza en todas.</div>
+  </div>
+</div>
+
+<script>
+  function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on', s.id===id)); window.scrollTo(0,0); }
+  function toggleAcc(h){ h.parentNode.classList.toggle('open'); }
+</script>
+</body>
+</html>

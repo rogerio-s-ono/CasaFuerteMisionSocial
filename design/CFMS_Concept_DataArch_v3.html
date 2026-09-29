@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Manos Fuertes · Arquitectura de datos (concepto v3 · con checklist)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@300;400;500;600&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --negro:#0f0f0f;--grafito:#1f1f1f;--gris:#767676;--gris-cl:#9a9a9a;--linea:#e7e5e1;--hueso:#f7f7f5;--blanco:#fff;
+    --oro:#f5c518;--oro-osc:#d9a90a;--oro-bg:#fdf6dd;--azul:#3a5a78;--azul-bg:#eaf0f5;--verde:#4f9d69;--verde-bg:#e4f2e9;
+    --morado:#7c5cbf;--morado-bg:#efeafa;--teal:#2f8f8f;--teal-bg:#e2f2f2;--rojo:#c2560c;--rojo-bg:#fdeadb;--raio:8px; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:"Jost",system-ui,sans-serif; background:var(--hueso); color:var(--grafito); font-weight:300; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  .page{ max-width:900px; margin:0 auto; padding:0 18px 60px; }
+  header{ background:var(--negro); color:#fff; padding:26px 18px; text-align:center; margin-bottom:24px; }
+  header .t{ font-family:"Oswald",sans-serif; text-transform:uppercase; letter-spacing:.05em; font-size:24px; }
+  header .s{ font-size:13px; color:var(--gris-cl); margin-top:6px; }
+  h2{ font-family:"Cormorant Garamond",serif; font-size:26px; font-weight:600; margin:34px 0 6px; }
+  h2 .n{ color:var(--oro-osc); font-family:"Oswald",sans-serif; font-size:15px; vertical-align:middle; margin-right:8px; }
+  .lead{ color:var(--gris); font-size:14px; margin:0 0 16px; max-width:700px; }
+  code{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; background:#efece6; padding:1px 6px; border-radius:4px; color:#5a4a2a; }
+  .diagram{ background:var(--blanco); border:1px solid var(--linea); border-radius:var(--raio); padding:20px; margin-bottom:12px; }
+  .ent{ border:2px solid var(--linea); border-radius:var(--raio); margin:0 0 6px; overflow:hidden; }
+  .ent > .eh{ padding:10px 14px; font-weight:600; font-family:"Oswald",sans-serif; text-transform:uppercase; letter-spacing:.04em; font-size:14px; display:flex; align-items:center; gap:8px; }
+  .ent.mision{ border-color:var(--oro); } .ent.mision .eh{ background:var(--oro-bg); color:#8a6d1a; }
+  .ent.actividad{ border-color:var(--azul); } .ent.actividad .eh{ background:var(--azul-bg); color:var(--azul); }
+  .ent.slot{ border-color:var(--verde); } .ent.slot .eh{ background:var(--verde-bg); color:#2f6b46; }
+  .ent.rol{ border-color:var(--morado); } .ent.rol .eh{ background:var(--morado-bg); color:#5a4494; }
+  .ent.chk{ border-color:var(--teal); } .ent.chk .eh{ background:var(--teal-bg); color:#1f6b6b; }
+  .fields{ padding:10px 14px; display:flex; flex-wrap:wrap; gap:6px; }
+  .f{ font-size:12px; background:var(--hueso); border:1px solid var(--linea); border-radius:999px; padding:3px 10px; }
+  .f b{ color:var(--grafito); } .f .ty{ color:var(--gris); }
+  .f.key{ background:#fff8e5; border-color:#ecdca6; } .f.ref{ background:var(--morado-bg); border-color:#d9cdf0; }
+  .nest{ padding:0 14px 12px 26px; } .nest .lbl{ font-size:11px; color:var(--gris); text-transform:uppercase; letter-spacing:.08em; margin:8px 0 4px; }
+  .arrow{ text-align:center; color:var(--gris-cl); font-size:18px; margin:2px 0; }
+  .rel{ font-size:11px; color:var(--gris); font-style:italic; }
+  table{ width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--linea); border-radius:var(--raio); overflow:hidden; font-size:13px; }
+  th{ background:#242424; color:#fff; text-align:left; padding:9px 12px; font-weight:600; font-size:12px; }
+  td{ padding:9px 12px; border-top:1px solid var(--linea); vertical-align:top; }
+  tr:nth-child(even) td{ background:#faf9f7; }
+  pre{ background:#1c1a17; color:#e8e2d6; border-radius:var(--raio); padding:16px; overflow-x:auto; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; line-height:1.55; }
+  pre .k{ color:#f5c518; } pre .s{ color:#9fd19f; } pre .c{ color:#7d786f; font-style:italic; } pre .n{ color:#d9a0f0; }
+  .card{ background:#fff; border:1px solid var(--linea); border-left:4px solid var(--oro); border-radius:var(--raio); padding:14px 16px; margin:10px 0; }
+  .card h4{ margin:0 0 6px; font-family:"Oswald",sans-serif; font-size:13px; text-transform:uppercase; letter-spacing:.04em; }
+  ul{ margin:6px 0; padding-left:20px; } li{ margin:4px 0; font-size:14px; }
+  .note{ background:var(--teal-bg); border:1px solid #bfe0e0; border-radius:var(--raio); padding:12px 14px; font-size:13px; color:#1f6b6b; margin:12px 0; }
+  .ok-tag{ display:inline-block; background:var(--verde-bg); color:#2f6b46; font-size:11px; font-weight:600; padding:2px 8px; border-radius:999px; text-transform:uppercase; letter-spacing:.04em; margin-left:6px; }
+  .legend{ display:flex; flex-wrap:wrap; gap:14px; margin:14px 0; font-size:12px; } .legend span{ display:inline-flex; align-items:center; gap:6px; } .legend i{ width:12px; height:12px; border-radius:3px; display:inline-block; }
+  /* mini demo checklist */
+  .chkdemo{ background:#fff; border:1px solid var(--linea); border-radius:var(--raio); padding:14px 16px; max-width:420px; }
+  .chkrow{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--linea); } .chkrow:last-child{ border-bottom:0; }
+  .chkbox{ width:20px; height:20px; border:2px solid var(--linea); border-radius:5px; flex:0 0 20px; display:grid; place-items:center; font-size:13px; color:#fff; }
+  .chkrow.done .chkbox{ background:var(--verde); border-color:var(--verde); } .chkrow.done .ctxt{ text-decoration:line-through; color:var(--gris); }
+  .ctxt{ flex:1; font-size:14px; } .cass{ font-size:11px; padding:2px 9px; border-radius:999px; background:var(--verde-bg); color:#2f6b46; border:1px solid #cfe6ad; }
+  .cass.temp{ background:var(--morado-bg); color:#5a4494; border-color:#d9cdf0; } .cass.none{ background:var(--hueso); color:var(--gris); border-color:var(--linea); }
+  .cass.adhoc{ background:var(--oro-bg); color:#8a6d1a; border-color:#ecdca6; margin-left:6px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="t">Manos Fuertes</div>
+  <div class="s">Arquitectura de datos — concepto v3 · añade el checklist de los líderes</div>
+</header>
+<div class="page">
+
+  <p class="lead">Sobre el modelo configurable (misiones → actividades → plazas-rol + roles), añadimos el <b>checklist</b>: tareas operativas que el <b>líder</b> gestiona, con <b>plantilla reutilizable</b> por actividad y <b>ítems sueltos</b> por ocasión, cada uno <b>asignable</b> a un servidor o temporal.</p>
+
+  <div class="card"><h4>Decisiones confirmadas (checklist)</h4>
+    <ul>
+      <li>Gestionado por el <b>LÍDER</b> de la misión <span class="ok-tag">confirmado</span> (el Admin define la estructura; el líder opera el día a día).</li>
+      <li><b>Plantilla</b> de checklist por actividad → se <b>materializa</b> en cada ocurrencia (instancia) de la misión <span class="ok-tag">confirmado</span>.</li>
+      <li>El líder puede añadir <b>ítems sueltos</b> a una ocurrencia (sin tocar la plantilla) <span class="ok-tag">confirmado</span>.</li>
+      <li>Cada ítem se puede <b>asignar</b> a un servidor inscrito o a un temporal, y marcarse como <b>hecho</b> <span class="ok-tag">confirmado</span>.</li>
+    </ul>
+  </div>
+
+  <div class="legend">
+    <span><i style="background:#f5c518"></i>Misión</span>
+    <span><i style="background:#3a5a78"></i>Actividad</span>
+    <span><i style="background:#4f9d69"></i>Plaza-rol</span>
+    <span><i style="background:#7c5cbf"></i>Rol</span>
+    <span><i style="background:#2f8f8f"></i>Checklist</span>
+  </div>
+
+  <!-- ===== 1. TEMPLATE VS INSTANCIA ===== -->
+  <h2><span class="n">01</span>El principio: plantilla vs. instancia</h2>
+  <p class="lead">Estándar de la industria (Checkflow, Trainual, OpenGRC): <i>"una plantilla contiene tareas; ejecutar la plantilla produce un checklist que guarda las respuestas"</i>. La plantilla es el molde reutilizable; la instancia recibe los checks, asignaciones e ítems sueltos — <b>sin alterar la plantilla</b>.</p>
+  <div class="diagram" style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start">
+    <div style="flex:1; min-width:260px">
+      <div class="ent chk"><div class="eh">📝 Plantilla de checklist <span class="rel" style="margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0">molde · el líder la define</span></div>
+        <div class="fields">
+          <span class="f">"Separar cajas de los pastores"</span>
+          <span class="f">"Comprobar furgoneta"</span>
+          <span class="f">"Recoger albaranes"</span>
+        </div></div>
+      <div class="rel" style="text-align:center; padding:6px">se reutiliza cada mes ↓</div>
+    </div>
+    <div style="flex:1; min-width:260px">
+      <div class="rel" style="text-align:center; padding:0 0 6px">al ocurrir (ej. Sáb 3 oct) se materializa ↓</div>
+      <div class="chkdemo">
+        <div class="chkrow done"><span class="chkbox">✓</span><span class="ctxt">Separar cajas de los pastores</span><span class="cass">Marcos</span></div>
+        <div class="chkrow"><span class="chkbox"></span><span class="ctxt">Comprobar furgoneta</span><span class="cass temp">Vecino Juan</span></div>
+        <div class="chkrow"><span class="chkbox"></span><span class="ctxt">Recoger albaranes</span><span class="cass none">sin asignar</span></div>
+        <div class="chkrow"><span class="chkbox"></span><span class="ctxt">Comprar bolsas extra</span><span class="cass none">—</span><span class="cass adhoc">suelto</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="note">La instancia hereda los 3 ítems de la plantilla + "Comprar bolsas extra" que el líder añadió <b>solo para ese día</b> (suelto). Marcar/asignar en la instancia <b>no cambia</b> la plantilla.</div>
+
+  <!-- ===== 2. MODELO ===== -->
+  <h2><span class="n">02</span>Dónde encaja en el modelo</h2>
+  <div class="diagram">
+    <div class="ent actividad">
+      <div class="eh">📋 Actividad (plantilla)</div>
+      <div class="fields">
+        <span class="f"><b>…campos de v2…</b></span>
+        <span class="f key"><b>checklistTemplate</b> <span class="ty">·[ ItemPlantilla ] — lo edita el líder</span></span>
+      </div>
+      <div class="nest">
+        <div class="lbl">▾ ItemPlantilla</div>
+        <div class="ent chk"><div class="eh">📝 Item de plantilla</div>
+          <div class="fields">
+            <span class="f key"><b>id</b></span>
+            <span class="f"><b>texto</b> <span class="ty">·{pt,es}</span></span>
+            <span class="f"><b>orden</b> <span class="ty">·nº</span></span>
+            <span class="f ref"><b>rolSugerido</b> <span class="ty">·opc. → Rol</span></span>
+          </div></div>
+      </div>
+    </div>
+    <div class="arrow">▼ al generar la ocurrencia del mes ▼</div>
+    <div class="ent chk">
+      <div class="eh">✅ Item de checklist (instancia) <span class="rel" style="margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0">por ocurrencia · lo opera el líder</span></div>
+      <div class="fields">
+        <span class="f key"><b>id</b></span>
+        <span class="f"><b>texto</b> <span class="ty">·(heredado o suelto)</span></span>
+        <span class="f"><b>suelto</b> <span class="ty">·bool (no venía de plantilla)</span></span>
+        <span class="f key"><b>hecho</b> <span class="ty">·bool</span></span>
+        <span class="f"><b>hechoPor / hechoEn</b> <span class="ty">·quién/cuándo</span></span>
+        <span class="f key"><b>asignadoA</b> <span class="ty">·servidor | temporal | —</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 3. EJEMPLO ===== -->
+  <h2><span class="n">03</span>Ejemplo de datos</h2>
+  <pre><span class="c">// En la actividad "Preparación (sábado)" de Misión MercaMadrid:</span>
+checklistTemplate: [
+  { <span class="k">id</span>:<span class="s">"c1"</span>, <span class="k">texto</span>:{es:<span class="s">"Separar cajas de los pastores"</span>}, <span class="k">orden</span>:<span class="n">1</span> },
+  { <span class="k">id</span>:<span class="s">"c2"</span>, <span class="k">texto</span>:{es:<span class="s">"Comprobar furgoneta"</span>}, <span class="k">orden</span>:<span class="n">2</span>, <span class="k">rolSugerido</span>:<span class="s">"conductor"</span> },
+  { <span class="k">id</span>:<span class="s">"c3"</span>, <span class="k">texto</span>:{es:<span class="s">"Recoger albaranes"</span>}, <span class="k">orden</span>:<span class="n">3</span> }
+]
+
+<span class="c">// Al ocurrir el Sáb 3 oct, se materializa el checklist de esa instancia:</span>
+ocurrencia("prep_sab @ 2026-10-03").checklist: [
+  { <span class="k">id</span>:<span class="s">"c1"</span>, <span class="k">texto</span>:<span class="s">"Separar cajas de los pastores"</span>, <span class="k">hecho</span>:<span class="n">true</span>,  <span class="k">hechoPor</span>:<span class="s">"Marcos"</span>, <span class="k">asignadoA</span>:<span class="s">"Marcos"</span> },
+  { <span class="k">id</span>:<span class="s">"c2"</span>, <span class="k">texto</span>:<span class="s">"Comprobar furgoneta"</span>,         <span class="k">hecho</span>:<span class="n">false</span>, <span class="k">asignadoA</span>:{ <span class="k">temporal</span>:<span class="s">"Vecino Juan"</span> } },
+  { <span class="k">id</span>:<span class="s">"c3"</span>, <span class="k">texto</span>:<span class="s">"Recoger albaranes"</span>,           <span class="k">hecho</span>:<span class="n">false</span>, <span class="k">asignadoA</span>:<span class="n">null</span> },
+  { <span class="k">id</span>:<span class="s">"x1"</span>, <span class="k">texto</span>:<span class="s">"Comprar bolsas extra"</span>, <span class="k">suelto</span>:<span class="n">true</span>, <span class="k">hecho</span>:<span class="n">false</span>, <span class="k">asignadoA</span>:<span class="n">null</span> } <span class="c">// añadido hoy</span>
+]</pre>
+
+  <!-- ===== 4. QUIÉN HACE QUÉ ===== -->
+  <h2><span class="n">04</span>Quién gestiona qué</h2>
+  <table>
+    <tr><th>Rol</th><th>Sobre el checklist</th></tr>
+    <tr><td><b>Admin</b></td><td>Define la estructura de la misión (actividades, roles, capacidad). <i>No</i> gestiona checklists.</td></tr>
+    <tr><td><b>Líder</b></td><td>Crea/edita la <b>plantilla</b> de checklist de cada actividad de su misión. En cada ocurrencia: añade ítems sueltos, <b>asigna</b> a servidor/temporal y marca <b>hecho</b>.</td></tr>
+    <tr><td><b>Servidor</b></td><td>(futuro/opcional) Ve las tareas que le fueron asignadas. Por ahora, la gestión es del líder.</td></tr>
+  </table>
+
+  <!-- ===== 5. ASIGNACIÓN ===== -->
+  <h2><span class="n">05</span>Asignación de ítems</h2>
+  <p class="lead">Reutiliza el patrón "añadir servidor" que ya construimos: un ítem se asigna a un <b>servidor inscrito</b> (chip verde), a un <b>temporal</b> (chip morado) o queda <b>sin asignar</b>.</p>
+  <div class="chkdemo">
+    <div class="chkrow"><span class="chkbox"></span><span class="ctxt">Comprobar furgoneta</span><span class="cass">Carlos R.</span></div>
+    <div class="chkrow"><span class="chkbox"></span><span class="ctxt">Cargar cajas</span><span class="cass temp">Vecino Juan</span></div>
+    <div class="chkrow"><span class="chkbox"></span><span class="ctxt">Recoger albaranes</span><span class="cass none">sin asignar</span></div>
+  </div>
+
+  <div class="card" style="border-left-color:var(--verde)"><h4 style="color:#2f6b46">Modelo completo — siguiente paso</h4>
+    Con el checklist, el modelo de datos cubre: <b>configuración</b> (misiones/actividades/roles), <b>operación</b> (inscripciones, lista de espera, añadir servidor) y <b>tareas</b> (checklist plantilla+instancia con asignación). Si validas → diseño los <b>mockups</b>: (1) pantalla del <b>Admin</b> (config) y (2) el <b>checklist del líder</b> dentro de la actividad. Luego migramos <code>SEED_TEMPLATES</code> → <code>CONFIG.misiones</code>.</div>
+
+</div>
+</body>
+</html>

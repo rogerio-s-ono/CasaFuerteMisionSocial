@@ -114,6 +114,10 @@ function tipoDe(templateId){
 const ICON_TIPO = { retirada:'🚐', prep:'📦', distri:'🤝', limpieza:'🧹' };
 
 /* ---------- persistencia local ---------- */
+function loadConfig(){
+  try{ const c=JSON.parse(localStorage.getItem('mf_config')||'null'); if(c && c.misiones) window.CFMS.setConfig(c); }catch(e){}
+}
+function saveConfig(){ localStorage.setItem('mf_config', JSON.stringify(window.CFMS.getConfig())); }
 function loadState(){
   try{ USER = JSON.parse(localStorage.getItem('mf_user')||'null'); }catch(e){ USER=null; }
   try{ INSCR = JSON.parse(localStorage.getItem('mf_inscr')||'{}'); }catch(e){ INSCR={}; }
@@ -189,6 +193,20 @@ function enter(msg){
   setTimeout(()=>{ document.getElementById('loginGate').style.display='none'; startApp(); }, 1600);
 }
 function logout(){ localStorage.removeItem('mf_user'); location.reload(); }
+function goLogin(){
+  // volver a la pantalla de login (cierra sesión)
+  USER = null; localStorage.removeItem('mf_user');
+  document.getElementById('appShell').classList.add('hidden');
+  document.getElementById('bottomNav').classList.add('hidden');
+  const gate = document.getElementById('loginGate');
+  gate.style.display=''; 
+  // resetear paneles del login
+  document.getElementById('panelPhone').classList.remove('hidden');
+  document.getElementById('panelRegister').classList.add('hidden');
+  document.getElementById('lgChecking').classList.remove('on');
+  window.scrollTo(0,0);
+}
+window.goLogin=goLogin;
 window.submitPhone=submitPhone; window.loginGoogle=loginGoogle; window.submitRegister=submitRegister; window.backToPhone=backToPhone;
 
 /* ---------- APP ---------- */
@@ -214,15 +232,17 @@ function renderDemoBar(){
   document.getElementById('demoSel').value = DEMO_PROFILE;
   applyProfile();
 }
-function setProfile(p){ DEMO_PROFILE=p; LIDER_SCOPE='all'; LIDER_VIEW='dia'; applyProfile(); renderAll();
-  // si dejo de ser líder y estoy en su vista, vuelvo a inicio
+function setProfile(p){ DEMO_PROFILE=p; LIDER_SCOPE='all'; LIDER_VIEW='dia'; ADMIN_NAV={screen:'list',misionId:null}; applyProfile(); renderAll();
+  // si dejo de ser líder/admin y estoy en su vista, vuelvo a inicio
   if(!isLider() && document.getElementById('v-lider').classList.contains('active')) go('v-inicio');
+  if(!isAdmin() && document.getElementById('v-admin').classList.contains('active')) go('v-inicio');
 }
 window.setProfile=setProfile;
 function applyProfile(){
   const nav = document.getElementById('navLider');
   nav.style.display = isLider() ? 'flex' : 'none';
-  // admin ve un aviso simple (autoriza líderes; gestión real en backend)
+  const navA = document.getElementById('navAdmin');
+  if(navA) navA.style.display = isAdmin() ? 'flex' : 'none';
 }
 
 /* ---------- VISTA LÍDER ---------- */
@@ -261,8 +281,9 @@ function actCardLider(a){
   }).join('');
   const badge = faltaAct>0 ? `<span class="lc-badge falta">Faltan ${faltaAct}</span>` : `<span class="lc-badge ok">Completa</span>`;
   return `<div class="lcard ${faltaAct>0?'falta':'completa'}">
-    <div class="lc-h"><div><span class="lc-t">${a.titulo[LANG]}</span> <span class="lc-time">${a.hora}</span></div>${badge}</div>
-    ${roles}</div>`;
+    <div class="lc-h"><div><span class="lc-t">${a.titulo[LANG]}</span> <span class="lc-time">${hhrs(a)}</span></div>${badge}</div>
+    ${roles}
+    <div class="lc-foot"><button class="chk-btn" onclick="openChecklist('${a.id}')">☑ Checklist${chkCount(a)}</button></div></div>`;
 }
 function covOf(acts){
   let plazas=0, cub=0, esp=0;
@@ -384,7 +405,7 @@ function openAddSheet(activityId, roleId){
   const rd = window.CFMS.ROLES[roleId];
   document.getElementById('addTitle').textContent = 'Añadir a ' + (a?a.titulo[LANG]:'');
   const f = a?fmtFecha(a.data):null;
-  document.getElementById('addSub').textContent = (f?`${f.w} ${f.d} ${f.m} · ${a.hora} · `:'') + (rd?rd.label[LANG]:roleId);
+  document.getElementById('addSub').textContent = (f?`${f.w} ${f.d} ${f.m} · ${hhrs(a)} · `:'') + (rd?rd.label[LANG]:roleId);
   acBackSearch();
   document.getElementById('addBackdrop').classList.add('on');
   document.getElementById('addSheet').classList.add('on');
@@ -426,9 +447,288 @@ function delAdd(activityId, roleId, idx){ removeAdd(activityId, roleId, idx); re
 window.openAddSheet=openAddSheet; window.closeAddSheet=closeAddSheet; window.acType=acType; window.acBackSearch=acBackSearch;
 window.acPick=acPick; window.acGoTemp=acGoTemp; window.addTemp=addTemp; window.delAdd=delAdd;
 
+/* ---------- ADMIN (configuración de misiones/roles) ---------- */
+let ADMIN_NAV = { screen:'list', misionId:null };   // list | mision | roles
+const WD = { es:['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'], pt:['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'] };
+function recLabel(rec){
+  if(!rec) return '—';
+  const wd = WD[LANG];
+  if(rec.tipo==='semanal') return `Semanal · ${wd[rec.weekday]}`;
+  if(rec.tipo==='mensal_posicao') return `Mensual · ${rec.ordinal}º ${wd[rec.weekday]}`;
+  if(rec.tipo==='mensal_dia') return `Mensual · día ${rec.day}`;
+  if(rec.tipo==='avulso') return `Fechas sueltas (${(rec.fechas||[]).length})`;
+  return '—';
+}
+function durLabel(min){ if(!min) return '—'; const h=Math.floor(min/60), m=min%60; return (h?h+'h':'')+(m?(' '+m+'min'):''); }
+function adminGo(screen, misionId){ ADMIN_NAV={ screen, misionId:misionId||null }; renderAdmin(); window.scrollTo(0,0); }
+window.adminGo=adminGo;
+
+function renderAdmin(){
+  const box=document.getElementById('adminBody');
+  if(!isAdmin()){ box.innerHTML=''; return; }
+  const cfg=window.CFMS.getConfig();
+  if(ADMIN_NAV.screen==='roles') return renderAdminRoles(box, cfg);
+  if(ADMIN_NAV.screen==='mision') return renderAdminMision(box, cfg);
+  return renderAdminList(box, cfg);
+}
+
+function renderAdminList(box, cfg){
+  const mis = cfg.misiones.map(m=>{
+    const nAct=m.actividades.length, nLid=(m.lideres||[]).length;
+    return `<div class="card"><div class="row" onclick="adminGo('mision','${m.id}')">
+      <span class="dot" style="background:${m.color}"></span>
+      <div class="rt"><div class="n">${m.nombre}</div><div class="s">${nAct} actividades · ${nLid} líder${nLid===1?'':'es'}</div></div>
+      <span class="pill ${m.activo!==false?'on':'off'}">${m.activo!==false?'Activa':'Inactiva'}</span><span class="chev">›</span></div></div>`;
+  }).join('');
+  box.innerHTML = `
+    <div class="adm-head"><div class="ah-t">Configuración</div><div class="ah-s">Admin · misiones y roles</div></div>
+    <div class="sec-t">Misiones</div>${mis}
+    <button class="btn primary" onclick="adminNewMision()">+ Nueva misión</button>
+    <div class="sec-t">Catálogo</div>
+    <div class="card"><div class="row" onclick="adminGo('roles')"><span class="dot" style="background:#7c5cbf"></span><div class="rt"><div class="n">Roles</div><div class="s">${cfg.roles.length} roles definidos</div></div><span class="chev">›</span></div></div>
+    <div class="admnote">El Admin configura la estructura. Los líderes operan el día a día.</div>`;
+}
+
+function adminNewMision(){
+  const cfg=window.CFMS.getConfig();
+  const id='m'+Date.now();
+  cfg.misiones.push({ id, nombre:'Nueva misión', color:'#7cb518', activo:true, descripcion:{es:'',pt:''}, lideres:[], actividades:[] });
+  saveConfig(); adminGo('mision', id);
+}
+window.adminNewMision=adminNewMision;
+
+function renderAdminMision(box, cfg){
+  const m=cfg.misiones.find(x=>x.id===ADMIN_NAV.misionId);
+  if(!m){ adminGo('list'); return; }
+  const colores=['#f2711c','#3a5a78','#7cb518','#e8a300','#7c5cbf','#4f9d69'];
+  const dots=colores.map(c=>`<i class="${c===m.color?'sel':''}" style="background:${c}" onclick="adminSetColor('${m.id}','${c}')"></i>`).join('');
+  const lideres=(m.lideres||[]).map((e,i)=>`<span class="chip">${e} <span class="x" onclick="adminDelLider('${m.id}',${i})">×</span></span>`).join('')
+    + `<span class="chip add" onclick="adminAddLider('${m.id}')">+ Añadir líder</span>`;
+  const acts=m.actividades.map(a=>{
+    const plz=(a.plazas||[]).map((p,pi)=>`<div class="slot"><span class="sn">${window.CFMS.rolLabel(p.rolId,LANG)}</span>
+        <span class="cap"><input type="number" min="0" value="${p.cap}" onchange="adminSetCap('${m.id}','${a.id}',${pi},this.value)" /><span class="lbl">plazas</span>
+        <span class="x" style="opacity:.4;cursor:pointer" onclick="adminDelPlaza('${m.id}','${a.id}',${pi})">×</span></span></div>`).join('');
+    return `<div class="acc" id="acc-${a.id}">
+      <div class="acc-h" onclick="toggleAcc(this)"><div class="at"><div class="n">${a.nombre[LANG]}</div>
+        <div class="s">${recLabel(a.recurrencia)} · ${a.horaInicio}${a.duracionMin?('–'+window.CFMS.calcFin(a.horaInicio,a.duracionMin)):''} · ${(a.plazas||[]).reduce((s,p)=>s+p.cap,0)} plazas</div></div><span class="caret">▾</span></div>
+      <div class="acc-body">
+        <div class="fld"><label>Nombre (ES)</label><input value="${a.nombre.es||''}" onchange="adminSetAct('${m.id}','${a.id}','nombre_es',this.value)" /></div>
+        <div class="two">
+          <div class="fld"><label>Hora inicio</label><input type="time" value="${a.horaInicio}" onchange="adminSetAct('${m.id}','${a.id}','horaInicio',this.value)" /></div>
+          <div class="fld"><label>Duración (min)</label><input type="number" min="0" step="15" value="${a.duracionMin||''}" onchange="adminSetAct('${m.id}','${a.id}','duracionMin',this.value)" /></div>
+        </div>
+        <div class="fld"><label>Recurrencia</label>${recEditor(m.id,a)}</div>
+        <div class="sec-t" style="margin-top:6px">Plazas por rol</div>${plz||'<div class="admnote" style="text-align:left;padding:4px 0">Sin plazas.</div>'}
+        <div class="rolerow"><select id="newrol-${a.id}">${cfg.roles.map(r=>`<option value="${r.id}">${r.nombre[LANG]}</option>`).join('')}</select><button class="miniadd" onclick="adminAddPlaza('${m.id}','${a.id}')">+ Añadir plaza</button></div>
+        <div class="acc-actions"><label class="tgl"><input type="checkbox" ${a.activo!==false?'checked':''} onchange="adminSetAct('${m.id}','${a.id}','activo',this.checked)" /> Activa</label><button class="del" onclick="adminDelAct('${m.id}','${a.id}')">Eliminar actividad</button></div>
+      </div></div>`;
+  }).join('');
+  box.innerHTML = `
+    <div class="adm-head"><button class="back" onclick="adminGo('list')">‹</button><div><div class="ah-t">Editar misión</div><div class="ah-s">${m.nombre}</div></div></div>
+    <div class="fld"><label>Nombre</label><input value="${m.nombre}" onchange="adminSetMision('${m.id}','nombre',this.value)" /></div>
+    <div class="two">
+      <div class="fld"><label>Color</label><div class="colordots">${dots}</div></div>
+      <div class="fld"><label>Estado</label><select onchange="adminSetMision('${m.id}','activo',this.value==='Activa')"><option ${m.activo!==false?'selected':''}>Activa</option><option ${m.activo===false?'selected':''}>Inactiva</option></select></div>
+    </div>
+    <div class="fld"><label>Líderes (entran con Google)</label><div class="chips">${lideres}</div><div class="admhint">Autorizados por el Admin. Gestionan escala y checklist de esta misión.</div></div>
+    <div class="sec-t">Actividades</div>${acts}
+    <button class="btn primary" onclick="adminAddAct('${m.id}')">+ Añadir actividad</button>
+    <div class="acc-actions" style="margin-top:16px"><button class="del" onclick="adminDelMision('${m.id}')">Eliminar misión</button><button class="btn primary sm" onclick="adminGo('list')">Hecho</button></div>`;
+}
+function recEditor(mid, a){
+  const wd=WD[LANG]; const rec=a.recurrencia||{tipo:'mensal_posicion',weekday:6,ordinal:1};
+  const tipos=[['semanal','Semanal'],['mensal_posicao','Mensual · posición'],['mensal_dia','Mensual · día'],['avulso','Fechas sueltas']];
+  let extra='';
+  if(rec.tipo==='semanal'||rec.tipo==='mensal_posicao'){
+    extra=`<select onchange="adminSetRec('${mid}','${a.id}','weekday',this.value)">${wd.map((d,i)=>`<option value="${i}" ${rec.weekday===i?'selected':''}>${d}</option>`).join('')}</select>`;
+    if(rec.tipo==='mensal_posicao') extra+=`<select onchange="adminSetRec('${mid}','${a.id}','ordinal',this.value)">${[1,2,3,4,5].map(o=>`<option value="${o}" ${rec.ordinal===o?'selected':''}>${o}º</option>`).join('')}</select>`;
+  } else if(rec.tipo==='mensal_dia'){
+    extra=`<input type="number" min="1" max="31" value="${rec.day||1}" onchange="adminSetRec('${mid}','${a.id}','day',this.value)" style="width:70px" />`;
+  }
+  return `<div class="recedit"><select onchange="adminSetRec('${mid}','${a.id}','tipo',this.value)">${tipos.map(t=>`<option value="${t[0]}" ${rec.tipo===t[0]?'selected':''}>${t[1]}</option>`).join('')}</select>${extra}</div>`;
+}
+
+/* ---- mutaciones admin (todas guardan + re-render) ---- */
+function _mis(id){ return window.CFMS.getConfig().misiones.find(m=>m.id===id); }
+function _act(mid,aid){ const m=_mis(mid); return m&&m.actividades.find(a=>a.id===aid); }
+function adminSetMision(id,campo,val){ const m=_mis(id); if(!m)return; m[campo]=val; saveConfig(); if(campo==='activo'||campo==='nombre'){} }
+function adminSetColor(id,c){ const m=_mis(id); if(m){ m.color=c; saveConfig(); renderAdmin(); } }
+function adminAddLider(id){ const e=prompt('Email del líder (Google):'); if(e){ const m=_mis(id); m.lideres=m.lideres||[]; m.lideres.push(e.trim()); saveConfig(); renderAdmin(); } }
+function adminDelLider(id,i){ const m=_mis(id); m.lideres.splice(i,1); saveConfig(); renderAdmin(); }
+function adminSetAct(mid,aid,campo,val){ const a=_act(mid,aid); if(!a)return;
+  if(campo==='nombre_es'){ a.nombre.es=val; } else if(campo==='duracionMin'){ a.duracionMin=val?parseInt(val,10):null; }
+  else if(campo==='activo'){ a.activo=val; } else { a[campo]=val; }
+  saveConfig(); if(campo==='horaInicio'||campo==='duracionMin'||campo==='activo'||campo==='nombre_es') renderAdmin(); }
+function adminSetRec(mid,aid,campo,val){ const a=_act(mid,aid); if(!a)return; a.recurrencia=a.recurrencia||{};
+  if(campo==='tipo'){ a.recurrencia={ tipo:val, weekday:6, ordinal:1, day:1, fechas:[] }; }
+  else if(campo==='weekday'||campo==='ordinal'||campo==='day'){ a.recurrencia[campo]=parseInt(val,10); }
+  saveConfig(); renderAdmin(); }
+function adminSetCap(mid,aid,pi,val){ const a=_act(mid,aid); if(a&&a.plazas[pi]){ a.plazas[pi].cap=parseInt(val,10)||0; saveConfig(); } }
+function adminAddPlaza(mid,aid){ const a=_act(mid,aid); const sel=document.getElementById('newrol-'+aid); const rolId=sel?sel.value:null;
+  if(a&&rolId){ a.plazas=a.plazas||[]; if(!a.plazas.find(p=>p.rolId===rolId)) a.plazas.push({rolId,cap:1}); saveConfig(); renderAdmin(); } }
+function adminDelPlaza(mid,aid,pi){ const a=_act(mid,aid); a.plazas.splice(pi,1); saveConfig(); renderAdmin(); }
+function adminAddAct(mid){ const m=_mis(mid); const id='a'+Date.now();
+  m.actividades.push({ id, nombre:{es:'Nueva actividad',pt:'Nova atividade'}, horaInicio:'10:00', duracionMin:120, activo:true, recurrencia:{tipo:'mensal_posicao',weekday:6,ordinal:1}, plazas:[], checklistTemplate:[] });
+  saveConfig(); renderAdmin(); }
+function adminDelAct(mid,aid){ if(!confirm('¿Eliminar esta actividad?'))return; const m=_mis(mid); m.actividades=m.actividades.filter(a=>a.id!==aid); saveConfig(); renderAdmin(); }
+function adminDelMision(id){ if(!confirm('¿Eliminar esta misión y sus actividades?'))return; const cfg=window.CFMS.getConfig(); cfg.misiones=cfg.misiones.filter(m=>m.id!==id); saveConfig(); adminGo('list'); }
+window.adminSetMision=adminSetMision; window.adminSetColor=adminSetColor; window.adminAddLider=adminAddLider; window.adminDelLider=adminDelLider;
+window.adminSetAct=adminSetAct; window.adminSetRec=adminSetRec; window.adminSetCap=adminSetCap; window.adminAddPlaza=adminAddPlaza; window.adminDelPlaza=adminDelPlaza;
+window.adminAddAct=adminAddAct; window.adminDelAct=adminDelAct; window.adminDelMision=adminDelMision;
+
+function renderAdminRoles(box, cfg){
+  const roles=cfg.roles.map((r,i)=>`<div class="card"><div class="row">
+    <div class="rt"><div class="n">${r.nombre[LANG]}</div><div class="s">${r.requisito?('Requisito: '+(r.requisito[LANG]||r.requisito.es)):'Sin requisito'}</div></div>
+    <span class="x" style="opacity:.4;cursor:pointer;font-size:18px" onclick="adminDelRol(${i})">×</span></div></div>`).join('');
+  box.innerHTML = `
+    <div class="adm-head"><button class="back" onclick="adminGo('list')">‹</button><div><div class="ah-t">Roles</div><div class="ah-s">Catálogo global · reutilizable</div></div></div>
+    ${roles}
+    <button class="btn primary" onclick="adminNewRol()">+ Nuevo rol</button>
+    <div class="admnote">Los roles se reutilizan entre misiones. Editar un rol lo actualiza en todas.</div>`;
+}
+function adminNewRol(){ const nombre=prompt('Nombre del rol (ES):'); if(!nombre)return; const req=prompt('¿Requisito? (deja vacío si no):','');
+  const cfg=window.CFMS.getConfig(); const id='r'+Date.now();
+  cfg.roles.push({ id, nombre:{es:nombre,pt:nombre}, requisito: req?{es:req,pt:req}:undefined, activo:true }); saveConfig(); renderAdmin(); }
+function adminDelRol(i){ const cfg=window.CFMS.getConfig(); const r=cfg.roles[i];
+  const enUso=cfg.misiones.some(m=>m.actividades.some(a=>(a.plazas||[]).some(p=>p.rolId===r.id)));
+  if(enUso){ alert('No se puede eliminar: el rol está en uso en alguna actividad.'); return; }
+  if(!confirm('¿Eliminar el rol "'+r.nombre[LANG]+'"?'))return; cfg.roles.splice(i,1); saveConfig(); renderAdmin(); }
+window.adminNewRol=adminNewRol; window.adminDelRol=adminDelRol;
+
+/* ---------- CHECKLIST DEL LÍDER ----------
+   Plantilla: vive en CONFIG (act.checklistTemplate) — se guarda con saveConfig.
+   Instancia: estado por ocurrencia en localStorage 'mf_chk' = { activityId: { items:[{id,texto,done,doneBy,asignado,suelto}] } } */
+let CHK = {};
+function loadChk(){ try{ CHK=JSON.parse(localStorage.getItem('mf_chk')||'{}'); }catch(e){ CHK={}; } }
+function saveChk(){ localStorage.setItem('mf_chk', JSON.stringify(CHK)); }
+let chkCtx = { activityId:null, view:'inst' };
+
+/* materializa la instancia: fusiona plantilla (de CONFIG) + estado guardado + sueltos */
+function chkInstance(activity){
+  const tpl = activity.checklistTemplate || [];
+  const saved = (CHK[activity.id] && CHK[activity.id].items) ? CHK[activity.id].items : [];
+  const byId = {}; saved.forEach(it=>{ byId[it.id]=it; });
+  const items = [];
+  // items de plantilla (heredan estado guardado si existe)
+  tpl.slice().sort((a,b)=>(a.orden||0)-(b.orden||0)).forEach(t=>{
+    const s = byId[t.id] || {};
+    items.push({ id:t.id, texto:(t.texto[LANG]||t.texto.es), done:!!s.done, doneBy:s.doneBy||null, asignado:s.asignado||null, suelto:false });
+  });
+  // items sueltos (guardados que no vienen de plantilla)
+  saved.filter(it=>it.suelto).forEach(it=>items.push({ id:it.id, texto:it.texto, done:!!it.done, doneBy:it.doneBy||null, asignado:it.asignado||null, suelto:true }));
+  return items;
+}
+function chkCount(activity){
+  const items=chkInstance(activity); if(!items.length) return '';
+  const done=items.filter(i=>i.done).length; return ` <span class="chk-n">${done}/${items.length}</span>`;
+}
+function chkPersistItem(activityId, item){
+  CHK[activityId]=CHK[activityId]||{ items:[] };
+  const arr=CHK[activityId].items; const i=arr.findIndex(x=>x.id===item.id);
+  if(i>=0) arr[i]=item; else arr.push(item);
+  saveChk();
+}
+
+function openChecklist(activityId){
+  chkCtx={ activityId, view:'inst' };
+  document.getElementById('chkOverlay').classList.add('active');
+  renderChecklist();
+}
+function closeChecklist(){ document.getElementById('chkOverlay').classList.remove('active'); renderLider(); }
+function chkSetView(v){ chkCtx.view=v; document.getElementById('chkBInst').classList.toggle('on',v==='inst'); document.getElementById('chkBTpl').classList.toggle('on',v==='tpl'); renderChecklist(); }
+window.openChecklist=openChecklist; window.closeChecklist=closeChecklist; window.chkSetView=chkSetView;
+
+function chkActivity(){ return currentActivities().find(a=>a.id===chkCtx.activityId); }
+function renderChecklist(){
+  const a=chkActivity(); if(!a){ closeChecklist(); return; }
+  const f=fmtFecha(a.data);
+  document.getElementById('chkTitle').textContent = a.titulo[LANG];
+  const body=document.getElementById('chkBody');
+  if(chkCtx.view==='tpl'){ body.innerHTML=renderChkTpl(a); return; }
+  // instancia
+  const items=chkInstance(a); const done=items.filter(i=>i.done).length;
+  const rows=items.map(it=>{
+    const asg = it.asignado
+      ? (it.asignado.temp ? `<span class="assign temp" onclick="chkAssign('${it.id}')">${it.asignado.name} <span style="font-size:9px">· Temp</span></span>`
+                          : `<span class="assign serv" onclick="chkAssign('${it.id}')">${it.asignado.name}</span>`)
+      : `<span class="assign none" onclick="chkAssign('${it.id}')">+ Asignar</span>`;
+    const suelto = it.suelto ? '<span class="tagsuelto">suelto</span>' : '';
+    const delx = it.suelto ? `<span class="x" style="opacity:.4;cursor:pointer;margin-left:auto" onclick="chkDelSuelto('${it.id}')">×</span>` : '';
+    return `<div class="item ${it.done?'done':''}">
+      <div class="box" onclick="chkToggle('${it.id}')">${it.done?'✓':''}</div>
+      <div class="body"><div class="txt">${it.texto}</div><div class="meta">${asg} ${suelto} ${it.done&&it.doneBy?`<span class="doneby">· hecho por ${it.doneBy}</span>`:''}${delx}</div></div></div>`;
+  }).join('');
+  body.innerHTML = `
+    <div class="chk-ctx">${f.w} ${f.d} ${f.m} · ${hhrs(a)} · ${window.CFMS.misionLabel(a.misionId)}</div>
+    <div class="prog"><div class="bar"><i style="width:${items.length?Math.round(done/items.length*100):0}%"></i></div><div class="txt">${done} / ${items.length}</div></div>
+    ${rows || '<div class="empty">Sin ítems. Añade uno abajo o crea la plantilla.</div>'}
+    <div class="addrow"><input id="chkNew" placeholder="Añadir ítem para hoy…" /><button onclick="chkAddSuelto()">+</button></div>
+    <div class="note">Los ítems sueltos son solo de hoy · no cambian la plantilla.</div>`;
+}
+function renderChkTpl(a){
+  const mis=window.CFMS.getMision(a.misionId); const act=mis&&mis.actividades.find(x=>x.id===a.templateId);
+  const tpl=(act&&act.checklistTemplate)?act.checklistTemplate.slice().sort((x,y)=>(x.orden||0)-(y.orden||0)):[];
+  const rows=tpl.map(t=>`<div class="item"><div class="body"><div class="txt">${t.texto[LANG]||t.texto.es}</div>${t.rolSugerido?`<div class="meta"><span class="assign serv">Rol sugerido: ${window.CFMS.rolLabel(t.rolSugerido,LANG)}</span></div>`:''}</div><span class="x" style="opacity:.4;cursor:pointer;align-self:center" onclick="chkTplDel('${t.id}')">×</span></div>`).join('');
+  return `<div class="tpl-note">Editas la <b>plantilla</b> de esta actividad. Se aplica a <b>cada ocurrencia futura</b> de la misión.</div>
+    ${rows || '<div class="empty">Plantilla vacía.</div>'}
+    <div class="addrow"><input id="chkTplNew" placeholder="Añadir ítem a la plantilla…" /><button onclick="chkTplAdd()">+</button></div>`;
+}
+
+function chkToggle(itemId){
+  const a=chkActivity(); const items=chkInstance(a); const it=items.find(x=>x.id===itemId); if(!it)return;
+  it.done=!it.done; it.doneBy = it.done ? (USER?USER.name.split(' ')[0]:'—') : null;
+  chkPersistItem(a.id, it); renderChecklist();
+}
+function chkAddSuelto(){
+  const a=chkActivity(); const inp=document.getElementById('chkNew'); const txt=(inp.value||'').trim(); if(!txt)return;
+  chkPersistItem(a.id, { id:'x'+Date.now(), texto:txt, done:false, asignado:null, suelto:true }); renderChecklist();
+}
+function chkDelSuelto(itemId){
+  const a=chkActivity(); CHK[a.id].items=(CHK[a.id].items||[]).filter(x=>x.id!==itemId); saveChk(); renderChecklist();
+}
+window.chkToggle=chkToggle; window.chkAddSuelto=chkAddSuelto; window.chkDelSuelto=chkDelSuelto;
+
+/* asignación de tarea (reusa servidores inscritos + temporal) */
+let asgItemId=null;
+function chkAssign(itemId){
+  asgItemId=itemId; const a=chkActivity();
+  // candidatos: inscritos demo/adds de esta actividad + temporal + sin asignar
+  const cand=[];
+  Object.keys(a.roles).forEach(r=>{ inscritosDe(a,r).forEach(n=>{ if(!cand.find(c=>c.name===n)) cand.push({name:n.replace(' (tú)',''), temp:false}); }); });
+  const ini=n=>n.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase();
+  let html=cand.map(c=>`<div class="opt" onclick="chkDoAssign('${c.name.replace(/'/g,"")}',false)"><div class="av">${ini(c.name)}</div><div>${c.name}<div style="font-size:11px;color:var(--gris)">servidor inscrito</div></div></div>`).join('');
+  html+=`<div class="opt" onclick="chkAssignTemp()"><div class="av t">+</div><div>Añadir temporal…</div></div>`;
+  html+=`<div class="opt" onclick="chkDoAssign(null,false)"><div class="av n">—</div><div>Sin asignar</div></div>`;
+  document.getElementById('asgList').innerHTML=html;
+  document.getElementById('asgBackdrop').classList.add('on'); document.getElementById('asgSheet').classList.add('on');
+}
+function chkAssignTemp(){ const n=prompt('Nombre del temporal:'); if(n) chkDoAssign(n.trim(), true); }
+function chkDoAssign(name, temp){
+  const a=chkActivity(); const items=chkInstance(a); const it=items.find(x=>x.id===asgItemId); if(!it){ closeAsg(); return; }
+  it.asignado = name ? { name, temp:!!temp } : null;
+  chkPersistItem(a.id, it); closeAsg(); renderChecklist();
+}
+function closeAsg(){ document.getElementById('asgBackdrop').classList.remove('on'); document.getElementById('asgSheet').classList.remove('on'); }
+window.chkAssign=chkAssign; window.chkAssignTemp=chkAssignTemp; window.chkDoAssign=chkDoAssign; window.closeAsg=closeAsg;
+
+/* editar plantilla (guarda en CONFIG) */
+function chkTplAdd(){
+  const a=chkActivity(); const inp=document.getElementById('chkTplNew'); const txt=(inp.value||'').trim(); if(!txt)return;
+  const mis=window.CFMS.getMision(a.misionId); const act=mis.actividades.find(x=>x.id===a.templateId);
+  act.checklistTemplate=act.checklistTemplate||[];
+  act.checklistTemplate.push({ id:'c'+Date.now(), texto:{es:txt,pt:txt}, orden:(act.checklistTemplate.length+1) });
+  saveConfig(); renderChecklist();
+}
+function chkTplDel(itemId){
+  const a=chkActivity(); const mis=window.CFMS.getMision(a.misionId); const act=mis.actividades.find(x=>x.id===a.templateId);
+  act.checklistTemplate=(act.checklistTemplate||[]).filter(t=>t.id!==itemId); saveConfig(); renderChecklist();
+}
+window.chkTplAdd=chkTplAdd; window.chkTplDel=chkTplDel;
+
 function currentActivities(){ return window.CFMS.generateActivities(cursor.getFullYear(), cursor.getMonth()); }
 
 function fmtFecha(iso){ const d=new Date(iso+'T12:00:00'); return { w:d.toLocaleDateString(LANG==='pt'?'pt-BR':'es-ES',{weekday:'short'}), d:d.getDate(), m:d.toLocaleDateString(LANG==='pt'?'pt-BR':'es-ES',{month:'short'}) }; }
+function hhrs(a){ return a && a.horaFin ? (a.hora+'–'+a.horaFin) : (a?a.hora:''); }
 function ringClass(rest,cap){ if(rest<=0) return 'cheio'; if(rest<=Math.max(1,Math.floor(cap*0.3))) return 'pouco'; return ''; }
 function totalCap(a){ return Object.values(a.roles).reduce((s,c)=>s+c,0); }
 function totalLibres(a){ return Object.keys(a.roles).reduce((s,r)=>s+libresRol(a,r),0); }
@@ -452,11 +752,11 @@ function actCardHTML(a, opts={}){
   return `<div class="act t-${tipo} ${mine?'estado-inscrito':''} ${enEspera?'estado-espera':''}" onclick="openWizard('${a.id}')">
     <div class="tipo-bar"></div>
     <div class="fecha"><div class="w">${f.w}</div><div class="d">${f.d}</div><div class="m">${f.m}</div></div>
-    <div class="info"><div class="t">${a.titulo[LANG]}</div><div class="sub">${a.hora} · ${a.notes?a.notes[LANG]:''}</div>${check||tag}</div>
+    <div class="info"><div class="t">${a.titulo[LANG]}</div><div class="sub">${hhrs(a)} · ${a.notes?a.notes[LANG]:''}</div>${check||tag}</div>
     ${right}</div>`;
 }
 
-function renderAll(){ renderInicio(); renderAgenda(); renderMios(); renderLider(); }
+function renderAll(){ renderInicio(); renderAgenda(); renderMios(); renderLider(); renderAdmin(); }
 
 function renderInicio(){
   const acts = currentActivities();
@@ -472,7 +772,7 @@ function renderInicio(){
     const dias = Math.max(0, Math.ceil((new Date(hero.data+'T12:00:00') - hoy)/86400000));
     heroBox.innerHTML = `<div class="hero"><span class="eyebrow">${mine?'Tu próxima actividad':'Próxima actividad'}</span>
       <h2>${hero.titulo[LANG]}</h2>
-      <div class="meta">${f.w} ${f.d} ${f.m} · ${hero.hora} — ${window.CFMS.cadenaLabel(hero.cadeia)}</div>
+      <div class="meta">${f.w} ${f.d} ${f.m} · ${hhrs(hero)} — ${window.CFMS.cadenaLabel(hero.cadeia)}</div>
       <div class="dots"><span class="ln"></span><span class="dt"></span><span class="ln"></span></div>
       <div class="countdown">En ${dias} día${dias===1?'':'s'}${mine?` · confirmado como <b>${window.CFMS.ROLES[mine]?window.CFMS.ROLES[mine].label[LANG]:mine}</b>`:''}</div>
       <button class="cta" onclick="go('v-agenda')">Ver toda la agenda</button></div>`;
@@ -539,7 +839,7 @@ function renderWzActs(){
     const sel = wzState.acts.includes(x.id) ? 'sel':'';
     const lleno = libres<=0;
     const estado = lleno ? '<span style="color:var(--warn)">Completo · lista de espera</span>'
-                         : `${f.w} ${f.d} ${f.m} · ${x.hora} · ${window.CFMS.cadenaLabel(x.cadeia)}`;
+                         : `${f.w} ${f.d} ${f.m} · ${hhrs(x)} · ${window.CFMS.cadenaLabel(x.cadeia)}`;
     return `<div class="opt ${sel} ${lleno?'espera':''}" data-act="${x.id}" onclick="wzToggleAct('${x.id}')">
       <div class="oic">${lleno?'⏳':ICON_TIPO[tipo]}</div>
       <div class="otxt"><div class="ot">${x.titulo[LANG]}</div><div class="os">${estado}</div></div>
@@ -586,7 +886,7 @@ function buildRoles(){
         <div class="otxt"><div class="ot">${rd?rd.label[LANG]:rid}</div><div class="os">${estado}</div></div>
         <div class="ocheck">✓</div></div>`;
     }).join('');
-    return `<div class="role-group"><div class="role-group-h"><span class="rg-t">${a.titulo[LANG]}</span><span class="rg-d">${f.w} ${f.d} ${f.m} · ${a.hora}</span></div>${opts}</div>`;
+    return `<div class="role-group"><div class="role-group-h"><span class="rg-t">${a.titulo[LANG]}</span><span class="rg-d">${f.w} ${f.d} ${f.m} · ${hhrs(a)}</span></div>${opts}</div>`;
   }).join('');
 }
 function wzPickRole(actId, rid){
@@ -673,6 +973,8 @@ document.getElementById('prev').onclick = ()=>{ cursor.setMonth(cursor.getMonth(
 document.getElementById('next').onclick = ()=>{ cursor.setMonth(cursor.getMonth()+1); renderAll(); };
 document.getElementById('prevL').onclick = ()=>{ cursor.setMonth(cursor.getMonth()-1); renderAll(); };
 document.getElementById('nextL').onclick = ()=>{ cursor.setMonth(cursor.getMonth()+1); renderAll(); };
+loadConfig();
 loadState();
 loadAdds();
+loadChk();
 if(USER){ document.getElementById('loginGate').style.display='none'; startApp(); }

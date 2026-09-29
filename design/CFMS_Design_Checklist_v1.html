@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Manos Fuertes · Checklist del líder (mock)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@300;400;500;600&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --negro:#0f0f0f;--grafito:#1f1f1f;--gris:#767676;--gris-cl:#9a9a9a;--linea:#e7e5e1;--hueso:#f7f7f5;--blanco:#fff;
+    --oro:#f5c518;--oro-osc:#d9a90a;--oro-bg:#fdf6dd;--verde:#4f9d69;--verde-bg:#e4f2e9;--verde-tx:#2f6b46;
+    --morado:#7c5cbf;--morado-bg:#efeafa;--rojo:#c2560c;--rojo-bg:#fdeadb;--raio:8px; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ margin:0 auto; max-width:480px; font-family:"Jost",system-ui,sans-serif; background:var(--hueso); color:var(--grafito); font-weight:300; -webkit-font-smoothing:antialiased; padding-bottom:40px; }
+  header{ background:var(--negro); color:#fff; padding:14px 16px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:10; }
+  header .back{ background:none; border:0; color:#fff; font-size:22px; cursor:pointer; width:24px; }
+  header .htitle{ font-family:"Cormorant Garamond",serif; font-style:italic; font-size:20px; } header .hsub{ font-size:11px; color:var(--gris-cl); }
+  .wrap{ padding:16px; }
+  /* toggle plantilla / instancia */
+  .switch{ display:flex; background:#ececec; border-radius:999px; padding:3px; margin-bottom:6px; }
+  .switch button{ flex:1; border:0; background:none; padding:9px; border-radius:999px; font-family:"Jost",sans-serif; font-size:12px; font-weight:500; text-transform:uppercase; letter-spacing:.05em; color:var(--gris); cursor:pointer; }
+  .switch button.on{ background:#fff; color:var(--negro); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+  .ctx{ font-size:12px; color:var(--gris); text-align:center; margin:8px 2px 16px; }
+  .view{ display:none; } .view.on{ display:block; animation:fade .2s; } @keyframes fade{ from{opacity:0} to{opacity:1} }
+
+  .prog{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .prog .bar{ flex:1; height:8px; background:#eee; border-radius:4px; overflow:hidden; } .prog .bar i{ display:block; height:100%; background:var(--verde); }
+  .prog .txt{ font-size:12px; font-weight:600; color:var(--verde-tx); }
+
+  .item{ background:#fff; border:1px solid var(--linea); border-radius:var(--raio); padding:12px 14px; margin-bottom:8px; display:flex; align-items:flex-start; gap:12px; }
+  .item .box{ width:22px; height:22px; border:2px solid var(--linea); border-radius:6px; flex:0 0 22px; display:grid; place-items:center; font-size:14px; color:#fff; cursor:pointer; margin-top:1px; }
+  .item.done .box{ background:var(--verde); border-color:var(--verde); }
+  .item .body{ flex:1; min-width:0; } .item .txt{ font-size:15px; } .item.done .txt{ text-decoration:line-through; color:var(--gris); }
+  .item .meta{ display:flex; align-items:center; gap:6px; margin-top:7px; flex-wrap:wrap; }
+  .assign{ font-size:11px; padding:3px 10px; border-radius:999px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; }
+  .assign.serv{ background:var(--verde-bg); color:var(--verde-tx); border:1px solid #cfe6ad; }
+  .assign.temp{ background:var(--morado-bg); color:#5a4494; border:1px solid #d9cdf0; }
+  .assign.none{ background:var(--hueso); color:var(--gris); border:1px dashed var(--linea); }
+  .tagsuelto{ font-size:9px; text-transform:uppercase; letter-spacing:.04em; background:var(--oro-bg); color:var(--oro-osc); border:1px solid #ecdca6; border-radius:6px; padding:1px 6px; }
+  .doneby{ font-size:11px; color:var(--gris-cl); }
+  .drag{ color:var(--gris-cl); cursor:grab; font-size:15px; }
+
+  .addrow{ display:flex; gap:8px; margin-top:10px; }
+  .addrow input{ flex:1; padding:13px; border:1px solid var(--linea); border-radius:var(--raio); font-size:15px; font-family:"Jost",sans-serif; }
+  .addrow button{ border:0; background:var(--oro); color:#111; border-radius:var(--raio); padding:0 16px; font-weight:600; font-family:"Jost",sans-serif; cursor:pointer; }
+  .tpl-note{ background:var(--oro-bg); border:1px solid #ecdca6; border-radius:var(--raio); padding:10px 12px; font-size:12px; color:#8a6d1a; margin-bottom:14px; }
+  .note{ font-size:11px; color:var(--gris-cl); text-align:center; padding:14px; }
+
+  /* mini sheet asignar */
+  .bd{ position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; z-index:40; } .bd.on{ display:block; }
+  .sheet{ position:fixed; left:50%; transform:translateX(-50%); bottom:0; width:100%; max-width:480px; background:#fff; border-radius:16px 16px 0 0; z-index:41; padding:18px 16px 26px; display:none; } .sheet.on{ display:block; animation:up .25s ease; } @keyframes up{ from{transform:translate(-50%,100%)} to{transform:translate(-50%,0)} }
+  .sheet .grab{ width:40px; height:4px; background:var(--linea); border-radius:2px; margin:0 auto 14px; }
+  .sheet h4{ font-family:"Cormorant Garamond",serif; font-style:italic; font-size:19px; margin:0 0 12px; }
+  .opt{ display:flex; align-items:center; gap:10px; padding:12px 8px; border-bottom:1px solid var(--linea); cursor:pointer; } .opt:last-child{ border-bottom:0; }
+  .opt .av{ width:30px; height:30px; border-radius:50%; background:var(--verde-bg); color:var(--verde-tx); display:grid; place-items:center; font-size:12px; font-weight:600; }
+  .opt .av.t{ background:var(--morado-bg); color:#5a4494; } .opt .av.n{ background:var(--hueso); color:var(--gris); }
+</style>
+</head>
+<body>
+<header>
+  <span class="back">‹</span>
+  <div><div class="htitle">Preparación (sábado)</div><div class="hsub">Misión MercaMadrid · Sáb 3 oct · 15:00–18:00</div></div>
+</header>
+<div class="wrap">
+  <div class="switch">
+    <button class="on" id="bInst" onclick="setV('inst')">Esta ocurrencia</button>
+    <button id="bTpl" onclick="setV('tpl')">Plantilla</button>
+  </div>
+
+  <!-- INSTANCIA -->
+  <div class="view on" id="vInst">
+    <div class="ctx">Checklist de <b>hoy</b>. Marca hecho y asigna a un servidor o temporal.</div>
+    <div class="prog"><div class="bar"><i style="width:25%"></i></div><div class="txt">1 / 4</div></div>
+
+    <div class="item done">
+      <div class="box" onclick="tog(this)">✓</div>
+      <div class="body"><div class="txt">Separar cajas de los pastores</div>
+        <div class="meta"><span class="assign serv" onclick="openAssign()">Marcos</span><span class="doneby">· hecho por Marcos</span></div></div>
+    </div>
+    <div class="item">
+      <div class="box" onclick="tog(this)"></div>
+      <div class="body"><div class="txt">Comprobar furgoneta</div>
+        <div class="meta"><span class="assign temp" onclick="openAssign()">Vecino Juan <span style="font-size:9px">· Temp</span></span></div></div>
+    </div>
+    <div class="item">
+      <div class="box" onclick="tog(this)"></div>
+      <div class="body"><div class="txt">Recoger albaranes</div>
+        <div class="meta"><span class="assign none" onclick="openAssign()">+ Asignar</span></div></div>
+    </div>
+    <div class="item">
+      <div class="box" onclick="tog(this)"></div>
+      <div class="body"><div class="txt">Comprar bolsas extra</div>
+        <div class="meta"><span class="assign none" onclick="openAssign()">+ Asignar</span><span class="tagsuelto">suelto</span></div></div>
+    </div>
+
+    <div class="addrow"><input placeholder="Añadir ítem para hoy…" /><button>+</button></div>
+    <div class="note">Los ítems sueltos son solo de hoy · no cambian la plantilla.</div>
+  </div>
+
+  <!-- PLANTILLA -->
+  <div class="view" id="vTpl">
+    <div class="tpl-note">Editas la <b>plantilla</b> reutilizable de esta actividad. Se aplica a <b>cada ocurrencia futura</b> de la misión.</div>
+    <div class="item"><div class="drag">⋮⋮</div><div class="body"><div class="txt">Separar cajas de los pastores</div></div><span class="assign none" style="align-self:center">×</span></div>
+    <div class="item"><div class="drag">⋮⋮</div><div class="body"><div class="txt">Comprobar furgoneta</div><div class="meta"><span class="assign serv">Rol sugerido: Conductor</span></div></div><span class="assign none" style="align-self:center">×</span></div>
+    <div class="item"><div class="drag">⋮⋮</div><div class="body"><div class="txt">Recoger albaranes</div></div><span class="assign none" style="align-self:center">×</span></div>
+    <div class="addrow"><input placeholder="Añadir ítem a la plantilla…" /><button>+</button></div>
+    <div class="note">Arrastra ⋮⋮ para reordenar · define un rol sugerido opcional.</div>
+  </div>
+</div>
+
+<!-- sheet asignar -->
+<div class="bd" id="bd" onclick="closeAssign()"></div>
+<div class="sheet" id="sheet">
+  <div class="grab"></div>
+  <h4>Asignar tarea</h4>
+  <div class="opt" onclick="closeAssign()"><div class="av">CR</div><div>Carlos R. <div style="font-size:11px;color:var(--gris)">servidor inscrito · Distribución</div></div></div>
+  <div class="opt" onclick="closeAssign()"><div class="av">MA</div><div>Marcos <div style="font-size:11px;color:var(--gris)">servidor inscrito · Preparación</div></div></div>
+  <div class="opt" onclick="closeAssign()"><div class="av t">VJ</div><div>Vecino Juan <div style="font-size:11px;color:var(--gris)">temporal · hoy</div></div></div>
+  <div class="opt" onclick="closeAssign()"><div class="av n">+</div><div>Añadir temporal…</div></div>
+  <div class="opt" onclick="closeAssign()"><div class="av n">—</div><div>Sin asignar</div></div>
+</div>
+
+<script>
+  function setV(v){ document.getElementById('vInst').classList.toggle('on', v==='inst'); document.getElementById('vTpl').classList.toggle('on', v==='tpl'); document.getElementById('bInst').classList.toggle('on', v==='inst'); document.getElementById('bTpl').classList.toggle('on', v==='tpl'); }
+  function tog(b){ b.parentNode.classList.toggle('done'); b.textContent = b.parentNode.classList.contains('done')?'✓':''; }
+  function openAssign(){ document.getElementById('bd').classList.add('on'); document.getElementById('sheet').classList.add('on'); }
+  function closeAssign(){ document.getElementById('bd').classList.remove('on'); document.getElementById('sheet').classList.remove('on'); }
+</script>
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Manos Fuertes · Arquitectura de datos configurable (concepto)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@300;400;500;600&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --negro:#0f0f0f;--grafito:#1f1f1f;--gris:#767676;--gris-cl:#9a9a9a;--linea:#e7e5e1;--hueso:#f7f7f5;--blanco:#fff;
+    --oro:#f5c518;--oro-osc:#d9a90a;--oro-bg:#fdf6dd;--azul:#3a5a78;--azul-bg:#eaf0f5;--verde:#4f9d69;--verde-bg:#e4f2e9;
+    --morado:#7c5cbf;--morado-bg:#efeafa;--rojo:#c2560c;--rojo-bg:#fdeadb;--raio:8px; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:"Jost",system-ui,sans-serif; background:var(--hueso); color:var(--grafito); font-weight:300; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  .page{ max-width:900px; margin:0 auto; padding:0 18px 60px; }
+  header{ background:var(--negro); color:#fff; padding:26px 18px; text-align:center; margin-bottom:24px; }
+  header .t{ font-family:"Oswald",sans-serif; text-transform:uppercase; letter-spacing:.05em; font-size:24px; }
+  header .s{ font-size:13px; color:var(--gris-cl); margin-top:6px; }
+  h2{ font-family:"Cormorant Garamond",serif; font-size:26px; font-weight:600; margin:34px 0 6px; }
+  h2 .n{ color:var(--oro-osc); font-family:"Oswald",sans-serif; font-size:15px; vertical-align:middle; margin-right:8px; }
+  .lead{ color:var(--gris); font-size:14px; margin:0 0 16px; max-width:680px; }
+  code{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; background:#efece6; padding:1px 6px; border-radius:4px; color:#5a4a2a; }
+
+  /* diagrama de entidades */
+  .diagram{ background:var(--blanco); border:1px solid var(--linea); border-radius:var(--raio); padding:20px; margin-bottom:12px; }
+  .ent{ border:2px solid var(--linea); border-radius:var(--raio); margin:0 0 6px; overflow:hidden; }
+  .ent > .eh{ padding:10px 14px; font-weight:600; font-family:"Oswald",sans-serif; text-transform:uppercase; letter-spacing:.04em; font-size:14px; display:flex; align-items:center; gap:8px; }
+  .ent.cadena{ border-color:var(--oro); } .ent.cadena .eh{ background:var(--oro-bg); color:#8a6d1a; }
+  .ent.actividad{ border-color:var(--azul); } .ent.actividad .eh{ background:var(--azul-bg); color:var(--azul); }
+  .ent.slot{ border-color:var(--verde); } .ent.slot .eh{ background:var(--verde-bg); color:#2f6b46; }
+  .ent.rol{ border-color:var(--morado); } .ent.rol .eh{ background:var(--morado-bg); color:#5a4494; }
+  .fields{ padding:10px 14px; display:flex; flex-wrap:wrap; gap:6px; }
+  .f{ font-size:12px; background:var(--hueso); border:1px solid var(--linea); border-radius:999px; padding:3px 10px; }
+  .f b{ color:var(--grafito); } .f .ty{ color:var(--gris); }
+  .f.key{ background:#fff8e5; border-color:#ecdca6; }
+  .f.ref{ background:var(--morado-bg); border-color:#d9cdf0; }
+  .nest{ padding:0 14px 12px 26px; } .nest .lbl{ font-size:11px; color:var(--gris); text-transform:uppercase; letter-spacing:.08em; margin:8px 0 4px; }
+  .arrow{ text-align:center; color:var(--gris-cl); font-size:18px; margin:2px 0; }
+  .rel{ font-size:11px; color:var(--gris); font-style:italic; }
+
+  /* tabla recurrencia */
+  table{ width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--linea); border-radius:var(--raio); overflow:hidden; font-size:13px; }
+  th{ background:#242424; color:#fff; text-align:left; padding:9px 12px; font-weight:600; font-size:12px; }
+  td{ padding:9px 12px; border-top:1px solid var(--linea); vertical-align:top; }
+  tr:nth-child(even) td{ background:#faf9f7; }
+
+  /* ejemplo JSON */
+  pre{ background:#1c1a17; color:#e8e2d6; border-radius:var(--raio); padding:16px; overflow-x:auto; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; line-height:1.55; }
+  pre .k{ color:#f5c518; } pre .s{ color:#9fd19f; } pre .c{ color:#7d786f; font-style:italic; } pre .n{ color:#d9a0f0; }
+
+  .card{ background:#fff; border:1px solid var(--linea); border-left:4px solid var(--oro); border-radius:var(--raio); padding:14px 16px; margin:10px 0; }
+  .card h4{ margin:0 0 6px; font-family:"Oswald",sans-serif; font-size:13px; text-transform:uppercase; letter-spacing:.04em; }
+  ul{ margin:6px 0; padding-left:20px; } li{ margin:4px 0; font-size:14px; }
+  .note{ background:var(--azul-bg); border:1px solid #cfe0ee; border-radius:var(--raio); padding:12px 14px; font-size:13px; color:var(--azul); margin:12px 0; }
+  .q{ background:var(--oro-bg); border:1px solid #ecdca6; border-radius:var(--raio); padding:12px 14px; font-size:13px; margin:10px 0; }
+  .q b{ color:#8a6d1a; }
+  .legend{ display:flex; flex-wrap:wrap; gap:14px; margin:14px 0; font-size:12px; } .legend span{ display:inline-flex; align-items:center; gap:6px; } .legend i{ width:12px; height:12px; border-radius:3px; display:inline-block; }
+</style>
+</head>
+<body>
+<header>
+  <div class="t">Manos Fuertes</div>
+  <div class="s">Arquitectura de datos configurable — documento conceptual (validar el modelo, aún no la UI)</div>
+</header>
+<div class="page">
+
+  <p class="lead">Hoy las cadenas (MercaMadrid, Banco de Alimentos) están <b>fijas en el código</b>. La propuesta: convertirlas en <b>datos de configuración</b> que el Admin crea y edita. Este documento valida el <b>modelo de datos</b> — las entidades, sus campos y cómo se generan las fechas — antes de diseñar la pantalla del Admin.</p>
+
+  <div class="legend">
+    <span><i style="background:#f5c518"></i>Cadena</span>
+    <span><i style="background:#3a5a78"></i>Actividad (plantilla)</span>
+    <span><i style="background:#4f9d69"></i>Plaza-rol</span>
+    <span><i style="background:#7c5cbf"></i>Rol (catálogo)</span>
+  </div>
+
+  <!-- ===== 1. MODELO ===== -->
+  <h2><span class="n">01</span>Modelo de entidades</h2>
+  <p class="lead">Jerarquía de 4 niveles. Los <b>Roles</b> viven en un catálogo global reutilizable; una <b>Cadena</b> contiene <b>Actividades</b>; cada Actividad tiene <b>Plazas-rol</b> (qué rol y cuántos).</p>
+
+  <div class="diagram">
+    <!-- ROL catalogo -->
+    <div class="ent rol">
+      <div class="eh">🎭 Rol <span class="rel" style="margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0">catálogo global · reutilizable entre cadenas</span></div>
+      <div class="fields">
+        <span class="f key"><b>id</b> <span class="ty">·id</span></span>
+        <span class="f"><b>nombre</b> <span class="ty">·{pt,es}</span></span>
+        <span class="f"><b>requisito</b> <span class="ty">·texto opc. (ej. "furgoneta")</span></span>
+        <span class="f"><b>icono</b> <span class="ty">·opc.</span></span>
+      </div>
+    </div>
+
+    <div class="arrow">▲ referenciado por ▲</div>
+
+    <!-- CADENA -->
+    <div class="ent cadena">
+      <div class="eh">⛓️ Cadena <span class="rel" style="margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0">frente configurable</span></div>
+      <div class="fields">
+        <span class="f key"><b>id</b> <span class="ty">·id</span></span>
+        <span class="f"><b>nombre</b> <span class="ty">·texto</span></span>
+        <span class="f"><b>descripción</b> <span class="ty">·texto opc.</span></span>
+        <span class="f"><b>color</b> <span class="ty">·hex</span></span>
+        <span class="f"><b>activo</b> <span class="ty">·bool</span></span>
+        <span class="f"><b>líderes</b> <span class="ty">·[email] (allowlist)</span></span>
+      </div>
+      <div class="nest">
+        <div class="lbl">contiene ▾ actividades</div>
+        <!-- ACTIVIDAD -->
+        <div class="ent actividad">
+          <div class="eh">📋 Actividad (plantilla)</div>
+          <div class="fields">
+            <span class="f key"><b>id</b> <span class="ty">·id</span></span>
+            <span class="f"><b>nombre</b> <span class="ty">·{pt,es}</span></span>
+            <span class="f"><b>hora</b> <span class="ty">·HH:MM</span></span>
+            <span class="f"><b>duración</b> <span class="ty">·opc. (ej. 12:00–16:00)</span></span>
+            <span class="f"><b>notas</b> <span class="ty">·{pt,es} opc.</span></span>
+            <span class="f key"><b>recurrencia</b> <span class="ty">·objeto (ver §2)</span></span>
+            <span class="f"><b>activo</b> <span class="ty">·bool</span></span>
+          </div>
+          <div class="nest">
+            <div class="lbl">contiene ▾ plazas-rol</div>
+            <!-- SLOT -->
+            <div class="ent slot">
+              <div class="eh">🎟️ Plaza-rol</div>
+              <div class="fields">
+                <span class="f ref"><b>rolId</b> <span class="ty">→ Rol</span></span>
+                <span class="f"><b>capacidad</b> <span class="ty">·nº de plazas</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note"><b>Clave del diseño:</b> una Actividad es una <b>plantilla</b> (no una fecha). Guardamos la <b>regla de recurrencia</b>, y las fechas concretas del mes se <b>generan bajo demanda</b> — nunca almacenamos una fila por ocurrencia. Es el patrón RRULE (iCalendar/RFC 5545), el estándar de la industria.</div>
+
+  <!-- ===== 2. RECURRENCIA ===== -->
+  <h2><span class="n">02</span>Tipos de recurrencia</h2>
+  <p class="lead">Cada actividad define <b>cuándo se repite</b>. Cuatro tipos cubren todas las frentes actuales y futuras:</p>
+  <table>
+    <tr><th>Tipo</th><th>Parámetros</th><th>Ejemplo</th><th>Genera</th></tr>
+    <tr><td><code>semanal</code></td><td><code>weekday</code></td><td>Plaza Mayor · cada martes</td><td>todos los martes del mes</td></tr>
+    <tr><td><code>mensual_posicion</code></td><td><code>weekday</code>, <code>ordinal</code></td><td>Recogida · 1er sábado</td><td>1 fecha/mes (el 1er sábado)</td></tr>
+    <tr><td><code>mensual_dia</code></td><td><code>day</code> (1–31)</td><td>Reparto · día 15</td><td>1 fecha/mes (el día 15)</td></tr>
+    <tr><td><code>avulso</code></td><td><code>fechas[]</code></td><td>Evento especial · 24 dic</td><td>solo las fechas listadas</td></tr>
+  </table>
+  <div class="note">Ya usamos <code>mensual_posicion</code> hoy (1er sábado / 1ª quarta). Añadir <code>semanal</code>, <code>mensual_dia</code> y <code>avulso</code> hace el modelo general — cubre las otras frentes (Plaza Mayor martes, Villaverde jueves, Cañada Real viernes, Jurídico 1ª miércoles…).</div>
+
+  <!-- ===== 3. EJEMPLO REAL ===== -->
+  <h2><span class="n">03</span>Prueba: la Cadena MercaMadrid como configuración</h2>
+  <p class="lead">El modelo debe reproducir <b>exactamente</b> el piloto actual. Aquí está la Cadena MercaMadrid representada 100% como datos (lo que hoy está en el código):</p>
+  <pre><span class="c">// Catálogo de roles (global)</span>
+roles: [
+  { <span class="k">id</span>:<span class="s">"conductor"</span>, <span class="k">nombre</span>:{es:<span class="s">"Conductor (furgoneta)"</span>}, <span class="k">requisito</span>:<span class="s">"furgoneta"</span> },
+  { <span class="k">id</span>:<span class="s">"ayudante"</span>,  <span class="k">nombre</span>:{es:<span class="s">"Ayudante de carga"</span>} },
+  { <span class="k">id</span>:<span class="s">"preparacion"</span>, <span class="k">nombre</span>:{es:<span class="s">"Preparación"</span>} },
+  { <span class="k">id</span>:<span class="s">"distribucion"</span>, <span class="k">nombre</span>:{es:<span class="s">"Distribución"</span>} },
+  { <span class="k">id</span>:<span class="s">"limpieza"</span>,   <span class="k">nombre</span>:{es:<span class="s">"Limpieza"</span>} }
+]
+
+<span class="c">// Cadena MercaMadrid (configurable por el Admin)</span>
+{
+  <span class="k">id</span>:<span class="s">"mercamadrid"</span>, <span class="k">nombre</span>:<span class="s">"Cadena MercaMadrid"</span>, <span class="k">color</span>:<span class="s">"#f2711c"</span>, <span class="k">activo</span>:<span class="n">true</span>,
+  <span class="k">lideres</span>:[<span class="s">"rogerio.s.ono@gmail.com"</span>],
+  <span class="k">actividades</span>:[
+    { <span class="k">id</span>:<span class="s">"recogida"</span>, <span class="k">nombre</span>:{es:<span class="s">"Recogida MercaMadrid"</span>}, <span class="k">hora</span>:<span class="s">"08:00"</span>,
+      <span class="k">recurrencia</span>:{ tipo:<span class="s">"mensual_posicion"</span>, weekday:<span class="n">6</span>, ordinal:<span class="n">1</span> }, <span class="c">// 1er sábado</span>
+      <span class="k">plazas</span>:[ {rolId:<span class="s">"conductor"</span>,cap:<span class="n">2</span>}, {rolId:<span class="s">"ayudante"</span>,cap:<span class="n">2</span>} ] },
+
+    { <span class="k">id</span>:<span class="s">"prep_sab"</span>, <span class="k">nombre</span>:{es:<span class="s">"Preparación (sábado)"</span>}, <span class="k">hora</span>:<span class="s">"15:00"</span>,
+      <span class="k">recurrencia</span>:{ tipo:<span class="s">"mensual_posicion"</span>, weekday:<span class="n">6</span>, ordinal:<span class="n">1</span> },
+      <span class="k">plazas</span>:[ {rolId:<span class="s">"preparacion"</span>,cap:<span class="n">6</span>} ] },
+
+    { <span class="k">id</span>:<span class="s">"prep_dom"</span>, <span class="k">nombre</span>:{es:<span class="s">"Preparación (domingo)"</span>}, <span class="k">hora</span>:<span class="s">"08:00"</span>,
+      <span class="k">recurrencia</span>:{ tipo:<span class="s">"mensual_posicion"</span>, weekday:<span class="n">0</span>, ordinal:<span class="n">1</span> }, <span class="c">// 1er domingo</span>
+      <span class="k">plazas</span>:[ {rolId:<span class="s">"preparacion"</span>,cap:<span class="n">10</span>} ] },
+
+    { <span class="k">id</span>:<span class="s">"distribucion"</span>, <span class="k">nombre</span>:{es:<span class="s">"Distribución"</span>}, <span class="k">hora</span>:<span class="s">"12:00"</span>, <span class="k">duracion</span>:<span class="s">"12:00–16:00"</span>,
+      <span class="k">recurrencia</span>:{ tipo:<span class="s">"mensual_posicion"</span>, weekday:<span class="n">0</span>, ordinal:<span class="n">1</span> },
+      <span class="k">plazas</span>:[ {rolId:<span class="s">"distribucion"</span>,cap:<span class="n">6</span>} ] },
+
+    { <span class="k">id</span>:<span class="s">"limpieza"</span>, <span class="k">nombre</span>:{es:<span class="s">"Limpieza"</span>}, <span class="k">hora</span>:<span class="s">"16:00"</span>,
+      <span class="k">recurrencia</span>:{ tipo:<span class="s">"mensual_posicion"</span>, weekday:<span class="n">0</span>, ordinal:<span class="n">1</span> },
+      <span class="k">plazas</span>:[ {rolId:<span class="s">"limpieza"</span>,cap:<span class="n">4</span>} ] }
+  ]
+}</pre>
+  <div class="card"><h4>✓ Validación</h4>El modelo reproduce las 5 actividades de MercaMadrid (y las 4 de Banco de Alimentos de forma idéntica), con sus roles, capacidades, horas y recurrencia — <b>sin nada hardcoded</b>. Si esto cierra, cualquier frente futura (Plaza Mayor, Jurídico…) es solo otra Cadena en la config.</div>
+
+  <!-- ===== 4. GENERACIÓN ===== -->
+  <h2><span class="n">04</span>Cómo se generan las actividades del mes</h2>
+  <p class="lead">El motor actual (<code>generateActivities(año, mes)</code>) casi no cambia: en vez de leer un array fijo en el código, lee <code>CONFIG.cadenas</code>. Para cada actividad-plantilla, aplica su recurrencia y produce las ocurrencias datadas — igual que hoy.</p>
+  <pre><span class="c">// hoy:  generateActivities lee SEED_TEMPLATES (fijo en app.js)</span>
+<span class="c">// mañana: generateActivities lee CONFIG.cadenas (editable por Admin)</span>
+
+CONFIG.cadenas
+  → por cada actividad-plantilla
+      → aplicar recurrencia(año, mes)  <span class="c">// = fechas del mes</span>
+      → por cada fecha: crear ocurrencia { fecha, hora, cadena, plazas, roles… }
+  → ordenar por fecha+hora  →  <b>agenda del mes</b> (lo que ven voluntarios y líderes)</pre>
+  <div class="note">La inscripción, la vista del líder, la lista de espera y "añadir servidor" <b>no cambian</b>: siguen operando sobre las ocurrencias generadas. Solo cambia <b>de dónde salen</b> las plantillas.</div>
+
+  <!-- ===== 5. DECISIONES ===== -->
+  <h2><span class="n">05</span>Decisiones incorporadas (mis recomendaciones)</h2>
+  <ul>
+    <li><b>Roles = catálogo global</b> reutilizable; cada cadena elige cuáles usar y con qué capacidad. Evita duplicar "Preparación" en cada cadena.</li>
+    <li><b>Recurrencia = 4 tipos</b> (semanal, mensual_posicion, mensual_dia, avulso) — cubre todas las frentes.</li>
+    <li><b>Requisito por rol</b> (ej. "furgoneta") = campo de texto opcional en el catálogo de roles.</li>
+    <li><b>Líderes por cadena</b> = allowlist de emails en la propia cadena (integra lo que ya diseñamos).</li>
+    <li><b>Activo/inactivo</b> en cadena y actividad = permite desactivar sin borrar (histórico intacto).</li>
+    <li><b>i18n</b> (pt/es) en nombres y notas, como ya hace el app.</li>
+  </ul>
+
+  <div class="q"><b>Para discutir antes de la UI del Admin:</b>
+    <ul>
+      <li>¿La <b>capacidad</b> puede variar por mes/ocasión, o es fija en la plantilla? (hoy propongo fija; el líder ya puede "añadir servidor" para excepciones)</li>
+      <li>¿Hace falta <b>duración/fin</b> por actividad, o basta la hora de inicio + nota? (Distribución 12:00–16:00 es el único caso hoy)</li>
+      <li>¿El Admin define el <b>catálogo de roles</b>, o dejamos roles fijos y solo se configuran cadenas/actividades al principio?</li>
+      <li>¿"Frente" y "Cadena" son lo mismo aquí? (uso "Cadena" como el contenedor configurable; ¿mantenemos ese nombre?)</li>
+    </ul>
+  </div>
+
+  <div class="card" style="border-left-color:var(--verde)"><h4 style="color:#2f6b46">Siguiente paso</h4>Si validas este modelo, el orden sería: <b>(1)</b> refinar las 4 preguntas de arriba · <b>(2)</b> diseñar el mockup de la pantalla del <b>Admin</b> (crear/editar cadenas, actividades, roles) · <b>(3)</b> migrar el <code>SEED_TEMPLATES</code> actual a <code>CONFIG.cadenas</code> y apuntar <code>generateActivities</code> a la config.</div>
+
+</div>
+</body>
+</html>
