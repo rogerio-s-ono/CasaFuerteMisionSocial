@@ -20,12 +20,12 @@ let wzState = { step:1, activity:null, role:null };
    ========================================================================= */
 let DEMO_PROFILE = 'voluntario';   // 'voluntario' | 'lider_A' | 'lider_B' | 'lider_AB' | 'admin'
 /* estado de la vista líder */
-let LIDER_SCOPE = 'all';           // 'all' | 'A' | 'B'  (cadena mostrada)
+let LIDER_SCOPE = 'all';           // 'all' | <misionId>  (misión mostrada)
 let LIDER_VIEW = 'dia';            // 'dia' | 'fn'  (agrupación)
-/* líderes autorizados por el admin, por cadena (en real: allowlist en la planilha) */
+/* líderes autorizados por el admin, por misionId (en real: allowlist en la planilha) */
 const DEMO_LIDERES = {
-  A: { name:'Rogério Ono', email:'rogerio.s.ono@gmail.com' },
-  B: { name:'Tânia Ono',   email:'tania.eustaqui@gmail.com' }
+  mercamadrid: { name:'Rogério Ono', email:'rogerio.s.ono@gmail.com' },
+  banco:       { name:'Tânia Ono',   email:'tania.eustaqui@gmail.com' }
 };
 /* inscripciones de ejemplo de OTROS voluntarios, por templateId+rol.
    En real esto vendrá del backend (todas las inscripciones de todos). */
@@ -69,17 +69,21 @@ function pushAdd(activityId, roleId, name, temp){
 function removeAdd(activityId, roleId, idx){
   if(LIDER_ADDS[activityId] && LIDER_ADDS[activityId][roleId]){ LIDER_ADDS[activityId][roleId].splice(idx,1); saveAdds(); }
 }
-function tmplId(activityId){ return (activityId||'').replace(/-.*/,''); }
+function tmplId(activityId){
+  // id de ocurrencia = "misionId:TMPL-YYYY-MM-DD" → extrae TMPL
+  const afterColon = (activityId||'').split(':').pop();   // "TMPL-YYYY-MM-DD" o "TMPL"
+  return afterColon.replace(/-\d{4}-\d{2}-\d{2}$/, '');    // quita la fecha
+}
 function isLider(){ return DEMO_PROFILE==='lider_A' || DEMO_PROFILE==='lider_B' || DEMO_PROFILE==='lider_AB'; }
 function isAdmin(){ return DEMO_PROFILE==='admin'; }
-/* cadenas de las que la persona es líder (lista) */
+/* misiones de las que la persona es líder (por misionId real) */
 function liderCadenas(){
-  if(DEMO_PROFILE==='lider_A') return ['A'];
-  if(DEMO_PROFILE==='lider_B') return ['B'];
-  if(DEMO_PROFILE==='lider_AB') return ['A','B'];
+  if(DEMO_PROFILE==='lider_A') return ['mercamadrid'];
+  if(DEMO_PROFILE==='lider_B') return ['banco'];
+  if(DEMO_PROFILE==='lider_AB') return ['mercamadrid','banco'];
   return [];
 }
-/* cadenas visibles según el scope elegido */
+/* misiones visibles según el scope elegido */
 function scopeCadenas(){
   const mias = liderCadenas();
   if(LIDER_SCOPE==='all') return mias;
@@ -231,9 +235,9 @@ function renderDemoBar(){
   bar.innerHTML = `<b>Demo · perfil:</b>
     <select id="demoSel" onchange="setProfile(this.value)">
       <option value="voluntario">Voluntario</option>
-      <option value="lider_A">Líder · Cadena MercaMadrid</option>
-      <option value="lider_B">Líder · Cadena Banco de Alimentos</option>
-      <option value="lider_AB">Líder · Ambas cadenas</option>
+      <option value="lider_A">Líder · MercaMadrid</option>
+      <option value="lider_B">Líder · Banco de Alimentos</option>
+      <option value="lider_AB">Líder · Ambas misiones</option>
       <option value="admin">Admin</option>
     </select>`;
   document.getElementById('demoSel').value = DEMO_PROFILE;
@@ -317,7 +321,7 @@ function renderLider(){
 
   // ---- resumen general ----
   const cov = covOf(acts);
-  const scopeTitle = (LIDER_SCOPE==='all' && mias.length>1) ? 'Todas las cadenas' : window.CFMS.cadenaLabel(cadenas[0]);
+  const scopeTitle = (LIDER_SCOPE==='all' && mias.length>1) ? 'Todas las misiones' : window.CFMS.cadenaLabel(cadenas[0]);
   const liderNombre = mias.map(c=>DEMO_LIDERES[c].name).filter((v,i,a)=>a.indexOf(v)===i).join(' · ');
   head.innerHTML = `<div class="lider-head">
     <div class="lh-cad">${scopeTitle}</div>
@@ -331,9 +335,9 @@ function renderLider(){
   // ---- controles: selector de cadena (si es líder de >1) + toggle de vista ----
   let ctrlHtml = '';
   if(mias.length>1){
-    ctrlHtml += `<div class="scope-sel"><label>Cadena</label>
+    ctrlHtml += `<div class="scope-sel"><label>Misión</label>
       <select onchange="setLiderScope(this.value)">
-        <option value="all">Todas las cadenas</option>
+        <option value="all">Todas las misiones</option>
         ${mias.map(c=>`<option value="${c}">${window.CFMS.cadenaLabel(c)}</option>`).join('')}
       </select></div>`;
   }
@@ -469,6 +473,8 @@ function recLabel(rec){
 function durLabel(min){ if(!min) return '—'; const h=Math.floor(min/60), m=min%60; return (h?h+'h':'')+(m?(' '+m+'min'):''); }
 function adminGo(screen, misionId){ ADMIN_NAV={ screen, misionId:misionId||null }; renderAdmin(); window.scrollTo(0,0); }
 window.adminGo=adminGo;
+function toggleAcc(h){ if(h && h.parentNode) h.parentNode.classList.toggle('open'); }
+window.toggleAcc=toggleAcc;
 
 function renderAdmin(){
   const box=document.getElementById('adminBody');
@@ -545,7 +551,7 @@ function renderAdminMision(box, cfg){
     <div class="acc-actions" style="margin-top:16px"><button class="del" onclick="adminDelMision('${m.id}')">Eliminar misión</button><button class="btn primary sm" onclick="adminGo('list')">Hecho</button></div>`;
 }
 function recEditor(mid, a){
-  const wd=WD[LANG]; const rec=a.recurrencia||{tipo:'mensal_posicion',weekday:6,ordinal:1};
+  const wd=WD[LANG]; const rec=a.recurrencia||{tipo:'mensal_posicao',weekday:6,ordinal:1};
   const tipos=[['semanal','Semanal'],['mensal_posicao','Mensual · posición'],['mensal_dia','Mensual · día'],['avulso','Fechas sueltas']];
   let extra='';
   if(rec.tipo==='semanal'||rec.tipo==='mensal_posicao'){
