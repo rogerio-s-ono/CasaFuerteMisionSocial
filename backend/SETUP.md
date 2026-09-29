@@ -54,6 +54,22 @@ En la parte de arriba del código, rellena:
 ## Reimplantar cuando cambie el Code.gs
 Si editas `Code.gs` más adelante: **Implementar → Gestionar implementaciones → (editar) → Nueva versión → Implementar**. La URL `/exec` se mantiene.
 
+> **Actualización Fase 2 (permisos):** el `Code.gs` ahora devuelve la allowlist (admins/líderes)
+> en el pull. Tras actualizarlo, **reimplanta** (Nueva versión). En la pestaña **Admin** define
+> filas: `email | papel | mision` — papel = `admin` o `lider`; para líderes, `mision` = id de la
+> misión (ej. `mercamadrid`, `banco`). Así el login Google reconoce el rol real.
+
+## Login con Google (Fase 2) — Client ID
+Para activar el botón "Entrar con Google" necesitas un **OAuth Client ID** (Google Cloud):
+1. https://console.cloud.google.com → APIs y servicios → Credenciales → Crear credenciales → **ID de cliente OAuth** → Tipo **Aplicación web**.
+2. En **Orígenes autorizados de JavaScript** añade la URL **fija** donde se hospeda el app
+   (ej. `https://rogerio-s-ono.github.io`). ⚠️ El login Google **NO funciona con URLs de túnel
+   temporales** — necesita un origen fijo autorizado.
+3. Copia el **Client ID** (`...apps.googleusercontent.com`) y ponlo en `config.js` → `GOOGLE_CLIENT_ID`
+   y en `Code.gs` → `GOOGLE_CLIENT_ID` (el mismo).
+4. Mientras no haya Client ID válido + origen autorizado, el botón Google hace *fallback* al
+   flujo de teléfono (el app sigue funcionando).
+
 ## Notas
 - **Fase 1** cubre la **configuración compartida** (lo que edita el Admin) + la base del sync.
 - Voluntarios, inscripciones (con validación de cupo por `LockService`) y checklists ya están

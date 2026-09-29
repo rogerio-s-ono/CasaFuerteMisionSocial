@@ -78,8 +78,22 @@ function _pull() {
     voluntarios:   _readRows(SHEETS.VOLUNTARIOS),
     inscripciones: _readRows(SHEETS.INSCRIPCIONES),
     checklists:    _readRows(SHEETS.CHECKLISTS),
+    permisos:      _permisos(),   // { admins:[email], lideres:{email:[misionId]} }
     serverTime:    new Date().toISOString()
   };
+}
+/* Allowlist desde la pestaña Admin: papel 'admin' o 'lider' (+ columna mision para líderes) */
+function _permisos() {
+  var rows = _readRows(SHEETS.ADMIN);
+  var admins = [], lideres = {};
+  rows.forEach(function(r){
+    var email = String(r.email||'').toLowerCase(); if(!email) return;
+    var papel = String(r.papel||'').toLowerCase();
+    if(papel==='admin') admins.push(email);
+    if(papel==='lider'){ var mis=String(r.mision||'').trim(); lideres[email]=(lideres[email]||[]); if(mis) lideres[email].push(mis); }
+  });
+  if(!admins.length) admins = ADMIN_FALLBACK.map(function(e){ return e.toLowerCase(); });
+  return { admins: admins, lideres: lideres };
 }
 
 /* ============ CONFIG (JSON en una celda A1 de la pestaña Config) ============ */

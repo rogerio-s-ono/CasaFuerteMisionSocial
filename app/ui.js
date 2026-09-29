@@ -74,10 +74,22 @@ function tmplId(activityId){
   const afterColon = (activityId||'').split(':').pop();   // "TMPL-YYYY-MM-DD" o "TMPL"
   return afterColon.replace(/-\d{4}-\d{2}-\d{2}$/, '');    // quita la fecha
 }
-function isLider(){ return DEMO_PROFILE==='lider_A' || DEMO_PROFILE==='lider_B' || DEMO_PROFILE==='lider_AB'; }
-function isAdmin(){ return DEMO_PROFILE==='admin'; }
-/* misiones de las que la persona es líder (por misionId real) */
+/* permisos reales del servidor (del pull): { admins:[email], lideres:{email:[misionId]} } */
+let PERMISOS = null;
+function setPermisos(p){ PERMISOS = p || null; }
+function myEmail(){ return (USER && USER.email) ? USER.email.toLowerCase() : ''; }
+/* si estoy logado con email y hay permisos del servidor, mandan ELLOS; si no, cae al modo demo (DEMO_PROFILE) */
+function isAdmin(){
+  if(myEmail() && PERMISOS){ return (PERMISOS.admins||[]).indexOf(myEmail())>=0; }
+  return DEMO_PROFILE==='admin';
+}
+function isLider(){
+  if(myEmail() && PERMISOS){ return !!(PERMISOS.lideres && PERMISOS.lideres[myEmail()] && PERMISOS.lideres[myEmail()].length); }
+  return DEMO_PROFILE==='lider_A' || DEMO_PROFILE==='lider_B' || DEMO_PROFILE==='lider_AB';
+}
+/* misiones de las que la persona es líder */
 function liderCadenas(){
+  if(myEmail() && PERMISOS && PERMISOS.lideres && PERMISOS.lideres[myEmail()]){ return PERMISOS.lideres[myEmail()].slice(); }
   if(DEMO_PROFILE==='lider_A') return ['mercamadrid'];
   if(DEMO_PROFILE==='lider_B') return ['banco'];
   if(DEMO_PROFILE==='lider_AB') return ['mercamadrid','banco'];
@@ -176,21 +188,58 @@ function submitPhone(){
   }
 }
 function loginGoogle(){
-  /* Sem backend Google ainda: simula 1ª vez pedindo teléfono+nombre (nombre viría de Google). */
+  var cid = (window.CFMS_CONFIG && window.CFMS_CONFIG.GOOGLE_CLIENT_ID) || '';
+  var gisReady = window.google && google.accounts && google.accounts.id && cid && cid.indexOf('XXXX') === -1;
+  if(!gisReady){
+    // Fallback: GIS no cargó o falta Client ID → usa el flujo de teléfono (1ª vez pide tel+nombre)
+    toast && toast('Login Google no disponible — usa tu teléfono');
+    _googleFirstTime('', '');
+    return;
+  }
+  google.accounts.id.initialize({ client_id: cid, callback: _onGoogleCredential });
+  google.accounts.id.prompt(); // muestra el selector de cuenta de Google
+}
+/* callback del GIS: recibe la credential (JWT idToken) */
+function _onGoogleCredential(resp){
+  var jwt = resp && resp.credential; if(!jwt){ return; }
+  try{ sessionStorage.setItem('mf_idtoken', jwt); }catch(e){}
+  var claims = _decodeJwt(jwt) || {};
+  var email = (claims.email||'').toLowerCase();
+  var nombre = claims.name || claims.given_name || '';
+  // ¿ya tiene teléfono vinculado localmente por este email?
+  var vinc = _emailPhone(email);
+  if(vinc){ USER={ name:vinc.name||nombre, phone:vinc.phone, email:email }; enter('Entrando…'); return; }
+  // 1ª vez con Google → pide teléfono (nombre pre-llenado del Google)
+  _googleFirstTime(nombre, email);
+}
+function _googleFirstTime(nombre, email){
   document.getElementById('panelPhone').classList.add('hidden');
   document.getElementById('ddi2').disabled=false; document.getElementById('ddi2').value='+34';
   document.getElementById('regPhone').value=''; document.getElementById('regPhone').removeAttribute('readonly');
   document.getElementById('regPhone').placeholder='600 000 000';
-  document.getElementById('regName').value='';
-  document.getElementById('regWelcome').innerHTML='Primera vez con Google. <b>¡Bienvenido!</b> Confirma tu nombre y añade tu teléfono (para los recordatorios por WhatsApp).';
+  document.getElementById('regName').value=nombre||'';
+  document.getElementById('regWelcome').innerHTML= email
+    ? 'Primera vez con Google. <b>¡Bienvenido!</b> Confirma tu nombre y añade tu teléfono (para los recordatorios por WhatsApp).'
+    : 'Primera vez. <b>¡Bienvenido!</b> Solo necesitamos tu nombre y teléfono.';
   document.getElementById('panelRegister').classList.remove('hidden');
+  window._googleEmail = email || '';
 }
+function _decodeJwt(jwt){ try{ var p=jwt.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'); return JSON.parse(decodeURIComponent(escape(atob(p)))); }catch(e){ return null; } }
+/* vínculo email↔teléfono guardado localmente: { email: {phone,name} } */
+function _emailMap(){ try{ return JSON.parse(localStorage.getItem('mf_email_phone')||'{}'); }catch(e){ return {}; } }
+function _emailPhone(email){ return email ? _emailMap()[email] : null; }
+function _rememberEmailPhone(email, phone, name){ if(!email) return; var m=_emailMap(); m[email]={phone:phone,name:name}; localStorage.setItem('mf_email_phone', JSON.stringify(m)); }
 function submitRegister(){
   const name = document.getElementById('regName').value.trim();
   const ddi = document.getElementById('ddi2').value;
   const phone = ddi + normPhone(document.getElementById('regPhone').value.trim());
   if(!name || normPhone(phone).length < 8){ return; }
-  USER={ name, phone }; rememberUser(phone,name); enter('Creando tu perfil…');
+  const email = window._googleEmail || '';
+  USER={ name, phone, email:email };
+  rememberUser(phone,name);
+  if(email) _rememberEmailPhone(email, phone, name);
+  window._googleEmail='';
+  enter('Creando tu perfil…');
 }
 function backToPhone(){
   document.getElementById('panelRegister').classList.add('hidden');
@@ -200,6 +249,10 @@ function backToPhone(){
 }
 function enter(msg){
   saveUser();
+  // registrar/actualizar el voluntario en el servidor (cola offline-first)
+  if(USER && USER.phone && window.MFSync && window.MFSync.enabled){
+    window.MFSync.queue('upsertVoluntario', { voluntario:{ telefono:USER.phone, nombre:USER.name, email:USER.email||'', idioma:LANG } });
+  }
   document.getElementById('panelPhone').classList.add('hidden');
   document.getElementById('panelRegister').classList.add('hidden');
   document.getElementById('lgCheckTxt').textContent = msg;
@@ -235,6 +288,14 @@ function startApp(){
 /* ---------- MODO DEMO: selector de perfil ---------- */
 function renderDemoBar(){
   const bar = document.getElementById('demoBar');
+  // Si el usuario entró con Google (email real) y hay permisos del servidor, NO se muestra
+  // el selector demo: el rol viene de la allowlist real.
+  if(myEmail() && PERMISOS){
+    var rol = isAdmin()?'Admin' : isLider()?'Líder' : 'Voluntario';
+    bar.innerHTML = '<b>'+rol+'</b> · '+myEmail();
+    applyProfile();
+    return;
+  }
   bar.innerHTML = `<b>Demo · perfil:</b>
     <select id="demoSel" onchange="setProfile(this.value)">
       <option value="voluntario">Voluntario</option>
@@ -1034,11 +1095,13 @@ function renderSyncBadge(s){
 if(window.MFSync){
   window.MFSync.onStatus(renderSyncBadge);
   window.MFSync.init().then(function(res){
-    if(res && res.data && res.data.config && res.data.config.misiones){
-      // el servidor manda: aplica su config y re-renderiza
-      window.CFMS.setConfig(res.data.config);
-      localStorage.setItem('mf_config', JSON.stringify(res.data.config));
-      if(USER) renderAll();
+    if(res && res.data){
+      if(res.data.permisos) setPermisos(res.data.permisos);
+      if(res.data.config && res.data.config.misiones){
+        window.CFMS.setConfig(res.data.config);
+        localStorage.setItem('mf_config', JSON.stringify(res.data.config));
+      }
+      if(USER){ renderDemoBar(); renderAll(); }
     }
   });
 }
