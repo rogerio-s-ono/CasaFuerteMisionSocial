@@ -835,7 +835,6 @@ function _renderUsrBody(){
   }).join('');
   const delTxt = (_delArm===USR_TEL) ? '¿Seguro? Eliminar' : 'Eliminar voluntario';
   document.getElementById('usrBody').innerHTML = `
-    <div class="sh-grab"></div>
     <h3 class="usr-t">${v.nombre||'(sin nombre)'}</h3>
     <div class="usr-sub">${USR_TEL}${em?(' · '+em):''}</div>
     ${!em ? '<div class="usr-note">Sin email de Google. Para ser Admin o Líder, esta persona debe entrar con Google al menos una vez.</div>' : `
@@ -863,21 +862,27 @@ window.accAddByEmail=accAddByEmail; window.accAddVol=accAddVol;
 function _renderFormBody(){
   const cfg=window.CFMS.getConfig(); const dis=ACC_BUSY?'disabled':'';
   const inputStyle="width:100%;padding:13px;border:1px solid var(--linea);border-radius:var(--raio);font-family:'Jost',sans-serif;font-size:15px";
+  // íconos SVG por tipo (patrón Gideones: círculo + ícono arriba)
+  const IC = {
+    admin: '<div class="md-icon oro"><svg viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg></div>',
+    lider: '<div class="md-icon purp"><svg viewBox="0 0 24 24"><path d="M12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2z"/></svg></div>',
+    voluntario: '<div class="md-icon verde"><svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>'
+  };
   let inner='';
   if(ACC_FORM.tipo==='voluntario'){
-    inner = `<h3 class="usr-t">Añadir voluntario</h3><div class="usr-sub">Registro manual (nombre + teléfono).</div>
+    inner = IC.voluntario + `<h3 class="usr-t">Añadir voluntario</h3><div class="usr-sub">Registro manual (nombre + teléfono).</div>
       <div class="usr-sec">Nombre</div><input id="accfNom" ${dis} placeholder="Ej. María González" style="${inputStyle}" />
       <div class="usr-sec">Teléfono</div>
       <div class="phone-row"><select id="accfDdi" ${dis}></select><input id="accfTel" ${dis} type="tel" placeholder="600 000 000" style="flex:1;${inputStyle}" /></div>
-      <div class="usr-actions"><button class="btn ghost" ${dis} onclick="closeUsr()">Cancelar</button><button class="btn primary" style="flex:1" ${dis} onclick="accDoAddVol()">Añadir</button></div>`;
+      <div class="usr-actions"><button class="btn ghost" ${dis} onclick="closeUsr()">Cancelar</button><button class="btn primary" ${dis} onclick="accDoAddVol()">Añadir</button></div>`;
   } else {
     const misSel = ACC_FORM.tipo==='lider' ? `<div class="usr-sec">Misión</div><select id="accfMis" ${dis} style="${inputStyle}">${cfg.misiones.map(m=>`<option value="${m.id}">${m.nombre}</option>`).join('')}</select>` : '';
-    inner = `<h3 class="usr-t">Añadir ${ACC_FORM.tipo==='admin'?'administrador':'líder'}</h3><div class="usr-sub">Por email de Google (debe entrar con Google).</div>
+    inner = IC[ACC_FORM.tipo] + `<h3 class="usr-t">Añadir ${ACC_FORM.tipo==='admin'?'administrador':'líder'}</h3><div class="usr-sub">Por email de Google (debe entrar con Google).</div>
       <div class="usr-sec">Email</div><input id="accfEmail" ${dis} type="email" placeholder="email@gmail.com" style="${inputStyle}" />
       ${misSel}
-      <div class="usr-actions"><button class="btn ghost" ${dis} onclick="closeUsr()">Cancelar</button><button class="btn primary" style="flex:1" ${dis} onclick="accDoAddByEmail('${ACC_FORM.tipo}')">Añadir</button></div>`;
+      <div class="usr-actions"><button class="btn ghost" ${dis} onclick="closeUsr()">Cancelar</button><button class="btn primary" ${dis} onclick="accDoAddByEmail('${ACC_FORM.tipo}')">Añadir</button></div>`;
   }
-  document.getElementById('usrBody').innerHTML = '<div class="sh-grab"></div>' + inner;
+  document.getElementById('usrBody').innerHTML = inner;
   if(ACC_FORM.tipo==='voluntario'){ var d=document.getElementById('accfDdi'); if(d && !d.options.length) fillDdi(d); }
 }
 function accDoAddByEmail(papel){

@@ -147,11 +147,17 @@
   .wz-foot{ padding:12px 16px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--linea); background:var(--blanco); display:flex; gap:10px; } .wz-foot .back{ flex:0 0 auto; background:none; border:0; color:var(--gris); font-size:12px; padding:16px 14px; cursor:pointer; font-family:"Jost",sans-serif; text-transform:uppercase; letter-spacing:.1em; } .wz-foot .next{ flex:1; background:var(--oro); color:var(--negro); border:0; border-radius:var(--raio); padding:16px; font-size:13px; font-weight:600; cursor:pointer; font-family:"Jost",sans-serif; text-transform:uppercase; letter-spacing:.12em; } .wz-foot .next:disabled{ background:#ddd2c6; }
   .ok-scr{ text-align:center; padding:44px 20px; } .ok-scr .circ{ width:88px; height:88px; border-radius:50%; background:var(--oro); color:var(--negro); display:grid; place-items:center; font-size:44px; margin:0 auto 22px; } .ok-scr h2{ font-family:"Cormorant Garamond",serif; font-style:italic; margin:0 0 8px; font-size:30px; font-weight:500; } .ok-scr p{ color:var(--gris); margin:0 0 26px; font-weight:300; } .ok-scr .resumo{ text-align:left; margin-bottom:20px; }
   /* ===== Sheet añadir servidor (líder) ===== */
-  .backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; z-index:40; } .backdrop.on{ display:block; }
-  .sheet{ position:fixed; left:50%; transform:translateX(-50%); bottom:0; width:100%; max-width:480px; background:#fff; border-radius:16px 16px 0 0; z-index:41; padding:14px 16px calc(18px + env(safe-area-inset-bottom)); display:none; max-height:80vh; overflow-y:auto; -webkit-overflow-scrolling:touch; box-shadow:0 -4px 24px rgba(0,0,0,.18); }
-  .sheet.on{ display:block; animation:sheetUp .25s ease; } @keyframes sheetUp{ from{transform:translate(-50%,100%);} to{transform:translate(-50%,0);} }
-  .sheet .sh-grab{ width:40px; height:4px; background:var(--linea); border-radius:2px; margin:0 auto 12px; }
-  .sheet h3{ position:sticky; top:0; background:#fff; padding-bottom:8px; z-index:1; }
+  .backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; z-index:40; } .backdrop.on{ display:block; animation:fadeIn .2s ease; } @keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
+  /* modal CENTRALIZADO (patrón Gideones): tarjeta centrada, ícono arriba, Cancelar + acción */
+  .sheet{ position:fixed; inset:0; margin:auto; width:calc(100% - 32px); max-width:400px; height:max-content; max-height:88vh; background:#fff; border-radius:18px; z-index:41; padding:22px 20px calc(20px + env(safe-area-inset-bottom)); display:none; overflow-y:auto; -webkit-overflow-scrolling:touch; box-shadow:0 12px 40px rgba(0,0,0,.28); }
+  .sheet.on{ display:block; animation:modalPop .22s cubic-bezier(.2,.9,.3,1.2); } @keyframes modalPop{ from{transform:scale(.92);opacity:0;} to{transform:scale(1);opacity:1;} }
+  .sheet .sh-grab{ display:none; }
+  .md-icon{ width:60px; height:60px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; }
+  .md-icon svg{ width:30px; height:30px; }
+  .md-icon.oro{ background:#fdf4d8; } .md-icon.oro svg{ fill:#b8860b; }
+  .md-icon.purp{ background:#efeafa; } .md-icon.purp svg{ fill:#5a4494; }
+  .md-icon.verde{ background:#e6f3ea; } .md-icon.verde svg{ fill:#2f7d4f; }
+  .sheet h3{ position:static; background:none; padding:0; }
   .sheet h3{ font-family:"Cormorant Garamond",serif; font-style:italic; font-size:22px; margin:0 0 3px; } .sheet .sh-sub{ font-size:12px; color:var(--gris); margin-bottom:16px; }
   .sheet .fld{ margin-bottom:12px; } .sheet .fld label{ font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--gris); display:block; margin-bottom:6px; }
   .sheet .fld input{ width:100%; padding:14px; border:1px solid var(--linea); border-radius:var(--raio); font-size:16px; font-family:"Jost",sans-serif; }
@@ -214,16 +220,17 @@
   #v-admin .sec-add{ width:34px; height:34px; flex:0 0 34px; border:0; border-radius:50%; background:var(--oro); color:#111; font-size:22px; line-height:1; cursor:pointer; display:grid; place-items:center; font-family:"Jost",sans-serif; box-shadow:0 1px 4px rgba(0,0,0,.15); }
   #v-admin .sec-add:active{ background:var(--oro-osc); }
   #v-admin .sec-add:disabled{ opacity:.4; }
-  #usrSheet .usr-actions{ display:flex; gap:10px; align-items:center; margin-top:18px; }
-  #usrSheet .usr-actions .btn.ghost{ flex:0 0 auto; background:none; border:0; color:var(--gris); padding:14px; }
+  #usrSheet .usr-actions{ display:flex; gap:10px; align-items:center; margin-top:20px; }
+  #usrSheet .usr-actions .btn{ flex:1; }
+  #usrSheet .usr-actions .btn.ghost{ flex:1; background:#f2f2f2; border:0; color:var(--grafito); padding:14px; border-radius:var(--raio); font-family:"Jost",sans-serif; font-size:14px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; cursor:pointer; }
   #usrSheet .usr-del{ display:block; width:100%; margin-top:10px; background:none; border:0; color:#c2560c; font-size:13px; font-family:"Jost",sans-serif; cursor:pointer; padding:10px; text-transform:uppercase; letter-spacing:.05em; }
   #usrSheet .usr-del.armed{ color:#fff; background:#c2560c; border-radius:var(--raio); font-weight:600; }
   #v-admin .res-box{ background:#fff; border:1px solid var(--linea); border-radius:var(--raio); overflow:hidden; }
   #v-admin .res-item{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 14px; border-bottom:1px solid var(--linea); cursor:pointer; }
   #v-admin .res-item:last-child{ border-bottom:0; } #v-admin .res-item:active{ background:#fafafa; }
   #v-admin .res-nm{ font-weight:500; font-size:14px; } #v-admin .res-sub{ font-size:11px; color:var(--oro-osc); text-transform:uppercase; letter-spacing:.04em; }
-  #usrSheet .usr-t{ font-family:"Cormorant Garamond",serif; font-size:22px; font-weight:600; margin:0 0 2px; }
-  #usrSheet .usr-sub{ font-size:12px; color:var(--gris); margin-bottom:14px; word-break:break-all; }
+  #usrSheet .usr-t{ font-family:"Cormorant Garamond",serif; font-size:23px; font-weight:600; margin:0 0 3px; text-align:center; }
+  #usrSheet .usr-sub{ font-size:12px; color:var(--gris); margin-bottom:14px; word-break:break-word; text-align:center; }
   #usrSheet .usr-note{ background:#fdeadb; border:1px solid #f0cbb0; color:#c2560c; border-radius:var(--raio); padding:10px 12px; font-size:12px; }
   #usrSheet .usr-sec{ font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--gris); margin:16px 0 8px; font-weight:600; }
   #usrSheet .usr-toggle{ display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border:1px solid var(--linea); border-radius:var(--raio); font-size:15px; }
