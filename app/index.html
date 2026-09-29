@@ -73,6 +73,7 @@
   @keyframes fade{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
   @media (prefers-reduced-motion: reduce){ #lgChecking::before,.lg-emblem::before{ animation:none; } }
   .lg-foot{ text-align:center; font-size:10px; color:#6f6a61; letter-spacing:.15em; text-transform:uppercase; padding:16px; }
+  .lg-foot .lg-ver{ display:inline-block; margin-top:8px; color:var(--oro-cl); font-size:12px; letter-spacing:.05em; opacity:.95; }
 
   /* ============ HEADER (3 columnas) ============ */
   header{ background:var(--negro); color:#fff; padding:12px 14px; position:sticky; top:0; z-index:20; }
@@ -359,7 +360,7 @@
 
     <div id="lgChecking"><span class="dot"></span> <span id="lgCheckTxt">Entrando…</span></div>
   </div>
-  <div class="lg-foot">Manos Fuertes · Misión Social Casa Fuerte<br><span id="loginVer" style="opacity:.7"></span><span id="loginNewVer"></span></div>
+  <div class="lg-foot">Manos Fuertes · Misión Social Casa Fuerte<br><span id="loginVer" class="lg-ver">v—</span><span id="loginNewVer"></span></div>
 </div>
 
 <!-- ============ APP ============ -->
