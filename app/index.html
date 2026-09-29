@@ -144,9 +144,10 @@
   .ok-scr{ text-align:center; padding:44px 20px; } .ok-scr .circ{ width:88px; height:88px; border-radius:50%; background:var(--oro); color:var(--negro); display:grid; place-items:center; font-size:44px; margin:0 auto 22px; } .ok-scr h2{ font-family:"Cormorant Garamond",serif; font-style:italic; margin:0 0 8px; font-size:30px; font-weight:500; } .ok-scr p{ color:var(--gris); margin:0 0 26px; font-weight:300; } .ok-scr .resumo{ text-align:left; margin-bottom:20px; }
   /* ===== Sheet añadir servidor (líder) ===== */
   .backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; z-index:40; } .backdrop.on{ display:block; }
-  .sheet{ position:fixed; left:50%; transform:translateX(-50%); bottom:0; width:100%; max-width:480px; background:#fff; border-radius:16px 16px 0 0; z-index:41; padding:18px 16px calc(18px + env(safe-area-inset-bottom)); display:none; }
+  .sheet{ position:fixed; left:50%; transform:translateX(-50%); bottom:0; width:100%; max-width:480px; background:#fff; border-radius:16px 16px 0 0; z-index:41; padding:14px 16px calc(18px + env(safe-area-inset-bottom)); display:none; max-height:80vh; overflow-y:auto; -webkit-overflow-scrolling:touch; box-shadow:0 -4px 24px rgba(0,0,0,.18); }
   .sheet.on{ display:block; animation:sheetUp .25s ease; } @keyframes sheetUp{ from{transform:translate(-50%,100%);} to{transform:translate(-50%,0);} }
-  .sheet .sh-grab{ width:40px; height:4px; background:var(--linea); border-radius:2px; margin:0 auto 14px; }
+  .sheet .sh-grab{ width:40px; height:4px; background:var(--linea); border-radius:2px; margin:0 auto 12px; }
+  .sheet h3{ position:sticky; top:0; background:#fff; padding-bottom:8px; z-index:1; }
   .sheet h3{ font-family:"Cormorant Garamond",serif; font-style:italic; font-size:22px; margin:0 0 3px; } .sheet .sh-sub{ font-size:12px; color:var(--gris); margin-bottom:16px; }
   .sheet .fld{ margin-bottom:12px; } .sheet .fld label{ font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--gris); display:block; margin-bottom:6px; }
   .sheet .fld input{ width:100%; padding:14px; border:1px solid var(--linea); border-radius:var(--raio); font-size:16px; font-family:"Jost",sans-serif; }
