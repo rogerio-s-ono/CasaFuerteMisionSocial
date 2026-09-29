@@ -78,7 +78,13 @@ function tmplId(activityId){
 let PERMISOS = null;
 let SERVER_VOLS = [];   // voluntarios del servidor (pestaña Voluntarios)
 function setPermisos(p){ PERMISOS = p || null; }
-function setServerVols(v){ SERVER_VOLS = Array.isArray(v)?v:[]; }
+function setServerVols(v){
+  var arr = Array.isArray(v) ? v : [];
+  // deduplicar por teléfono (solo dígitos) — nos quedamos con el más reciente (último)
+  var byTel = {};
+  arr.forEach(function(r){ var k=String(r.telefono==null?'':r.telefono).replace(/[^0-9]/g,''); if(k) byTel[k]=r; });
+  SERVER_VOLS = Object.keys(byTel).map(function(k){ return byTel[k]; });
+}
 /* busca un voluntario del servidor por email (para reconocer login Google entre dispositivos) */
 function volByEmail(email){
   if(!email) return null;
@@ -736,6 +742,7 @@ function renderAdminAccesos(box, cfg){
     <div class="sec-t">Voluntarios registrados (${SERVER_VOLS.length})</div>
     <div class="acc-search"><input type="search" id="accSearch" placeholder="Buscar nombre o teléfono…" value="${ACC_SEARCH.replace(/"/g,'&quot;')}" oninput="accSearchInput(this.value)" /></div>
     ${volCards || '<div class="admnote">Sin voluntarios que coincidan.</div>'}
+    <div style="text-align:center;margin-top:10px"><button class="miniadd" onclick="accDedupe()">Limpiar duplicados</button></div>
     <div class="admnote">Los permisos se guardan en el servidor (pestaña Admin) y valen para todos.</div>`;
   // mantener foco en la búsqueda tras re-render
   var si=document.getElementById('accSearch'); if(si && ACC_SEARCH){ si.focus(); si.setSelectionRange(si.value.length,si.value.length); }
@@ -757,6 +764,14 @@ function accAddLider(){ var e=(document.getElementById('accLiderEmail').value||'
 function accSet(email,papel,mis){ _accPerm('setPermiso',email,papel,mis); }
 function accSetLider(email,tel){ var m=document.getElementById('accMis-'+tel).value; _accPerm('setPermiso',email,'lider',m); }
 function accDel(email,papel,mis){ _accPerm('delPermiso',email,papel,mis); }
+function accDedupe(){
+  if(!window.MFSync || !window.MFSync.enabled){ toast('Necesita backend'); return; }
+  toast('Limpiando…');
+  window.MFSync.queue('dedupeVoluntarios', {}).then(function(){
+    window.MFSync.pull().then(function(res){ if(res&&res.data){ if(res.data.voluntarios) setServerVols(res.data.voluntarios); renderAdmin(); toast('Duplicados limpiados'); } });
+  });
+}
+window.accDedupe=accDedupe;
 window.accSearchInput=accSearchInput; window.accToggle=accToggle; window.accAddAdmin=accAddAdmin; window.accAddLider=accAddLider; window.accSet=accSet; window.accSetLider=accSetLider; window.accDel=accDel;
 
 function renderAdminRoles(box, cfg){

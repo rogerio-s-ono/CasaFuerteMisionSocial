@@ -61,6 +61,7 @@ function doPost(e) {
       case 'setPermiso':      return _json(_setPermiso(body, email));
       case 'delPermiso':      return _json(_delPermiso(body, email));
       case 'upsertVoluntario':return _json(_upsertVoluntario(body, email));
+      case 'dedupeVoluntarios':return _json(_dedupeVoluntarios(body, email));
       case 'inscribir':       return _json(_inscribir(body, email));
       case 'cancelar':        return _json(_cancelar(body, email));
       case 'setChecklistItem':return _json(_setChecklistItem(body, email));
@@ -148,16 +149,35 @@ function _delPermiso(body, email) {
 }
 
 /* ============ VOLUNTARIOS ============ */
+function _normTel(t){ return String(t==null?'':t).replace(/[^0-9]/g,''); } // solo dígitos, para comparar
 function _upsertVoluntario(body, email) {
   var v = body.voluntario || {};
   if (!v.telefono || !v.nombre) return { ok:false, error:'datos_incompletos' };
+  var telKey = _normTel(v.telefono);
   var sh = _sheet(SHEETS.VOLUNTARIOS);
   var rows = _readRows(SHEETS.VOLUNTARIOS);
-  var idx = rows.findIndex(function(r){ return r.telefono === v.telefono; });
-  var rec = { telefono:v.telefono, nombre:v.nombre, email:(email||v.email||''), idioma:(v.idioma||'es'), actualizadoEm:new Date().toISOString() };
+  var idx = rows.findIndex(function(r){ return _normTel(r.telefono) === telKey; });
+  // guardar como TEXTO con "+" para que Sheets no lo convierta en número
+  var telText = "'" + (String(v.telefono).charAt(0)==='+' ? v.telefono : ('+'+telKey));
+  var rec = { telefono:telText, nombre:v.nombre, email:(email||v.email||''), idioma:(v.idioma||'es'), actualizadoEm:new Date().toISOString() };
   if (idx >= 0) _updateRow(sh, idx, rec); else _appendRow(sh, rec);
-  _audit(email||v.telefono, 'upsertVoluntario', 'voluntario', v.telefono);
-  return { ok:true, voluntario:rec };
+  _audit(email||v.telefono, 'upsertVoluntario', 'voluntario', telKey);
+  return { ok:true };
+}
+
+function _dedupeVoluntarios(body, email){
+  if (!_isAdmin(email)) return { ok:false, error:'forbidden_admin' };
+  var sh = _sheet(SHEETS.VOLUNTARIOS);
+  var rows = _readRows(SHEETS.VOLUNTARIOS);
+  // quedarse con la ÚLTIMA fila por teléfono; borrar las demás (de abajo hacia arriba)
+  var lastByTel = {};
+  rows.forEach(function(r,i){ var k=_normTel(r.telefono); if(k) lastByTel[k]=i; });
+  var keep = {}; Object.keys(lastByTel).forEach(function(k){ keep[lastByTel[k]]=true; });
+  for (var i = rows.length - 1; i >= 0; i--) {
+    if (!keep[i]) sh.deleteRow(i + 2);
+  }
+  _audit(email, 'dedupeVoluntarios', 'voluntario', String(rows.length)+'→'+Object.keys(lastByTel).length);
+  return { ok:true, antes:rows.length, despues:Object.keys(lastByTel).length };
 }
 
 /* ============ INSCRIPCIONES (con validación de cupo) ============ */
