@@ -1,7 +1,8 @@
-# === Segredos — NUNCA versionar (lição do gideao300) ===
-# Config real com tokens/URLs/e-mails fica só local; o repo versiona só o .example.
-app/config.js
-config.js
+# === Segredos ===
+# NOTA: el repo es PÚBLICO y se sirve por GitHub Pages, así que app/config.js DEBE
+# versionarse (el app estático lo necesita en el servidor). El SYNC_TOKEN queda expuesto
+# (inevitable en un frontend público) — la seguridad real es login Google + allowlist en el
+# servidor. NUNCA se versionan datos personales ni los *.real (con secretos fuertes).
 *.real
 *.local
 
