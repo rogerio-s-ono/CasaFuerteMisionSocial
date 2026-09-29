@@ -713,42 +713,97 @@ window.adminSetAct=adminSetAct; window.adminSetRec=adminSetRec; window.adminSetC
 window.adminAddAct=adminAddAct; window.adminDelAct=adminDelAct; window.adminDelMision=adminDelMision;
 
 /* ---------- ADMIN · ACCESOS Y USUARIOS ---------- */
+/* =========================================================================
+   ADMIN · ACCESOS Y USUARIOS — arquitectura unificada
+   -------------------------------------------------------------------------
+   ESTADO:   PERMISOS, SERVER_VOLS (del pull) son la única fuente de verdad.
+   VISTA:    ACC_VIEW = 'list' | 'user' | 'form:<tipo>' → un solo punto de render.
+   MUTACIÓN: mfMutate() es el ÚNICO camino al backend: post → pull → refresca
+             estado → re-render de la vista actual. Loading state centralizado.
+   ========================================================================= */
 let ACC_SEARCH = '';
+let ACC_VIEW = 'list';       // 'list' | 'user' | 'form'
+let USR_TEL = null;          // teléfono del usuario abierto en el modal
+let ACC_FORM = null;         // { tipo:'admin'|'lider'|'voluntario' } cuando ACC_VIEW='form'
 let ACC_BUSY = false;
+let _accSearchT = null, _delArm = null;
+
+/* ---- helpers de lectura (sobre el estado real) ---- */
 function _permInfo(email){
   const perm = PERMISOS || { admins:[], lideres:{} };
   const e = (email||'').toLowerCase();
   return { admin: !!e && (perm.admins||[]).indexOf(e)>=0, lideres: (e && perm.lideres && perm.lideres[e]) ? perm.lideres[e].slice() : [] };
 }
-function _telByEmail(email){ var v=SERVER_VOLS.find(function(x){ return String(x.email||'').toLowerCase()===String(email).toLowerCase(); }); return v?String(v.telefono):''; }
-function _nameByEmail(email){ var v=SERVER_VOLS.find(function(x){ return String(x.email||'').toLowerCase()===String(email).toLowerCase(); }); return v?v.nombre:email; }
+function _telByEmail(email){ var v=SERVER_VOLS.find(function(x){ return String(x.email||'').toLowerCase()===String(email||'').toLowerCase(); }); return v?String(v.telefono):''; }
+function _nameByEmail(email){ var v=SERVER_VOLS.find(function(x){ return String(x.email||'').toLowerCase()===String(email||'').toLowerCase(); }); return v?v.nombre:email; }
+function _volByTel(tel){ var k=String(tel).replace(/[^0-9]/g,''); return SERVER_VOLS.find(function(v){ return String(v.telefono).replace(/[^0-9]/g,'')===k; }); }
+
+/* ---- ÚNICO camino al backend: post → pull → refresca estado → re-render de la vista actual ---- */
+function mfMutate(action, payload, okMsg){
+  if(!window.MFSync || !window.MFSync.enabled){ toast('Necesita backend configurado'); return Promise.resolve(false); }
+  if(ACC_BUSY) return Promise.resolve(false);
+  ACC_BUSY = true; accRender();                 // re-render → controles se muestran deshabilitados
+  toast('Guardando…');
+  return window.MFSync.post(action, payload)
+    .then(function(j){
+      if(j && j.ok){ toast(okMsg||'Hecho'); return true; }
+      if(j && j.error==='forbidden_admin'){ toast('Sesión caducada — vuelve a entrar con Google'); return false; }
+      toast('No se pudo (revisa tu conexión o permiso)'); return false;
+    })
+    .catch(function(){ toast('Error de conexión'); return false; })
+    .then(function(ok){
+      return window.MFSync.pull().then(function(res){
+        if(res && res.data){
+          if(res.data.permisos) setPermisos(res.data.permisos);
+          if(res.data.voluntarios) setServerVols(res.data.voluntarios);
+          if(res.data.inscripciones) setServerInscr(res.data.inscripciones);
+        }
+        return ok;
+      }).catch(function(){ return ok; });
+    })
+    .then(function(ok){ ACC_BUSY=false; accRender(); return ok; });   // punto ÚNICO de refresh
+}
+
+/* ---- render unificado: decide qué mostrar según ACC_VIEW ---- */
+function accRender(){
+  // el usuario del modal puede haber sido eliminado tras un pull
+  if(ACC_VIEW==='user' && !_volByTel(USR_TEL)){ ACC_VIEW='list'; USR_TEL=null; }
+  _accSetModal(ACC_VIEW!=='list');       // abre/cierra el sheet
+  renderAdmin();                          // re-render de la pantalla base (lista + resúmenes)
+  if(ACC_VIEW==='user') _renderUsrBody();
+  else if(ACC_VIEW==='form') _renderFormBody();
+}
+function _accSetModal(open){
+  document.getElementById('usrBackdrop').classList.toggle('on', open);
+  document.getElementById('usrSheet').classList.toggle('on', open);
+}
+
+/* ---- PANTALLA base (lista + resúmenes) ---- */
 function _accResumen(){
   const perm = PERMISOS || { admins:[], lideres:{} };
   function item(email, sub){
-    var tel=_telByEmail(email);
-    var nm=_nameByEmail(email);
+    var tel=_telByEmail(email), nm=_nameByEmail(email);
     var onclick = tel ? `onclick="usrOpen('${tel.replace(/'/g,"")}')"` : '';
     return `<div class="res-item" ${onclick}><span class="res-nm">${nm}</span><span class="res-sub">${sub}</span></div>`;
   }
-  var adminsH = (perm.admins||[]).map(function(e){ return item(e,'Admin'); }).join('') || '<div class="admnote" style="padding:2px 0">Sin admins.</div>';
+  var adminsH = (perm.admins||[]).map(function(e){ return item(e,'Admin'); }).join('') || '<div class="admnote" style="padding:8px 14px">Sin administradores.</div>';
   var lidH = '';
   Object.keys(perm.lideres||{}).forEach(function(e){
     var mis=(perm.lideres[e]||[]).map(function(m){ return window.CFMS.misionLabel(m); }).join(', ');
     lidH += item(e, mis||'Líder');
   });
-  if(!lidH) lidH='<div class="admnote" style="padding:2px 0">Sin líderes.</div>';
-  return `<div class="sec-t">Administradores</div><div class="res-box">${adminsH}</div>
-          <div class="sec-t">Líderes</div><div class="res-box">${lidH}</div>`;
+  if(!lidH) lidH='<div class="admnote" style="padding:8px 14px">Sin líderes.</div>';
+  return `<div class="sec-head"><span class="sec-t">Administradores</span><button class="sec-add" ${ACC_BUSY?'disabled':''} title="Añadir administrador" onclick="accAddByEmail('admin')">+</button></div><div class="res-box">${adminsH}</div>
+          <div class="sec-head"><span class="sec-t">Líderes</span><button class="sec-add" ${ACC_BUSY?'disabled':''} title="Añadir líder" onclick="accAddByEmail('lider')">+</button></div><div class="res-box">${lidH}</div>`;
 }
 function renderAdminAccesos(box, cfg){
   const q = norm(ACC_SEARCH.trim());
-  const vols = SERVER_VOLS.filter(v=>{
+  const vols = SERVER_VOLS.filter(function(v){
     if(!q) return true;
     return norm(String(v.nombre||'')).includes(q) || String(v.telefono||'').includes(ACC_SEARCH.trim());
-  }).sort((a,b)=>String(a.nombre||'').localeCompare(String(b.nombre||'')));
-  const rows = vols.map(v=>{
-    const tel=String(v.telefono||''); const em=String(v.email||'');
-    const pi=_permInfo(em);
+  }).sort(function(a,b){ return String(a.nombre||'').localeCompare(String(b.nombre||'')); });
+  const rows = vols.map(function(v){
+    const tel=String(v.telefono||''); const em=String(v.email||''); const pi=_permInfo(em);
     const badge = pi.admin?'<span class="acc-role admin">Admin</span>':(pi.lideres.length?'<span class="acc-role lider">Líder</span>':'');
     return `<div class="acc-row" onclick="usrOpen('${tel.replace(/'/g,"")}')">
       <div class="acc-nm"><div class="n">${v.nombre||'(sin nombre)'}</div><div class="s">${tel}</div></div>
@@ -756,155 +811,90 @@ function renderAdminAccesos(box, cfg){
   }).join('');
   box.innerHTML = `
     <div class="adm-head"><button class="back" onclick="adminGo('list')">‹</button><div><div class="ah-t">Accesos y usuarios</div><div class="ah-s">${SERVER_VOLS.length} usuarios</div></div></div>
+    ${!LIVE?'<div class="usr-note" style="margin-bottom:12px">Modo local (sin backend): los cambios no se comparten.</div>':''}
     ${_accResumen()}
-    <div class="acc-add-row">
-      <button class="miniadd" onclick="accAddByEmail('admin')">+ Admin por email</button>
-      <button class="miniadd" onclick="accAddByEmail('lider')">+ Líder por email</button>
-      <button class="miniadd" onclick="accAddVol()">+ Voluntario</button>
-    </div>
-    <div class="sec-t">Todos los usuarios</div>
+    <div class="sec-head"><span class="sec-t">Voluntarios</span><button class="sec-add" ${ACC_BUSY?'disabled':''} title="Añadir voluntario" onclick="accAddVol()">+</button></div>
     <div class="acc-search"><input type="search" id="accSearch" placeholder="Buscar nombre o teléfono…" value="${ACC_SEARCH.replace(/"/g,'&quot;')}" oninput="accSearchInput(this.value)" /></div>
     <div class="acc-list">${rows || '<div class="admnote">Sin usuarios que coincidan.</div>'}</div>
-    <div class="acc-foot"><button class="miniadd" onclick="accDedupe()">Limpiar duplicados</button></div>
-    <div class="admnote">Toca un usuario para gestionar sus datos y permisos.</div>`;
+    <div class="acc-foot"><button class="miniadd" ${ACC_BUSY?'disabled':''} onclick="accDedupe()">Limpiar duplicados</button></div>`;
   var si=document.getElementById('accSearch'); if(si && ACC_SEARCH){ si.focus(); si.setSelectionRange(si.value.length,si.value.length); }
 }
-let _accSearchT=null;
-function accSearchInput(v){ ACC_SEARCH=v; clearTimeout(_accSearchT); _accSearchT=setTimeout(renderAdmin, 220); }
+function accSearchInput(v){ ACC_SEARCH=v; clearTimeout(_accSearchT); _accSearchT=setTimeout(function(){ if(ACC_VIEW==='list') renderAdmin(); }, 220); }
 
-/* ---- MODAL de gestión de usuario ---- */
-let USR_TEL=null;
-function usrOpen(tel){
-  USR_TEL = tel;
-  renderUsrModal();
-  document.getElementById('usrBackdrop').classList.add('on');
-  document.getElementById('usrSheet').classList.add('on');
-}
-function closeUsr(){ document.getElementById('usrBackdrop').classList.remove('on'); document.getElementById('usrSheet').classList.remove('on'); USR_TEL=null; renderAdmin(); }
+/* ---- MODAL: gestión de un usuario ---- */
+function usrOpen(tel){ USR_TEL=tel; ACC_VIEW='user'; _delArm=null; accRender(); }
+function closeUsr(){ ACC_VIEW='list'; USR_TEL=null; ACC_FORM=null; _delArm=null; accRender(); }
 window.usrOpen=usrOpen; window.closeUsr=closeUsr;
-function _volByTel(tel){ var k=String(tel).replace(/[^0-9]/g,''); return SERVER_VOLS.find(function(v){ return String(v.telefono).replace(/[^0-9]/g,'')===k; }); }
-function renderUsrModal(){
+function _renderUsrBody(){
   const cfg=window.CFMS.getConfig();
   const v=_volByTel(USR_TEL)||{}; const em=String(v.email||''); const pi=_permInfo(em);
+  const dis = ACC_BUSY?'disabled':'';
   const misChips = cfg.misiones.map(function(m){
     const on = pi.lideres.indexOf(m.id)>=0;
-    return `<button class="tog-chip ${on?'on':''}" ${ACC_BUSY?'disabled':''} onclick="usrToggleLider('${m.id}',${on})">${m.nombre}${on?' ✓':''}</button>`;
+    return `<button class="tog-chip ${on?'on':''}" ${dis} onclick="usrToggleLider('${m.id}',${on})">${m.nombre}${on?' ✓':''}</button>`;
   }).join('');
-  const body = document.getElementById('usrBody');
-  body.innerHTML = `
+  const delTxt = (_delArm===USR_TEL) ? '¿Seguro? Eliminar' : 'Eliminar voluntario';
+  document.getElementById('usrBody').innerHTML = `
+    <div class="sh-grab"></div>
     <h3 class="usr-t">${v.nombre||'(sin nombre)'}</h3>
     <div class="usr-sub">${USR_TEL}${em?(' · '+em):''}</div>
-    ${!em ? '<div class="usr-note">Sin email de Google — para ser Admin o Líder debe entrar con Google al menos una vez.</div>' : `
+    ${!em ? '<div class="usr-note">Sin email de Google. Para ser Admin o Líder, esta persona debe entrar con Google al menos una vez.</div>' : `
       <div class="usr-sec">Administrador</div>
       <label class="usr-toggle"><span>Es administrador</span>
-        <input type="checkbox" ${pi.admin?'checked':''} ${ACC_BUSY?'disabled':''} onchange="usrToggleAdmin(${pi.admin})" /></label>
+        <input type="checkbox" ${pi.admin?'checked':''} ${dis} onchange="usrToggleAdmin(${pi.admin})" /></label>
       <div class="usr-sec">Líder de misiones</div>
       <div class="tog-chips">${misChips}</div>
     `}
-    <button class="btn primary" style="margin-top:18px;width:100%" onclick="closeUsr()">Hecho</button>
-    <button class="usr-del" onclick="usrDelete('${USR_TEL.replace(/'/g,"")}')">Eliminar voluntario</button>`;
+    <button class="btn primary" style="margin-top:18px;width:100%" ${dis} onclick="closeUsr()">Hecho</button>
+    <button class="usr-del ${_delArm===USR_TEL?'armed':''}" ${dis} onclick="usrDelete('${USR_TEL.replace(/'/g,"")}')">${delTxt}</button>`;
 }
-function usrToggleAdmin(isOn){ const v=_volByTel(USR_TEL); if(!v||!v.email) return; _usrPerm(isOn?'delPermiso':'setPermiso', v.email, 'admin', ''); }
-function usrToggleLider(mid, isOn){ const v=_volByTel(USR_TEL); if(!v||!v.email) return; _usrPerm(isOn?'delPermiso':'setPermiso', v.email, 'lider', mid); }
-window.usrToggleAdmin=usrToggleAdmin; window.usrToggleLider=usrToggleLider;
-let _delArm=null;
+function usrToggleAdmin(isOn){ const v=_volByTel(USR_TEL); if(!v||!v.email) return; mfMutate(isOn?'delPermiso':'setPermiso', { email:v.email, papel:'admin', mision:'' }, isOn?'Admin quitado':'Admin concedido'); }
+function usrToggleLider(mid, isOn){ const v=_volByTel(USR_TEL); if(!v||!v.email) return; mfMutate(isOn?'delPermiso':'setPermiso', { email:v.email, papel:'lider', mision:mid }, isOn?'Líder quitado':'Líder concedido'); }
 function usrDelete(tel){
-  if(_delArm!==tel){ _delArm=tel; toast('Toca de nuevo para confirmar'); 
-    var b=document.querySelector('#usrSheet .usr-del'); if(b){ b.textContent='¿Seguro? Eliminar'; b.classList.add('armed'); } return; }
-  _delArm=null;
-  if(ACC_BUSY) return; ACC_BUSY=true; toast('Eliminando…');
-  window.MFSync.post('delVoluntario', { telefono:tel })
-    .then(function(j){ if(j&&j.ok) toast('Voluntario eliminado'); else if(j&&j.error==='forbidden_admin') toast('Sesión caducada'); else toast('No se pudo'); return window.MFSync.pull(); })
-    .then(function(res){ if(res&&res.data){ if(res.data.voluntarios) setServerVols(res.data.voluntarios); if(res.data.permisos) setPermisos(res.data.permisos); } })
-    .catch(function(){ toast('Error'); })
-    .then(function(){ ACC_BUSY=false; closeUsr(); });
+  if(_delArm!==tel){ _delArm=tel; _renderUsrBody(); return; }   // 1º toque: arma confirmación
+  mfMutate('delVoluntario', { telefono:tel }, 'Voluntario eliminado').then(function(ok){ if(ok){ ACC_VIEW='list'; USR_TEL=null; accRender(); } });
 }
-window.usrDelete=usrDelete;
-/* aplica cambio de permiso y refresca SOLO el modal (control fino del refresh) */
-function _usrPerm(action, email, papel, mision){
-  if(!window.MFSync || !window.MFSync.enabled){ toast('Necesita backend'); return; }
-  if(ACC_BUSY) return; ACC_BUSY=true; renderUsrModal(); // deshabilita controles del modal
-  toast('Guardando…');
-  window.MFSync.post(action, { email:email, papel:papel, mision:mision||'' })
-    .then(function(j){
-      if(j && j.ok) toast(action==='delPermiso'?'Quitado':'Concedido');
-      else if(j && j.error==='forbidden_admin') toast('Sesión caducada — entra de nuevo con Google');
-      else toast('No se pudo');
-    })
-    .catch(function(){ toast('Error de conexión'); })
-    .then(function(){ return window.MFSync.pull(); })
-    .then(function(res){ if(res && res.data){ if(res.data.permisos) setPermisos(res.data.permisos); if(res.data.voluntarios) setServerVols(res.data.voluntarios); } })
-    .catch(function(){})
-    .then(function(){ ACC_BUSY=false; if(USR_TEL) renderUsrModal(); });  // refresca el modal con el estado real
-}
-function accDedupe(){
-  if(!window.MFSync || !window.MFSync.enabled){ toast('Necesita backend'); return; }
-  if(ACC_BUSY) return; ACC_BUSY=true;
-  toast('Limpiando…');
-  window.MFSync.post('dedupeVoluntarios', {})
-    .then(function(j){ if(j&&j.ok) toast('Duplicados limpiados'); else toast('No se pudo'); return window.MFSync.pull(); })
-    .then(function(res){ if(res&&res.data&&res.data.voluntarios) setServerVols(res.data.voluntarios); })
-    .catch(function(){ toast('Error'); })
-    .then(function(){ ACC_BUSY=false; renderAdmin(); });
-}
-window.accSearchInput=accSearchInput; window.accDedupe=accDedupe;
+window.usrToggleAdmin=usrToggleAdmin; window.usrToggleLider=usrToggleLider; window.usrDelete=usrDelete;
 
-/* ---- Añadir admin/líder por email, o voluntario manual (usando el mismo sheet como formulario) ---- */
-function _accFormOpen(html){ document.getElementById('usrBody').innerHTML=html; document.getElementById('usrBackdrop').classList.add('on'); document.getElementById('usrSheet').classList.add('on'); }
-function accAddByEmail(papel){
-  const cfg=window.CFMS.getConfig();
-  const misSel = papel==='lider' ? `<div class="usr-sec">Misión</div><select id="accfMis" style="width:100%;padding:12px;border:1px solid var(--linea);border-radius:var(--raio);font-family:'Jost',sans-serif">${cfg.misiones.map(m=>`<option value="${m.id}">${m.nombre}</option>`).join('')}</select>` : '';
-  _accFormOpen(`<div class="sh-grab" style="margin:-6px auto 12px"></div>
-    <h3 class="usr-t">Añadir ${papel==='admin'?'administrador':'líder'}</h3>
-    <div class="usr-sub">Por email de Google (debe entrar con Google).</div>
-    <div class="usr-sec">Email</div>
-    <input id="accfEmail" type="email" placeholder="email@gmail.com" style="width:100%;padding:13px;border:1px solid var(--linea);border-radius:var(--raio);font-family:'Jost',sans-serif;font-size:15px" />
-    ${misSel}
-    <div style="display:flex;gap:10px;margin-top:16px"><button class="btn ghost" style="flex:0 0 auto;background:none;border:0;color:var(--gris);padding:14px" onclick="closeUsr()">Cancelar</button>
-    <button class="btn primary" style="flex:1" onclick="accDoAddByEmail('${papel}')">Añadir</button></div>`);
-  setTimeout(()=>{ var el=document.getElementById('accfEmail'); if(el) el.focus(); },200);
+/* ---- MODAL: formularios de añadir (admin/líder por email, o voluntario) ---- */
+function accAddByEmail(papel){ ACC_FORM={ tipo:papel }; ACC_VIEW='form'; accRender(); setTimeout(function(){ var el=document.getElementById('accfEmail'); if(el) el.focus(); },200); }
+function accAddVol(){ ACC_FORM={ tipo:'voluntario' }; ACC_VIEW='form'; accRender(); setTimeout(function(){ var el=document.getElementById('accfNom'); if(el) el.focus(); },200); }
+window.accAddByEmail=accAddByEmail; window.accAddVol=accAddVol;
+function _renderFormBody(){
+  const cfg=window.CFMS.getConfig(); const dis=ACC_BUSY?'disabled':'';
+  const inputStyle="width:100%;padding:13px;border:1px solid var(--linea);border-radius:var(--raio);font-family:'Jost',sans-serif;font-size:15px";
+  let inner='';
+  if(ACC_FORM.tipo==='voluntario'){
+    inner = `<h3 class="usr-t">Añadir voluntario</h3><div class="usr-sub">Registro manual (nombre + teléfono).</div>
+      <div class="usr-sec">Nombre</div><input id="accfNom" ${dis} placeholder="Ej. María González" style="${inputStyle}" />
+      <div class="usr-sec">Teléfono</div>
+      <div class="phone-row"><select id="accfDdi" ${dis}></select><input id="accfTel" ${dis} type="tel" placeholder="600 000 000" style="flex:1;${inputStyle}" /></div>
+      <div class="usr-actions"><button class="btn ghost" ${dis} onclick="closeUsr()">Cancelar</button><button class="btn primary" style="flex:1" ${dis} onclick="accDoAddVol()">Añadir</button></div>`;
+  } else {
+    const misSel = ACC_FORM.tipo==='lider' ? `<div class="usr-sec">Misión</div><select id="accfMis" ${dis} style="${inputStyle}">${cfg.misiones.map(m=>`<option value="${m.id}">${m.nombre}</option>`).join('')}</select>` : '';
+    inner = `<h3 class="usr-t">Añadir ${ACC_FORM.tipo==='admin'?'administrador':'líder'}</h3><div class="usr-sub">Por email de Google (debe entrar con Google).</div>
+      <div class="usr-sec">Email</div><input id="accfEmail" ${dis} type="email" placeholder="email@gmail.com" style="${inputStyle}" />
+      ${misSel}
+      <div class="usr-actions"><button class="btn ghost" ${dis} onclick="closeUsr()">Cancelar</button><button class="btn primary" style="flex:1" ${dis} onclick="accDoAddByEmail('${ACC_FORM.tipo}')">Añadir</button></div>`;
+  }
+  document.getElementById('usrBody').innerHTML = '<div class="sh-grab"></div>' + inner;
+  if(ACC_FORM.tipo==='voluntario'){ var d=document.getElementById('accfDdi'); if(d && !d.options.length) fillDdi(d); }
 }
 function accDoAddByEmail(papel){
   const e=(document.getElementById('accfEmail').value||'').trim().toLowerCase(); if(!e){ document.getElementById('accfEmail').focus(); return; }
-  const mis = papel==='lider' ? (document.getElementById('accfMis').value) : '';
-  _accApply('setPermiso', e, papel, mis, function(){ closeUsr(); });
-}
-function accAddVol(){
-  _accFormOpen(`<div class="sh-grab" style="margin:-6px auto 12px"></div>
-    <h3 class="usr-t">Añadir voluntario</h3>
-    <div class="usr-sub">Registro manual (nombre + teléfono).</div>
-    <div class="usr-sec">Nombre</div>
-    <input id="accfNom" placeholder="Ej. María González" style="width:100%;padding:13px;border:1px solid var(--linea);border-radius:var(--raio);font-family:'Jost',sans-serif;font-size:15px" />
-    <div class="usr-sec">Teléfono</div>
-    <div class="phone-row"><select id="accfDdi"></select><input id="accfTel" type="tel" placeholder="600 000 000" style="flex:1;padding:13px;border:1px solid var(--linea);border-radius:var(--raio);font-family:'Jost',sans-serif;font-size:15px" /></div>
-    <div style="display:flex;gap:10px;margin-top:16px"><button class="btn ghost" style="flex:0 0 auto;background:none;border:0;color:var(--gris);padding:14px" onclick="closeUsr()">Cancelar</button>
-    <button class="btn primary" style="flex:1" onclick="accDoAddVol()">Añadir</button></div>`);
-  fillDdi(document.getElementById('accfDdi'));
-  setTimeout(()=>{ var el=document.getElementById('accfNom'); if(el) el.focus(); },200);
+  const mis = papel==='lider' ? document.getElementById('accfMis').value : '';
+  mfMutate('setPermiso', { email:e, papel:papel, mision:mis }, 'Permiso concedido').then(function(ok){ if(ok) closeUsr(); });
 }
 function accDoAddVol(){
   const nom=(document.getElementById('accfNom').value||'').trim();
   const ddi=document.getElementById('accfDdi').value;
   const tel=ddi+normPhone(document.getElementById('accfTel').value||'');
-  if(!nom || normPhone(tel).length<8){ toast('Nombre y teléfono válidos'); return; }
-  if(ACC_BUSY) return; ACC_BUSY=true; toast('Guardando…');
-  window.MFSync.post('upsertVoluntario', { voluntario:{ telefono:tel, nombre:nom, idioma:'es' } })
-    .then(function(j){ if(j&&j.ok) toast('Voluntario añadido'); else toast('No se pudo'); return window.MFSync.pull(); })
-    .then(function(res){ if(res&&res.data&&res.data.voluntarios) setServerVols(res.data.voluntarios); })
-    .catch(function(){ toast('Error'); })
-    .then(function(){ ACC_BUSY=false; closeUsr(); });
+  if(!nom || normPhone(tel).length<8){ toast('Escribe nombre y teléfono válidos'); return; }
+  mfMutate('upsertVoluntario', { voluntario:{ telefono:tel, nombre:nom, idioma:'es' } }, 'Voluntario añadido').then(function(ok){ if(ok) closeUsr(); });
 }
-/* aplica setPermiso/delPermiso genérico con refresh y callback */
-function _accApply(action, email, papel, mis, cb){
-  if(!window.MFSync || !window.MFSync.enabled){ toast('Necesita backend'); return; }
-  if(ACC_BUSY) return; ACC_BUSY=true; toast('Guardando…');
-  window.MFSync.post(action, { email:email, papel:papel, mision:mis||'' })
-    .then(function(j){ if(j&&j.ok) toast(action==='delPermiso'?'Quitado':'Concedido'); else if(j&&j.error==='forbidden_admin') toast('Sesión caducada — entra de nuevo'); else toast('No se pudo'); return window.MFSync.pull(); })
-    .then(function(res){ if(res&&res.data){ if(res.data.permisos) setPermisos(res.data.permisos); if(res.data.voluntarios) setServerVols(res.data.voluntarios); } })
-    .catch(function(){ toast('Error'); })
-    .then(function(){ ACC_BUSY=false; if(cb) cb(); });
-}
-window.accAddByEmail=accAddByEmail; window.accDoAddByEmail=accDoAddByEmail; window.accAddVol=accAddVol; window.accDoAddVol=accDoAddVol;
+window.accDoAddByEmail=accDoAddByEmail; window.accDoAddVol=accDoAddVol;
+function accDedupe(){ mfMutate('dedupeVoluntarios', {}, 'Duplicados limpiados'); }
+window.accSearchInput=accSearchInput; window.accDedupe=accDedupe;
 
 function renderAdminRoles(box, cfg){
   const roles=cfg.roles.map((r,i)=>`<div class="card"><div class="row">
