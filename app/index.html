@@ -200,6 +200,16 @@
   #v-admin .miniadd{ font-size:12px; color:var(--oro-osc); background:var(--oro-bg); border:1px solid #ecdca6; border-radius:999px; padding:8px 12px; cursor:pointer; font-family:"Jost",sans-serif; white-space:nowrap; }
   #v-admin .recedit{ display:flex; gap:8px; } #v-admin .recedit select{ flex:1; }
   #v-admin .acc-actions{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; } #v-admin .acc-actions .del{ background:none; border:0; color:#c2560c; font-size:12px; cursor:pointer; font-family:"Jost",sans-serif; text-transform:uppercase; letter-spacing:.05em; } #v-admin .tgl{ font-size:13px; display:inline-flex; align-items:center; gap:6px; }
+  /* Accesos y usuarios */
+  #v-admin .acc-add{ display:flex; gap:8px; margin:10px 0 4px; flex-wrap:wrap; } #v-admin .acc-add input{ flex:1; min-width:140px; padding:11px; border:1px solid var(--linea); border-radius:var(--raio); font-family:"Jost",sans-serif; font-size:14px; } #v-admin .acc-add select{ padding:11px; border:1px solid var(--linea); border-radius:var(--raio); font-family:"Jost",sans-serif; }
+  #v-admin .acc-search{ margin:4px 0 10px; } #v-admin .acc-search input{ width:100%; padding:12px 14px; border:1px solid var(--linea); border-radius:999px; font-family:"Jost",sans-serif; font-size:15px; }
+  #v-admin .acc-card{ background:#fff; border:1px solid var(--linea); border-radius:var(--raio); margin-bottom:8px; overflow:hidden; }
+  #v-admin .acc-card .acc-h{ display:flex; align-items:center; gap:10px; padding:12px 14px; cursor:pointer; }
+  #v-admin .acc-card .acc-nm{ flex:1; min-width:0; } #v-admin .acc-card .acc-nm .n{ font-family:"Cormorant Garamond",serif; font-weight:600; font-size:16px; } #v-admin .acc-card .acc-nm .s{ font-size:12px; color:var(--gris); }
+  #v-admin .acc-card .caret{ color:var(--gris-cl); transition:.2s; } #v-admin .acc-card.open .caret{ transform:rotate(180deg); }
+  #v-admin .acc-role{ font-size:10px; font-weight:600; padding:2px 8px; border-radius:999px; text-transform:uppercase; letter-spacing:.04em; } #v-admin .acc-role.admin{ background:var(--oro-bg); color:var(--oro-osc); } #v-admin .acc-role.lider{ background:#efeafa; color:#5a4494; }
+  #v-admin .acc-exp{ padding:0 14px 14px; border-top:1px solid var(--linea); } #v-admin .acc-email{ font-size:12px; color:var(--gris); margin:10px 0; } #v-admin .acc-email.muted{ font-style:italic; }
+  #v-admin .acc-btns{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; } #v-admin .acc-lider-add{ display:flex; gap:6px; align-items:center; } #v-admin .acc-lider-add select{ padding:8px; border:1px solid var(--linea); border-radius:var(--raio); font-family:"Jost",sans-serif; font-size:13px; }
 
   /* ===== Checklist del líder ===== */
   .lc-foot{ padding:10px 14px; border-top:1px solid var(--linea); }

@@ -570,6 +570,7 @@ function renderAdmin(){
   if(!isAdmin()){ box.innerHTML=''; return; }
   const cfg=window.CFMS.getConfig();
   if(ADMIN_NAV.screen==='roles') return renderAdminRoles(box, cfg);
+  if(ADMIN_NAV.screen==='accesos') return renderAdminAccesos(box, cfg);
   if(ADMIN_NAV.screen==='mision') return renderAdminMision(box, cfg);
   return renderAdminList(box, cfg);
 }
@@ -588,6 +589,7 @@ function renderAdminList(box, cfg){
     <button class="btn primary" onclick="adminNewMision()">+ Nueva misión</button>
     <div class="sec-t">Catálogo</div>
     <div class="card"><div class="row" onclick="adminGo('roles')"><span class="dot" style="background:#7c5cbf"></span><div class="rt"><div class="n">Roles</div><div class="s">${cfg.roles.length} roles definidos</div></div><span class="chev">›</span></div></div>
+    <div class="card"><div class="row" onclick="adminGo('accesos')"><span class="dot" style="background:#4f9d69"></span><div class="rt"><div class="n">Accesos y usuarios</div><div class="s">Admins, líderes y voluntarios</div></div><span class="chev">›</span></div></div>
     <div class="admnote">El Admin configura la estructura. Los líderes operan el día a día.</div>`;
 }
 
@@ -680,6 +682,82 @@ function adminDelMision(id){ const cfg=window.CFMS.getConfig(); cfg.misiones=cfg
 window.adminSetMision=adminSetMision; window.adminSetColor=adminSetColor; window.adminAddLider=adminAddLider; window.adminDelLider=adminDelLider; window.adminShowLiderInput=adminShowLiderInput;
 window.adminSetAct=adminSetAct; window.adminSetRec=adminSetRec; window.adminSetCap=adminSetCap; window.adminAddPlaza=adminAddPlaza; window.adminDelPlaza=adminDelPlaza;
 window.adminAddAct=adminAddAct; window.adminDelAct=adminDelAct; window.adminDelMision=adminDelMision;
+
+/* ---------- ADMIN · ACCESOS Y USUARIOS ---------- */
+let ACC_SEARCH = '';
+let ACC_EXPANDED = null;   // telefono expandido
+function renderAdminAccesos(box, cfg){
+  const perm = PERMISOS || { admins:[], lideres:{} };
+  const misOpts = cfg.misiones.map(m=>`<option value="${m.id}">${m.nombre}</option>`).join('');
+  // ADMINS
+  const admins = (perm.admins||[]).map(e=>`<span class="chip">${e} <span class="x" onclick="accDel('${e}','admin','')">×</span></span>`).join('') || '<span class="admnote" style="padding:0">Sin admins (fallback).</span>';
+  // LÍDERES (email → [misiones])
+  let lideresHtml='';
+  Object.keys(perm.lideres||{}).forEach(e=>{
+    (perm.lideres[e]||[]).forEach(mid=>{
+      lideresHtml += `<span class="chip">${e} · ${window.CFMS.misionLabel(mid)} <span class="x" onclick="accDel('${e}','lider','${mid}')">×</span></span>`;
+    });
+  });
+  if(!lideresHtml) lideresHtml='<span class="admnote" style="padding:0">Sin líderes.</span>';
+  // VOLUNTARIOS con búsqueda
+  const q = norm(ACC_SEARCH.trim());
+  const vols = SERVER_VOLS.filter(v=>{
+    if(!q) return true;
+    return norm(String(v.nombre||'')).includes(q) || String(v.telefono||'').includes(ACC_SEARCH.trim());
+  });
+  const volCards = vols.map(v=>{
+    const tel=String(v.telefono||''); const exp = ACC_EXPANDED===tel;
+    const em = String(v.email||'');
+    const esAdmin = em && (perm.admins||[]).indexOf(em.toLowerCase())>=0;
+    const esLider = em && perm.lideres && perm.lideres[em.toLowerCase()] && perm.lideres[em.toLowerCase()].length;
+    const badge = esAdmin?'<span class="acc-role admin">Admin</span>':esLider?'<span class="acc-role lider">Líder</span>':'';
+    const acciones = exp ? `<div class="acc-exp">
+        ${em?`<div class="acc-email">${em}</div>`:'<div class="acc-email muted">sin email Google — no puede ser admin/líder aún</div>'}
+        ${em?`<div class="acc-btns">
+          <button class="miniadd" onclick="accSet('${em}','admin','')">+ Admin</button>
+          <span class="acc-lider-add"><select id="accMis-${tel}">${misOpts}</select><button class="miniadd" onclick="accSetLider('${em}','${tel}')">+ Líder</button></span>
+        </div>`:''}
+      </div>` : '';
+    return `<div class="acc-card ${exp?'open':''}">
+      <div class="acc-h" onclick="accToggle('${tel}')">
+        <div class="acc-nm"><div class="n">${v.nombre||'(sin nombre)'}</div><div class="s">${tel}</div></div>
+        ${badge}<span class="caret">▾</span>
+      </div>${acciones}</div>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="adm-head"><button class="back" onclick="adminGo('list')">‹</button><div><div class="ah-t">Accesos y usuarios</div><div class="ah-s">Permisos + voluntarios</div></div></div>
+    <div class="sec-t">Administradores</div>
+    <div class="chips">${admins}</div>
+    <div class="acc-add"><input type="email" id="accAdminEmail" placeholder="email@gmail.com" /><button class="miniadd" onclick="accAddAdmin()">+ Admin</button></div>
+    <div class="sec-t">Líderes</div>
+    <div class="chips">${lideresHtml}</div>
+    <div class="acc-add"><input type="email" id="accLiderEmail" placeholder="email@gmail.com" /><select id="accLiderMis">${misOpts}</select><button class="miniadd" onclick="accAddLider()">+ Líder</button></div>
+    <div class="sec-t">Voluntarios registrados (${SERVER_VOLS.length})</div>
+    <div class="acc-search"><input type="search" id="accSearch" placeholder="Buscar nombre o teléfono…" value="${ACC_SEARCH.replace(/"/g,'&quot;')}" oninput="accSearchInput(this.value)" /></div>
+    ${volCards || '<div class="admnote">Sin voluntarios que coincidan.</div>'}
+    <div class="admnote">Los permisos se guardan en el servidor (pestaña Admin) y valen para todos.</div>`;
+  // mantener foco en la búsqueda tras re-render
+  var si=document.getElementById('accSearch'); if(si && ACC_SEARCH){ si.focus(); si.setSelectionRange(si.value.length,si.value.length); }
+}
+let _accSearchT=null;
+function accSearchInput(v){ ACC_SEARCH=v; clearTimeout(_accSearchT); _accSearchT=setTimeout(renderAdmin, 220); } // debounce
+function accToggle(tel){ ACC_EXPANDED = (ACC_EXPANDED===tel)?null:tel; renderAdmin(); }
+/* llamadas al backend (solo admin) vía cola */
+function _accPerm(action, email, papel, mision){
+  if(!window.MFSync || !window.MFSync.enabled){ toast('Necesita backend configurado'); return; }
+  window.MFSync.queue(action, { email:email, papel:papel, mision:mision||'' }).then(function(){
+    // refrescar permisos tras aplicar
+    window.MFSync.pull().then(function(res){ if(res&&res.data&&res.data.permisos){ setPermisos(res.data.permisos); if(res.data.voluntarios) setServerVols(res.data.voluntarios); renderAdmin(); } });
+  });
+  toast('Guardando…');
+}
+function accAddAdmin(){ var e=(document.getElementById('accAdminEmail').value||'').trim().toLowerCase(); if(!e)return; _accPerm('setPermiso',e,'admin',''); }
+function accAddLider(){ var e=(document.getElementById('accLiderEmail').value||'').trim().toLowerCase(); var m=document.getElementById('accLiderMis').value; if(!e)return; _accPerm('setPermiso',e,'lider',m); }
+function accSet(email,papel,mis){ _accPerm('setPermiso',email,papel,mis); }
+function accSetLider(email,tel){ var m=document.getElementById('accMis-'+tel).value; _accPerm('setPermiso',email,'lider',m); }
+function accDel(email,papel,mis){ _accPerm('delPermiso',email,papel,mis); }
+window.accSearchInput=accSearchInput; window.accToggle=accToggle; window.accAddAdmin=accAddAdmin; window.accAddLider=accAddLider; window.accSet=accSet; window.accSetLider=accSetLider; window.accDel=accDel;
 
 function renderAdminRoles(box, cfg){
   const roles=cfg.roles.map((r,i)=>`<div class="card"><div class="row">

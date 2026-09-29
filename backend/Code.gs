@@ -58,6 +58,8 @@ function doPost(e) {
 
     switch (action) {
       case 'saveConfig':      return _json(_saveConfig(body, email));
+      case 'setPermiso':      return _json(_setPermiso(body, email));
+      case 'delPermiso':      return _json(_delPermiso(body, email));
       case 'upsertVoluntario':return _json(_upsertVoluntario(body, email));
       case 'inscribir':       return _json(_inscribir(body, email));
       case 'cancelar':        return _json(_cancelar(body, email));
@@ -110,6 +112,39 @@ function _saveConfig(body, email) {
   sh.getRange('A1').setValue(JSON.stringify(body.config));
   _audit(email, 'saveConfig', 'config', '');
   return { ok:true };
+}
+
+/* ============ PERMISOS (gestión de la pestaña Admin — solo admin) ============ */
+function _setPermiso(body, email) {
+  if (!_isAdmin(email)) return { ok:false, error:'forbidden_admin' };
+  var e = String(body.email||'').toLowerCase().trim();
+  var papel = String(body.papel||'').toLowerCase().trim();  // 'admin' | 'lider'
+  var mision = String(body.mision||'').trim();
+  if (!e || (papel!=='admin' && papel!=='lider')) return { ok:false, error:'datos_incompletos' };
+  var sh = _sheet(SHEETS.ADMIN);
+  var rows = _readRows(SHEETS.ADMIN);
+  // evitar duplicado exacto (email+papel+mision)
+  var dup = rows.some(function(r){ return String(r.email||'').toLowerCase()===e && String(r.papel||'').toLowerCase()===papel && String(r.mision||'')===mision; });
+  if (!dup) _appendRow(sh, { email:e, papel:papel, mision:mision });
+  _audit(email, 'setPermiso:'+papel, 'admin', e+(mision?('/'+mision):''));
+  return { ok:true, permisos:_permisos() };
+}
+function _delPermiso(body, email) {
+  if (!_isAdmin(email)) return { ok:false, error:'forbidden_admin' };
+  var e = String(body.email||'').toLowerCase().trim();
+  var papel = String(body.papel||'').toLowerCase().trim();
+  var mision = String(body.mision||'').trim();
+  var sh = _sheet(SHEETS.ADMIN);
+  var rows = _readRows(SHEETS.ADMIN);
+  // borrar de abajo hacia arriba las filas que coincidan
+  for (var i = rows.length - 1; i >= 0; i--) {
+    var r = rows[i];
+    if (String(r.email||'').toLowerCase()===e && String(r.papel||'').toLowerCase()===papel && (!mision || String(r.mision||'')===mision)) {
+      sh.deleteRow(i + 2); // +2: header + 0-index
+    }
+  }
+  _audit(email, 'delPermiso:'+papel, 'admin', e+(mision?('/'+mision):''));
+  return { ok:true, permisos:_permisos() };
 }
 
 /* ============ VOLUNTARIOS ============ */
