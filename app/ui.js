@@ -693,10 +693,14 @@ function renderChecklist(){
 function renderChkTpl(a){
   const mis=window.CFMS.getMision(a.misionId); const act=mis&&mis.actividades.find(x=>x.id===a.templateId);
   const tpl=(act&&act.checklistTemplate)?act.checklistTemplate.slice().sort((x,y)=>(x.orden||0)-(y.orden||0)):[];
+  const cfg=window.CFMS.getConfig();
   const rows=tpl.map(t=>`<div class="item"><div class="body"><div class="txt">${t.texto[LANG]||t.texto.es}</div>${t.rolSugerido?`<div class="meta"><span class="assign serv">Rol sugerido: ${window.CFMS.rolLabel(t.rolSugerido,LANG)}</span></div>`:''}</div><span class="x" style="opacity:.4;cursor:pointer;align-self:center" onclick="chkTplDel('${t.id}')">×</span></div>`).join('');
+  const rolOpts = `<option value="">Sin rol sugerido</option>` + cfg.roles.map(r=>`<option value="${r.id}">${r.nombre[LANG]}</option>`).join('');
   return `<div class="tpl-note">Editas la <b>plantilla</b> de esta actividad. Se aplica a <b>cada ocurrencia futura</b> de la misión.</div>
     ${rows || '<div class="empty">Plantilla vacía.</div>'}
-    <div class="addrow"><input id="chkTplNew" placeholder="Añadir ítem a la plantilla…" /><button onclick="chkTplAdd()">+</button></div>`;
+    <div class="sec-t" style="margin:16px 2px 8px">Añadir ítem</div>
+    <div class="fld" style="margin-bottom:8px"><input id="chkTplNew" placeholder="Texto de la tarea…" style="width:100%;padding:13px;border:1px solid var(--linea);border-radius:var(--raio);font-size:15px;font-family:'Jost',sans-serif" /></div>
+    <div class="rolerow"><select id="chkTplRol" style="flex:1;padding:11px;border:1px solid var(--linea);border-radius:var(--raio);font-family:'Jost',sans-serif">${rolOpts}</select><button class="miniadd" onclick="chkTplAdd()">+ Añadir</button></div>`;
 }
 
 function chkToggle(itemId){
@@ -746,10 +750,13 @@ window.chkAssign=chkAssign; window.chkAssignTemp=chkAssignTemp; window.chkDoAssi
 
 /* editar plantilla (guarda en CONFIG) */
 function chkTplAdd(){
-  const a=chkActivity(); const inp=document.getElementById('chkTplNew'); const txt=(inp.value||'').trim(); if(!txt)return;
+  const a=chkActivity(); const inp=document.getElementById('chkTplNew'); const txt=(inp.value||'').trim(); if(!txt){ if(inp)inp.focus(); return; }
+  const rolSel=document.getElementById('chkTplRol'); const rol=rolSel?rolSel.value:'';
   const mis=window.CFMS.getMision(a.misionId); const act=mis.actividades.find(x=>x.id===a.templateId);
   act.checklistTemplate=act.checklistTemplate||[];
-  act.checklistTemplate.push({ id:'c'+Date.now(), texto:{es:txt,pt:txt}, orden:(act.checklistTemplate.length+1) });
+  const item={ id:'c'+Date.now(), texto:{es:txt,pt:txt}, orden:(act.checklistTemplate.length+1) };
+  if(rol) item.rolSugerido=rol;
+  act.checklistTemplate.push(item);
   saveConfig(); renderChecklist();
 }
 function chkTplDel(itemId){
