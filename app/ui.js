@@ -128,6 +128,13 @@ function saveInscr(){ localStorage.setItem('mf_inscr', JSON.stringify(INSCR)); }
 function saveEspera(){ localStorage.setItem('mf_espera', JSON.stringify(MI_ESPERA)); }
 function normPhone(v){ return (v||'').replace(/[\s\-()]/g,''); }
 function norm(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+function toast(msg){
+  let t=document.getElementById('mfToast');
+  if(!t){ t=document.createElement('div'); t.id='mfToast'; document.body.appendChild(t); }
+  t.textContent=msg; t.className='on';
+  clearTimeout(window._toastT); window._toastT=setTimeout(()=>{ t.className=''; }, 2200);
+}
+window.toast=toast;
 
 /* ---------- DDI ---------- */
 const DDIS = [
@@ -503,7 +510,7 @@ function renderAdminMision(box, cfg){
   const colores=['#f2711c','#3a5a78','#7cb518','#e8a300','#7c5cbf','#4f9d69'];
   const dots=colores.map(c=>`<i class="${c===m.color?'sel':''}" style="background:${c}" onclick="adminSetColor('${m.id}','${c}')"></i>`).join('');
   const lideres=(m.lideres||[]).map((e,i)=>`<span class="chip">${e} <span class="x" onclick="adminDelLider('${m.id}',${i})">×</span></span>`).join('')
-    + `<span class="chip add" onclick="adminAddLider('${m.id}')">+ Añadir líder</span>`;
+    + `<span class="chip add" onclick="adminShowLiderInput('${m.id}')">+ Añadir líder</span>`;
   const acts=m.actividades.map(a=>{
     const plz=(a.plazas||[]).map((p,pi)=>`<div class="slot"><span class="sn">${window.CFMS.rolLabel(p.rolId,LANG)}</span>
         <span class="cap"><input type="number" min="0" value="${p.cap}" onchange="adminSetCap('${m.id}','${a.id}',${pi},this.value)" /><span class="lbl">plazas</span>
@@ -530,7 +537,9 @@ function renderAdminMision(box, cfg){
       <div class="fld"><label>Color</label><div class="colordots">${dots}</div></div>
       <div class="fld"><label>Estado</label><select onchange="adminSetMision('${m.id}','activo',this.value==='Activa')"><option ${m.activo!==false?'selected':''}>Activa</option><option ${m.activo===false?'selected':''}>Inactiva</option></select></div>
     </div>
-    <div class="fld"><label>Líderes (entran con Google)</label><div class="chips">${lideres}</div><div class="admhint">Autorizados por el Admin. Gestionan escala y checklist de esta misión.</div></div>
+    <div class="fld"><label>Líderes (entran con Google)</label><div class="chips">${lideres}</div>
+      <div id="liderInput" style="display:none;margin-top:8px" class="rolerow"><input type="email" id="newLiderEmail" placeholder="email@gmail.com" /><button class="miniadd" onclick="adminAddLider('${m.id}')">Añadir</button></div>
+      <div class="admhint">Autorizados por el Admin. Gestionan escala y checklist de esta misión.</div></div>
     <div class="sec-t">Actividades</div>${acts}
     <button class="btn primary" onclick="adminAddAct('${m.id}')">+ Añadir actividad</button>
     <div class="acc-actions" style="margin-top:16px"><button class="del" onclick="adminDelMision('${m.id}')">Eliminar misión</button><button class="btn primary sm" onclick="adminGo('list')">Hecho</button></div>`;
@@ -553,7 +562,8 @@ function _mis(id){ return window.CFMS.getConfig().misiones.find(m=>m.id===id); }
 function _act(mid,aid){ const m=_mis(mid); return m&&m.actividades.find(a=>a.id===aid); }
 function adminSetMision(id,campo,val){ const m=_mis(id); if(!m)return; m[campo]=val; saveConfig(); if(campo==='activo'||campo==='nombre'){} }
 function adminSetColor(id,c){ const m=_mis(id); if(m){ m.color=c; saveConfig(); renderAdmin(); } }
-function adminAddLider(id){ const e=prompt('Email del líder (Google):'); if(e){ const m=_mis(id); m.lideres=m.lideres||[]; m.lideres.push(e.trim()); saveConfig(); renderAdmin(); } }
+function adminShowLiderInput(id){ const el=document.getElementById('liderInput'); if(el){ el.style.display='flex'; document.getElementById('newLiderEmail').focus(); } }
+function adminAddLider(id){ const inp=document.getElementById('newLiderEmail'); const e=(inp&&inp.value||'').trim(); if(!e){ if(inp)inp.focus(); return; } const m=_mis(id); m.lideres=m.lideres||[]; m.lideres.push(e); saveConfig(); renderAdmin(); }
 function adminDelLider(id,i){ const m=_mis(id); m.lideres.splice(i,1); saveConfig(); renderAdmin(); }
 function adminSetAct(mid,aid,campo,val){ const a=_act(mid,aid); if(!a)return;
   if(campo==='nombre_es'){ a.nombre.es=val; } else if(campo==='duracionMin'){ a.duracionMin=val?parseInt(val,10):null; }
@@ -570,9 +580,9 @@ function adminDelPlaza(mid,aid,pi){ const a=_act(mid,aid); a.plazas.splice(pi,1)
 function adminAddAct(mid){ const m=_mis(mid); const id='a'+Date.now();
   m.actividades.push({ id, nombre:{es:'Nueva actividad',pt:'Nova atividade'}, horaInicio:'10:00', duracionMin:120, activo:true, recurrencia:{tipo:'mensal_posicao',weekday:6,ordinal:1}, plazas:[], checklistTemplate:[] });
   saveConfig(); renderAdmin(); }
-function adminDelAct(mid,aid){ if(!confirm('¿Eliminar esta actividad?'))return; const m=_mis(mid); m.actividades=m.actividades.filter(a=>a.id!==aid); saveConfig(); renderAdmin(); }
-function adminDelMision(id){ if(!confirm('¿Eliminar esta misión y sus actividades?'))return; const cfg=window.CFMS.getConfig(); cfg.misiones=cfg.misiones.filter(m=>m.id!==id); saveConfig(); adminGo('list'); }
-window.adminSetMision=adminSetMision; window.adminSetColor=adminSetColor; window.adminAddLider=adminAddLider; window.adminDelLider=adminDelLider;
+function adminDelAct(mid,aid){ const m=_mis(mid); m.actividades=m.actividades.filter(a=>a.id!==aid); saveConfig(); renderAdmin(); toast('Actividad eliminada'); }
+function adminDelMision(id){ const cfg=window.CFMS.getConfig(); cfg.misiones=cfg.misiones.filter(m=>m.id!==id); saveConfig(); adminGo('list'); toast('Misión eliminada'); }
+window.adminSetMision=adminSetMision; window.adminSetColor=adminSetColor; window.adminAddLider=adminAddLider; window.adminDelLider=adminDelLider; window.adminShowLiderInput=adminShowLiderInput;
 window.adminSetAct=adminSetAct; window.adminSetRec=adminSetRec; window.adminSetCap=adminSetCap; window.adminAddPlaza=adminAddPlaza; window.adminDelPlaza=adminDelPlaza;
 window.adminAddAct=adminAddAct; window.adminDelAct=adminDelAct; window.adminDelMision=adminDelMision;
 
@@ -583,16 +593,25 @@ function renderAdminRoles(box, cfg){
   box.innerHTML = `
     <div class="adm-head"><button class="back" onclick="adminGo('list')">‹</button><div><div class="ah-t">Roles</div><div class="ah-s">Catálogo global · reutilizable</div></div></div>
     ${roles}
-    <button class="btn primary" onclick="adminNewRol()">+ Nuevo rol</button>
+    <div class="sec-t">Nuevo rol</div>
+    <div class="card" style="padding:14px 15px">
+      <div class="fld"><label>Nombre (ES)</label><input id="newRolName" placeholder="Ej. Cocina" /></div>
+      <div class="fld"><label>Requisito (opcional)</label><input id="newRolReq" placeholder="Ej. carné manipulador" /></div>
+      <button class="btn primary" onclick="adminNewRol()">Añadir rol</button>
+    </div>
     <div class="admnote">Los roles se reutilizan entre misiones. Editar un rol lo actualiza en todas.</div>`;
 }
-function adminNewRol(){ const nombre=prompt('Nombre del rol (ES):'); if(!nombre)return; const req=prompt('¿Requisito? (deja vacío si no):','');
+function adminNewRol(){
+  const nombre=(document.getElementById('newRolName').value||'').trim(); if(!nombre) { document.getElementById('newRolName').focus(); return; }
+  const req=(document.getElementById('newRolReq').value||'').trim();
   const cfg=window.CFMS.getConfig(); const id='r'+Date.now();
-  cfg.roles.push({ id, nombre:{es:nombre,pt:nombre}, requisito: req?{es:req,pt:req}:undefined, activo:true }); saveConfig(); renderAdmin(); }
+  cfg.roles.push({ id, nombre:{es:nombre,pt:nombre}, requisito: req?{es:req,pt:req}:undefined, activo:true }); saveConfig(); renderAdmin();
+}
 function adminDelRol(i){ const cfg=window.CFMS.getConfig(); const r=cfg.roles[i];
   const enUso=cfg.misiones.some(m=>m.actividades.some(a=>(a.plazas||[]).some(p=>p.rolId===r.id)));
-  if(enUso){ alert('No se puede eliminar: el rol está en uso en alguna actividad.'); return; }
-  if(!confirm('¿Eliminar el rol "'+r.nombre[LANG]+'"?'))return; cfg.roles.splice(i,1); saveConfig(); renderAdmin(); }
+  if(enUso){ toast('No se puede eliminar: el rol está en uso.'); return; }
+  cfg.roles.splice(i,1); saveConfig(); renderAdmin();
+}
 window.adminNewRol=adminNewRol; window.adminDelRol=adminDelRol;
 
 /* ---------- CHECKLIST DEL LÍDER ----------
@@ -702,7 +721,15 @@ function chkAssign(itemId){
   document.getElementById('asgList').innerHTML=html;
   document.getElementById('asgBackdrop').classList.add('on'); document.getElementById('asgSheet').classList.add('on');
 }
-function chkAssignTemp(){ const n=prompt('Nombre del temporal:'); if(n) chkDoAssign(n.trim(), true); }
+function chkAssignTemp(){
+  document.getElementById('asgList').innerHTML =
+    `<div class="fld" style="margin:0"><label style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--gris);display:block;margin-bottom:6px">Nombre del temporal</label>
+     <div class="rolerow"><input id="asgTempName" placeholder="Ej. Vecino Juan" style="flex:1;padding:13px;border:1px solid var(--linea);border-radius:6px;font-family:'Jost',sans-serif;font-size:15px" />
+     <button class="miniadd" onclick="chkAddTempAssign()">Añadir</button></div></div>`;
+  setTimeout(()=>{ const el=document.getElementById('asgTempName'); if(el) el.focus(); },150);
+}
+function chkAddTempAssign(){ const n=(document.getElementById('asgTempName').value||'').trim(); if(!n){ document.getElementById('asgTempName').focus(); return; } chkDoAssign(n, true); }
+window.chkAddTempAssign=chkAddTempAssign;
 function chkDoAssign(name, temp){
   const a=chkActivity(); const items=chkInstance(a); const it=items.find(x=>x.id===asgItemId); if(!it){ closeAsg(); return; }
   it.asignado = name ? { name, temp:!!temp } : null;

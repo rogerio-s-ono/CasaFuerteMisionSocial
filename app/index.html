@@ -219,6 +219,8 @@
   #asgSheet .opt .av{ width:30px; height:30px; border-radius:50%; background:var(--t-distri-bg); color:var(--t-distri-tx); display:grid; place-items:center; font-size:12px; font-weight:600; } #asgSheet .opt .av.t{ background:#efeafa; color:#5a4494; } #asgSheet .opt .av.n{ background:var(--hueso); color:var(--gris); }
 
   .footver{ text-align:center; font-size:10px; color:var(--gris-cl); padding:10px; }
+  #mfToast{ position:fixed; left:50%; bottom:96px; transform:translateX(-50%) translateY(20px); background:var(--negro); color:#fff; font-size:13px; padding:11px 18px; border-radius:999px; z-index:300; opacity:0; pointer-events:none; transition:.25s; max-width:90%; text-align:center; }
+  #mfToast.on{ opacity:1; transform:translateX(-50%) translateY(0); }
 
   /* ===== Barra demo (selector de perfil) ===== */
   #demoBar{ background:#2b2b2b; color:#eee; font-size:11px; padding:8px 12px; display:flex; align-items:center; gap:8px; justify-content:center; flex-wrap:wrap; }
