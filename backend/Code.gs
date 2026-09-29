@@ -127,6 +127,7 @@ function _setPermiso(body, email) {
   // evitar duplicado exacto (email+papel+mision)
   var dup = rows.some(function(r){ return String(r.email||'').toLowerCase()===e && String(r.papel||'').toLowerCase()===papel && String(r.mision||'')===mision; });
   if (!dup) _appendRow(sh, { email:e, papel:papel, mision:mision });
+  SpreadsheetApp.flush();
   _audit(email, 'setPermiso:'+papel, 'admin', e+(mision?('/'+mision):''));
   return { ok:true, permisos:_permisos() };
 }
@@ -144,6 +145,7 @@ function _delPermiso(body, email) {
       sh.deleteRow(i + 2); // +2: header + 0-index
     }
   }
+  SpreadsheetApp.flush();
   _audit(email, 'delPermiso:'+papel, 'admin', e+(mision?('/'+mision):''));
   return { ok:true, permisos:_permisos() };
 }

@@ -754,23 +754,26 @@ function accToggle(tel){ ACC_EXPANDED = (ACC_EXPANDED===tel)?null:tel; renderAdm
 let ACC_BUSY = false;
 function _accPerm(action, email, papel, mision){
   if(!window.MFSync || !window.MFSync.enabled){ toast('Necesita backend configurado'); return; }
-  if(ACC_BUSY){ return; }                 // ya hay una operación en curso → ignora clics extra
+  if(ACC_BUSY){ return; }
   ACC_BUSY = true;
-  // deshabilitar todos los botones de la pantalla Accesos + feedback
   document.querySelectorAll('#adminBody button').forEach(function(b){ b.disabled=true; b.style.opacity='.5'; });
   toast('Guardando…');
-  // usa post DIRECTO (espera la respuesta real del servidor), no la cola
   window.MFSync.post(action, { email:email, papel:papel, mision:mision||'' })
     .then(function(j){
-      if(j && j.ok){
-        if(j.permisos) setPermisos(j.permisos);   // el backend devuelve permisos actualizados
-        toast(action==='delPermiso'?'Permiso quitado':'Permiso concedido');
-        return window.MFSync.pull();               // refresca voluntarios también
-      } else { toast('No se pudo (¿eres admin?)'); return null; }
+      if(j && j.ok){ toast(action==='delPermiso'?'Permiso quitado':'Permiso concedido'); }
+      else if(j && j.error==='forbidden_admin'){ toast('Sesión caducada — vuelve a entrar con Google'); }
+      else { toast('No se pudo guardar'); }
     })
-    .then(function(res){ if(res && res.data){ if(res.data.permisos) setPermisos(res.data.permisos); if(res.data.voluntarios) setServerVols(res.data.voluntarios); } })
     .catch(function(){ toast('Error de conexión'); })
-    .then(function(){ ACC_BUSY=false; renderAdmin(); });   // re-render (rehabilita botones)
+    .then(function(){
+      // SIEMPRE refrescar desde el servidor (aunque el post fallara) y re-render
+      return window.MFSync.pull();
+    })
+    .then(function(res){
+      if(res && res.data){ if(res.data.permisos) setPermisos(res.data.permisos); if(res.data.voluntarios) setServerVols(res.data.voluntarios); }
+    })
+    .catch(function(){})
+    .then(function(){ ACC_BUSY=false; renderAdmin(); });
 }
 function accAddAdmin(){ var e=(document.getElementById('accAdminEmail').value||'').trim().toLowerCase(); if(!e)return; _accPerm('setPermiso',e,'admin',''); }
 function accAddLider(){ var e=(document.getElementById('accLiderEmail').value||'').trim().toLowerCase(); var m=document.getElementById('accLiderMis').value; if(!e)return; _accPerm('setPermiso',e,'lider',m); }
