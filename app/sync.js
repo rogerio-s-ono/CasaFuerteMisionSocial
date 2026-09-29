@@ -103,5 +103,5 @@
     return pull();
   }
 
-  window.MFSync = { init:init, pull:pull, pushConfig:pushConfig, queue:queue, onStatus:onStatus, status:status, enabled:ENABLED };
+  window.MFSync = { init:init, pull:pull, pushConfig:pushConfig, post:post, queue:queue, onStatus:onStatus, status:status, enabled:ENABLED };
 })();
