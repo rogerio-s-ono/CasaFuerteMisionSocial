@@ -81,6 +81,8 @@
   .h-center .titulo{ font-family:"Oswald",sans-serif; font-size:20px; font-weight:600; color:#fff; line-height:1; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
   .h-center .saludo{ font-size:11px; color:var(--gris-cl); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .h-center .saludo em{ font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--oro); }
+  .sync-badge{ font-size:10px; font-weight:500; display:inline-flex; align-items:center; gap:3px; margin-left:6px; }
+  .sync-badge span{ font-size:10px; }
   .h-mision{ flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:2px; }
   .h-mision img{ height:28px; width:auto; }
   .h-mision .lbl{ display:flex; align-items:baseline; gap:3px; line-height:1; }
@@ -356,7 +358,7 @@
     <img class="iglesia" src="assets/logo-casafuerte-light.png" alt="Casa Fuerte Church" onclick="goLogin()" title="Volver al inicio de sesión" />
     <div class="h-center">
       <div class="titulo">Manos Fuertes</div>
-      <div class="saludo">hola, <em id="hdrName">—</em></div>
+      <div class="saludo">hola, <em id="hdrName">—</em> <span id="syncBadge" class="sync-badge" style="display:none"></span></div>
     </div>
     <div class="h-mision">
       <img src="assets/logo-mision-heart.png" alt="Misión Social" />
@@ -480,6 +482,7 @@
 
 <script src="config.js"></script>
 <script src="app.js"></script>
+<script src="sync.js"></script>
 <script src="ui.js"></script>
 </body>
 </html>

@@ -25,3 +25,8 @@ node_modules/
 .vscode/
 .idea/
 *.swp
+
+# Backend secrets
+backend/Code.gs.real
+app/config.js.real
+config.js.real

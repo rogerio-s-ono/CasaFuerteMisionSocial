@@ -121,7 +121,10 @@ const ICON_TIPO = { retirada:'🚐', prep:'📦', distri:'🤝', limpieza:'🧹'
 function loadConfig(){
   try{ const c=JSON.parse(localStorage.getItem('mf_config')||'null'); if(c && c.misiones) window.CFMS.setConfig(c); }catch(e){}
 }
-function saveConfig(){ localStorage.setItem('mf_config', JSON.stringify(window.CFMS.getConfig())); }
+function saveConfig(){
+  localStorage.setItem('mf_config', JSON.stringify(window.CFMS.getConfig()));
+  if(window.MFSync && window.MFSync.enabled){ window.MFSync.pushConfig(window.CFMS.getConfig()); }
+}
 function loadState(){
   try{ USER = JSON.parse(localStorage.getItem('mf_user')||'null'); }catch(e){ USER=null; }
   try{ INSCR = JSON.parse(localStorage.getItem('mf_inscr')||'{}'); }catch(e){ INSCR={}; }
@@ -1018,3 +1021,24 @@ loadState();
 loadAdds();
 loadChk();
 if(USER){ document.getElementById('loginGate').style.display='none'; startApp(); }
+
+/* ---------- SYNC con backend (si está configurado) ---------- */
+function renderSyncBadge(s){
+  var el=document.getElementById('syncBadge'); if(!el) return;
+  var map={ ok:['✓','sincronizado','#4f9d69'], pending:['⏳','pendiente','#d9a90a'], syncing:['↻','sincronizando…','#d9a90a'],
+            offline:['⚡','sin conexión','#c2560c'], error:['⚠','error de sync','#c2560c'], off:['','',''] };
+  var m=map[s]||map.off;
+  el.style.display = m[0] ? 'inline-flex' : 'none';
+  el.style.color = m[2]; el.innerHTML = m[0] ? (m[0]+' <span>'+m[1]+'</span>') : '';
+}
+if(window.MFSync){
+  window.MFSync.onStatus(renderSyncBadge);
+  window.MFSync.init().then(function(res){
+    if(res && res.data && res.data.config && res.data.config.misiones){
+      // el servidor manda: aplica su config y re-renderiza
+      window.CFMS.setConfig(res.data.config);
+      localStorage.setItem('mf_config', JSON.stringify(res.data.config));
+      if(USER) renderAll();
+    }
+  });
+}
