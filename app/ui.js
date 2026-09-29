@@ -697,6 +697,26 @@ function _permInfo(email){
   const e = (email||'').toLowerCase();
   return { admin: !!e && (perm.admins||[]).indexOf(e)>=0, lideres: (e && perm.lideres && perm.lideres[e]) ? perm.lideres[e].slice() : [] };
 }
+function _telByEmail(email){ var v=SERVER_VOLS.find(function(x){ return String(x.email||'').toLowerCase()===String(email).toLowerCase(); }); return v?String(v.telefono):''; }
+function _nameByEmail(email){ var v=SERVER_VOLS.find(function(x){ return String(x.email||'').toLowerCase()===String(email).toLowerCase(); }); return v?v.nombre:email; }
+function _accResumen(){
+  const perm = PERMISOS || { admins:[], lideres:{} };
+  function item(email, sub){
+    var tel=_telByEmail(email);
+    var nm=_nameByEmail(email);
+    var onclick = tel ? `onclick="usrOpen('${tel.replace(/'/g,"")}')"` : '';
+    return `<div class="res-item" ${onclick}><span class="res-nm">${nm}</span><span class="res-sub">${sub}</span></div>`;
+  }
+  var adminsH = (perm.admins||[]).map(function(e){ return item(e,'Admin'); }).join('') || '<div class="admnote" style="padding:2px 0">Sin admins.</div>';
+  var lidH = '';
+  Object.keys(perm.lideres||{}).forEach(function(e){
+    var mis=(perm.lideres[e]||[]).map(function(m){ return window.CFMS.misionLabel(m); }).join(', ');
+    lidH += item(e, mis||'Líder');
+  });
+  if(!lidH) lidH='<div class="admnote" style="padding:2px 0">Sin líderes.</div>';
+  return `<div class="sec-t">Administradores</div><div class="res-box">${adminsH}</div>
+          <div class="sec-t">Líderes</div><div class="res-box">${lidH}</div>`;
+}
 function renderAdminAccesos(box, cfg){
   const q = norm(ACC_SEARCH.trim());
   const vols = SERVER_VOLS.filter(v=>{
@@ -713,6 +733,8 @@ function renderAdminAccesos(box, cfg){
   }).join('');
   box.innerHTML = `
     <div class="adm-head"><button class="back" onclick="adminGo('list')">‹</button><div><div class="ah-t">Accesos y usuarios</div><div class="ah-s">${SERVER_VOLS.length} usuarios</div></div></div>
+    ${_accResumen()}
+    <div class="sec-t">Todos los usuarios</div>
     <div class="acc-search"><input type="search" id="accSearch" placeholder="Buscar nombre o teléfono…" value="${ACC_SEARCH.replace(/"/g,'&quot;')}" oninput="accSearchInput(this.value)" /></div>
     <div class="acc-list">${rows || '<div class="admnote">Sin usuarios que coincidan.</div>'}</div>
     <div class="acc-foot"><button class="miniadd" onclick="accDedupe()">Limpiar duplicados</button></div>
