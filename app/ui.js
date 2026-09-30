@@ -211,7 +211,7 @@ function _onGoogleCredential(resp){
   if(vinc){ USER={ name:vinc.name||nombre, phone:vinc.phone, email:email }; enter('Entrando…'); return; }
   // 3) por si el pull inicial aún no trajo voluntarios: pull fresco y reintenta
   if(window.MFSync && window.MFSync.enabled){
-    document.getElementById('lgCheckTxt') && (document.getElementById('lgCheckTxt').textContent='Entrando…');
+    document.getElementById('lgCheckTxt') && (document.getElementById('lgCheckTxt').textContent='Verificando…');
     document.getElementById('lgChecking').classList.add('on');
     window.MFSync.pull().then(function(res){
       document.getElementById('lgChecking').classList.remove('on');
@@ -226,6 +226,8 @@ function _onGoogleCredential(resp){
   _googleFirstTime(nombre, email);
 }
 function _googleFirstTime(nombre, email){
+  // garante que o spinner intermediário ("Verificando…") suma antes de mostrar o formulário
+  document.getElementById('lgChecking').classList.remove('on');
   document.getElementById('panelPhone').classList.add('hidden');
   document.getElementById('ddi2').disabled=false; document.getElementById('ddi2').value='+34';
   document.getElementById('regPhone').value=''; document.getElementById('regPhone').removeAttribute('readonly');
@@ -234,6 +236,9 @@ function _googleFirstTime(nombre, email){
   document.getElementById('regWelcome').innerHTML= email
     ? 'Primera vez con Google. <b>¡Bienvenido!</b> Confirma tu nombre y añade tu teléfono (para los recordatorios por WhatsApp).'
     : 'Primera vez. <b>¡Bienvenido!</b> Solo necesitamos tu nombre y teléfono.';
+  // quando vem do Google não faz sentido voltar para escolher método de login
+  var backBtn = document.querySelector('#panelRegister .lg-back');
+  if(backBtn) backBtn.style.display = email ? 'none' : '';
   document.getElementById('panelRegister').classList.remove('hidden');
   window._googleEmail = email || '';
 }
@@ -258,6 +263,9 @@ function backToPhone(){
   document.getElementById('panelRegister').classList.add('hidden');
   document.getElementById('regPhone').setAttribute('readonly','');
   document.getElementById('ddi2').disabled=true;
+  // restaurar visibilidade do botão voltar para o próximo uso
+  var backBtn = document.querySelector('#panelRegister .lg-back');
+  if(backBtn) backBtn.style.display = '';
   document.getElementById('panelPhone').classList.remove('hidden');
 }
 function enter(msg){
