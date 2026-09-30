@@ -1279,18 +1279,27 @@ function renderMas(){
                   offline:'#c2560c', error:'#c2560c', off:'#9a9a9a' };
   var queueLen = 0;
   try{ queueLen = JSON.parse(localStorage.getItem('mf_sync_queue')||'[]').length; }catch(e){}
-  var lastErr = (window.MFSync && window.MFSync.lastError) ? window.MFSync.lastError() : null;
+  var errList = (window.MFSync && window.MFSync.errorLog) ? window.MFSync.errorLog() : [];
 
   function _fmtErrTime(iso){ try{ var d=new Date(iso); return d.toLocaleString(LANG==='pt'?'pt-BR':'es-ES'); }catch(e){ return iso; } }
   var errBlock = '';
-  if(lastErr && lastErr.detail){
+  if(errList && errList.length){
+    var items = errList.map(function(e){
+      return '<div class="mas-err-item">'
+        +   '<div class="mas-err-msg">'+_esc(e.detail)+'</div>'
+        +   '<div class="mas-err-meta">'+_esc(e.where||'')+' · '+_fmtErrTime(e.ts)+' · '+(e.online?'en línea':'sin conexión')+'</div>'
+        + '</div>';
+    }).join('');
     errBlock =
-      '<div class="mas-row" style="align-items:flex-start;flex-direction:column;gap:6px">'
-      + '<span class="mas-lbl">Último error</span>'
-      + '<div class="mas-errbox">'
-      +   '<div class="mas-err-msg">'+_esc(lastErr.detail)+'</div>'
-      +   '<div class="mas-err-meta">'+_esc(lastErr.where||'')+' · '+_fmtErrTime(lastErr.ts)+' · '+(lastErr.online?'en línea':'sin conexión')+'</div>'
+      '<div class="mas-row" style="align-items:flex-start;flex-direction:column;gap:8px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;width:100%">'
+      +   '<span class="mas-lbl">Últimos errores ('+errList.length+')</span>'
+      +   '<div style="display:flex;gap:6px">'
+      +     '<button class="mas-mini" onclick="mfCopyErrLog()">Copiar</button>'
+      +     '<button class="mas-mini ghost" onclick="mfClearErrLog()">Limpiar</button>'
+      +   '</div>'
       + '</div>'
+      + '<div class="mas-errbox">'+items+'</div>'
       + '<button class="mas-retry" onclick="mfRetrySync()">Reintentar sincronización</button>'
       + '</div>';
   }
@@ -1329,6 +1338,27 @@ function mfRetrySync(){
   window.MFSync.pull().then(function(){ renderMas(); });
 }
 window.mfRetrySync=mfRetrySync;
+/* copiar el log de errores al portapapeles (con fallback para navegadores sin clipboard API) */
+function mfCopyErrLog(){
+  var txt = (window.MFSync && window.MFSync.errorLogText) ? window.MFSync.errorLogText() : '';
+  if(!txt){ toast('Nada que copiar'); return; }
+  function done(){ toast('Log copiado — pégalo donde quieras'); }
+  function fallback(){
+    try{
+      var ta=document.createElement('textarea'); ta.value=txt;
+      ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta);
+      ta.focus(); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); done();
+    }catch(e){ toast('No se pudo copiar'); }
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done).catch(fallback);
+  } else { fallback(); }
+}
+function mfClearErrLog(){
+  if(window.MFSync && window.MFSync.clearError){ window.MFSync.clearError(); }
+  toast('Log limpiado'); renderMas();
+}
+window.mfCopyErrLog=mfCopyErrLog; window.mfClearErrLog=mfClearErrLog;
 
 function renderAll(){ renderInicio(); renderAgenda(); renderMios(); renderLider(); renderAdmin(); renderMas(); }
 

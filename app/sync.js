@@ -23,19 +23,39 @@
   var QUEUE_KEY = 'mf_sync_queue';
   var CACHE_KEY = 'mf_sync_cache';   // último pull cacheado (para offline)
   var ERR_KEY   = 'mf_sync_lasterr'; // último error detallado (para diagnóstico en "Más")
+  var ERRLOG_KEY= 'mf_sync_errlog';  // historial de los últimos 10 errores
 
   function setStatus(s){ state = s; listeners.forEach(function(cb){ try{ cb(s); }catch(e){} }); }
   function onStatus(cb){ listeners.push(cb); cb(state); }
   function status(){ return state; }
 
-  /* ---- registro del último error (para mostrarlo en la pestaña "Más") ---- */
+  /* ---- registro de errores: acumula los últimos 10 (para diagnóstico en "Más") ---- */
+  var ERRLOG_MAX = 10;
   function recordError(where, detail){
     var rec = { where:where, detail:String(detail||''), online:navigator.onLine, ts:new Date().toISOString() };
-    try{ localStorage.setItem(ERR_KEY, JSON.stringify(rec)); }catch(e){}
+    try{ localStorage.setItem(ERR_KEY, JSON.stringify(rec)); }catch(e){}   // último (compat)
+    try{
+      var log = errorLog();
+      log.unshift(rec);                       // más reciente primero
+      if(log.length > ERRLOG_MAX) log = log.slice(0, ERRLOG_MAX);
+      localStorage.setItem(ERRLOG_KEY, JSON.stringify(log));
+    }catch(e){}
     return rec;
   }
-  function clearError(){ try{ localStorage.removeItem(ERR_KEY); }catch(e){} }
+  function clearError(){ try{ localStorage.removeItem(ERR_KEY); localStorage.removeItem(ERRLOG_KEY); }catch(e){} }
   function lastError(){ try{ return JSON.parse(localStorage.getItem(ERR_KEY)||'null'); }catch(e){ return null; } }
+  function errorLog(){ try{ return JSON.parse(localStorage.getItem(ERRLOG_KEY)||'[]'); }catch(e){ return []; } }
+  /* texto plano de los últimos errores (para copiar/pegar) */
+  function errorLogText(){
+    var log = errorLog();
+    if(!log.length) return 'Sin errores de sincronización registrados.';
+    var head = 'Manos Fuertes — log de sync (v'+(window.CFMS?window.CFMS.APP_VERSION:'?')+') — '+new Date().toISOString()+'\n'
+             + 'Últimos '+log.length+' errores (más reciente primero):\n';
+    var body = log.map(function(e,i){
+      return (i+1)+'. ['+e.ts+'] '+(e.online?'online':'offline')+' · '+e.where+'\n   '+e.detail;
+    }).join('\n');
+    return head + body;
+  }
 
   function idToken(){ try{ return sessionStorage.getItem('mf_idtoken') || null; }catch(e){ return null; } }
   function loadQueue(){ try{ return JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]'); }catch(e){ return []; } }
@@ -151,5 +171,5 @@
     return pull();
   }
 
-  window.MFSync = { init:init, pull:pull, pushConfig:pushConfig, post:post, queue:queue, onStatus:onStatus, status:status, enabled:ENABLED, lastError:lastError, clearError:clearError };
+  window.MFSync = { init:init, pull:pull, pushConfig:pushConfig, post:post, queue:queue, onStatus:onStatus, status:status, enabled:ENABLED, lastError:lastError, clearError:clearError, errorLog:errorLog, errorLogText:errorLogText };
 })();
