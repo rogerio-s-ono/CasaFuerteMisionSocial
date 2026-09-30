@@ -77,9 +77,11 @@
 
   /* ============ HEADER (3 columnas) ============ */
   header{ background:var(--negro); color:#fff; padding:12px 14px; position:sticky; top:0; z-index:20; }
-  .h-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
-  .h-row img.iglesia{ height:24px; width:auto; opacity:.9; flex:0 0 auto; cursor:pointer; }
-  .h-center{ flex:1; text-align:center; min-width:0; }
+  .h-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; position:relative; }
+  .h-row img.iglesia{ height:24px; width:auto; opacity:.9; flex:0 0 auto; cursor:pointer; z-index:1; }
+  /* centro anclado al CENTRO DE LA PANTALLA (no al espacio entre logos) */
+  .h-center{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:auto; max-width:58%; text-align:center; min-width:0; pointer-events:none; }
+  .h-center .saludo{ pointer-events:auto; }
   .h-center .titulo{ font-family:"Oswald",sans-serif; font-size:20px; font-weight:600; color:#fff; line-height:1; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
   .h-center .saludo{ font-size:11px; color:var(--gris-cl); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .h-center .saludo em{ font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--oro); }

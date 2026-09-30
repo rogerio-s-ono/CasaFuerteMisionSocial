@@ -1724,12 +1724,23 @@ if(USER){ document.getElementById('loginGate').style.display='none'; startApp();
 /* ---------- SYNC con backend (si está configurado) ---------- */
 function renderSyncBadge(s){
   var el=document.getElementById('syncBadge'); if(!el) return;
-  // SVGs inline — 12×12, currentColor, sem dependência externa
-  var SVG_OK      = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-label="sincronizado"><polyline points="2,9 6,13 14,4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  var SVG_SYNC    = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-label="sincronizando" style="animation:mf-spin 1s linear infinite"><path d="M14 8A6 6 0 1 1 8 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
-  var SVG_PENDING = '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-label="pendiente"><circle cx="4" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="12" cy="8" r="1.5"/></svg>';
-  var SVG_OFFLINE = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-label="sin conexión"><line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4.5 6A5 5 0 0 1 13 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M2 4A8 8 0 0 1 16 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="8" cy="13" r="1.5" fill="currentColor"/></svg>';
-  var SVG_ERROR   = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-label="error"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="2"/><line x1="8" y1="5" x2="8" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="8" cy="12" r="1" fill="currentColor"/></svg>';
+  // Opción C — nube en contorno (currentColor toma el color del estado). Sin animación.
+  // Nube base común: path de una nube limpia y consistente en viewBox 24x24.
+  var NUBE = 'M7.5 18h9a3.5 3.5 0 0 0 .4-6.98 5 5 0 0 0-9.65-1.2A3.75 3.75 0 0 0 7.5 18z';
+  function ic(inner, w){
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="'+(w||1.7)+'" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="'+NUBE+'"/>' + (inner||'') + '</svg>';
+  }
+  // OK: nube + check dentro
+  var SVG_OK      = ic('<polyline points="10,13.2 11.6,14.8 14.4,11.4" stroke-width="1.6"/>');
+  // Sincronizando: nube + flecha circular (estática, sin animación)
+  var SVG_SYNC    = ic('<path d="M14.3 12.4a2.4 2.4 0 1 0-.5 2.7" stroke-width="1.6"/><polyline points="14.5,10.4 14.7,12.5 12.6,12.3" stroke-width="1.6"/>');
+  // Pendiente: nube + tres puntos
+  var SVG_PENDING = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="'+NUBE+'"/><circle cx="9.2" cy="13.6" r="0.7" fill="currentColor" stroke="none"/><circle cx="12" cy="13.6" r="0.7" fill="currentColor" stroke="none"/><circle cx="14.8" cy="13.6" r="0.7" fill="currentColor" stroke="none"/></svg>';
+  // Offline: nube tachada (línea diagonal)
+  var SVG_OFFLINE = ic('<line x1="4.5" y1="4.5" x2="19.5" y2="19.5"/>');
+  // Error: nube + signo de exclamación
+  var SVG_ERROR   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="'+NUBE+'"/><line x1="12" y1="10.6" x2="12" y2="13.4"/><circle cx="12" cy="15.5" r="0.75" fill="currentColor" stroke="none"/></svg>';
   var map={
     ok:      [SVG_OK,      'sincronizado',   '#4f9d69'],
     pending: [SVG_PENDING, 'pendiente',      '#d9a90a'],
