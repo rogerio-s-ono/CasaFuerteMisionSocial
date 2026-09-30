@@ -1,0 +1,5 @@
+# clasp só deve enviar o código do Apps Script (Code.gs) e o manifest (appsscript.json).
+# Tudo o resto fica de fora.
+**/**
+!Code.gs
+!appsscript.json

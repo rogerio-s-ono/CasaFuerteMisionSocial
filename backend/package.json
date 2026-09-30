@@ -1,0 +1,19 @@
+{
+  "name": "cfms-backend",
+  "version": "1.0.0",
+  "description": "Casa Fuerte Misión Social — backend Apps Script (deploy via clasp)",
+  "scripts": {
+    "push": "clasp push -f",
+    "deploy": "node deploy.mjs",
+    "open": "clasp open-script",
+    "login": "clasp login",
+    "status": "clasp status"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@google/clasp": "^3.4.1"
+  }
+}

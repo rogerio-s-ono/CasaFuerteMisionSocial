@@ -54,6 +54,104 @@ En la parte de arriba del código, rellena:
 ## Reimplantar cuando cambie el Code.gs
 Si editas `Code.gs` más adelante: **Implementar → Gestionar implementaciones → (editar) → Nueva versión → Implementar**. La URL `/exec` se mantiene.
 
+---
+
+## 🚀 Deploy automatizado (clasp) — YA NO copiar/pegar
+
+A partir de ahora el `Code.gs` se sube y se republica con **un solo comando** (`npm run deploy`),
+sin abrir el editor ni copiar/pegar. Se usa **clasp** (CLI oficial de Google Apps Script).
+
+### Cambio importante — secretos en Script Properties
+El `Code.gs` ya **NO** contiene secretos. `SYNC_TOKEN`, `GOOGLE_CLIENT_ID` y `ADMIN_FALLBACK`
+se leen de las **Script Properties** del proyecto (así el archivo se puede versionar y desplegar
+automáticamente sin exponer nada). Se configuran **una vez** (paso 5 de abajo).
+
+### Ya está hecho (por Kiro, no tienes que hacerlo)
+- ✅ Node instalado (vía nvm) y `clasp` instalado en `backend/`.
+- ✅ `Code.gs` refactorizado para leer secretos de Script Properties + función `setupSecrets()`.
+- ✅ `appsscript.json`, `package.json` (con `npm run deploy`), `deploy.mjs`, `.claspignore` creados.
+- ✅ `.clasp.json` / `.deploy.json` como plantillas; `.gitignore` cubre credenciales e IDs.
+
+### Lo que SOLO TÚ puedes hacer (una vez, ~10 min — es tu cuenta Google)
+
+Todos los comandos se ejecutan **dentro de `backend/`**:
+```bash
+cd backend
+```
+
+**1. Login en Google (genera las credenciales de clasp)**
+```bash
+npm run login
+```
+Se abre el navegador → autoriza con tu cuenta Google (la dueña de la planilla). Crea
+`~/.clasprc.json` (ya está en `.gitignore`).
+
+**2. Activar la Apps Script API** (1 clic, una vez)
+- Abre https://script.google.com/home/usersettings
+- Activa el interruptor **"Google Apps Script API"** → ON.
+
+**3. Pegar el Script ID** en `backend/.clasp.json`
+- Abre tu proyecto Apps Script (menú **Extensiones → Apps Script** desde la planilla).
+- **Configuración del proyecto** (icono de engranaje ⚙️) → copia el **"ID de secuencia de comandos"** (Script ID).
+- Pégalo en `backend/.clasp.json` sustituyendo `COLE_AQUI_O_SCRIPT_ID`:
+  ```json
+  { "scriptId": "1AbC...tuScriptId...XyZ", "rootDir": "." }
+  ```
+
+**4. Pegar el Deployment ID** en `backend/.deploy.json` (para mantener la MISMA URL `/exec`)
+- En el editor Apps Script: **Implementar → Gestionar implementaciones**.
+- Abre tu implementación Web App activa → copia el **"ID de implementación"** (Deployment ID,
+  empieza por `AKfyc...`).
+- Pégalo en `backend/.deploy.json` sustituyendo `COLE_AQUI_O_DEPLOYMENT_ID`:
+  ```json
+  { "deploymentId": "AKfyc...tuDeploymentId..." }
+  ```
+
+> Si aún **no** tienes una Web App creada, hazla una vez por la UI (Implementar → Nueva
+> implementación → Aplicación web) y luego copia su Deployment ID aquí. A partir de ahí,
+> `npm run deploy` la republica sola.
+
+**5. Grabar los secretos en Script Properties** (una vez)
+Dos formas — elige una:
+
+- **Opción rápida (UI):** en el editor Apps Script → **Configuración del proyecto ⚙️ →
+  Propiedades de la secuencia de comandos → Añadir propiedad**, y crea:
+  | Propiedad | Valor |
+  |---|---|
+  | `SYNC_TOKEN` | tu token compartido (el mismo de `app/config.js`) |
+  | `GOOGLE_CLIENT_ID` | tu OAuth client id (`...apps.googleusercontent.com`) |
+  | `ADMIN_FALLBACK` | tu email (varios separados por coma) |
+
+- **Opción código:** edita la función `setupSecrets()` al inicio de `Code.gs` con tus valores
+  reales, súbela con `npm run push`, ábrela en el editor (`npm run open`), ejecútala una vez
+  (▶) y autoriza. Después vuelve a poner placeholders en `setupSecrets()` (los valores ya
+  quedaron guardados en las Script Properties).
+
+### Uso diario — a partir de aquí, todo automático
+Cada vez que cambie el `Code.gs`, solo:
+```bash
+cd backend
+npm run deploy
+```
+Esto hace `clasp push` (sube el código) + `clasp deploy` (republica la Web App **con la misma
+URL `/exec`**). No hay que abrir el editor ni copiar/pegar nada.
+
+Comandos útiles:
+| Comando | Qué hace |
+|---|---|
+| `npm run deploy` | Sube el código y republica la Web App (uso normal) |
+| `npm run push` | Solo sube el código (sin nueva versión de la Web App) |
+| `npm run open` | Abre el proyecto Apps Script en el navegador |
+| `npm run login` | Reautentica clasp si expira el token |
+| `npm run status` | Muestra qué archivos subiría clasp |
+
+### Notas / problemas comunes
+- **"User has not enabled the Apps Script API"** → repite el paso 2 y espera ~1 min.
+- **Error de credenciales / token expirado** → `npm run login` de nuevo.
+- El `node`/`npm` vienen de nvm; en una terminal nueva ya están disponibles. Si no, ejecuta
+  `source ~/.bashrc` o `nvm use --lts`.
+- `.clasp.json`, `.deploy.json` y `~/.clasprc.json` **no** se versionan (contienen IDs/credenciales).
+
 > **Actualización Fase 2 (permisos):** el `Code.gs` ahora devuelve la allowlist (admins/líderes)
 > en el pull. Tras actualizarlo, **reimplanta** (Nueva versión). En la pestaña **Admin** define
 > filas: `email | papel | mision` — papel = `admin` o `lider`; para líderes, `mision` = id de la

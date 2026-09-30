@@ -335,6 +335,7 @@ function _inscribir(body, email) {
   var esTemp = !!i.temp;
   var vol = esTemp ? ('temp:' + Utilities.getUuid().slice(0,8)) : _normTel(i.voluntario);
   var nombre = String(i.nombre||'').trim();
+  var tel = _normTel(i.tel);   // teléfono del temporal (opcional); para persona real el tel ya está en 'voluntario'
   if (!vol && !esTemp) return { ok:false, error:'datos_incompletos' };
   if (esTemp && !nombre) return { ok:false, error:'datos_incompletos' };
 
@@ -352,7 +353,7 @@ function _inscribir(body, email) {
   var id = Utilities.getUuid();
   _appendRow(sh, {
     id: id, activityId:i.activityId, misionId:i.misionId||'', templateId:i.templateId||'',
-    fecha:i.fecha||'', rol:i.rol, voluntario:vol, nombre:nombre, temp:(esTemp?true:false),
+    fecha:i.fecha||'', rol:i.rol, voluntario:vol, nombre:nombre, tel:tel, temp:(esTemp?true:false),
     estado:estado, porLider:(i.porLider?true:false), porEmail:(email||''), creadoEm:new Date().toISOString()
   });
   _audit(email||vol, 'inscribir:'+estado+(i.porLider?'(lider)':''), 'inscripcion', i.activityId+'/'+i.rol);
@@ -464,13 +465,14 @@ function _ensureSheets() {
   var headers = {};
   headers[SHEETS.CONFIG] = ['config_json'];
   headers[SHEETS.USUARIOS] = ['telefono','nombre','email','esAdmin','lider','idioma','actualizadoEm'];
-  headers[SHEETS.INSCRIPCIONES] = ['id','activityId','misionId','templateId','fecha','rol','voluntario','nombre','temp','estado','porLider','porEmail','creadoEm','motivo'];
+  headers[SHEETS.INSCRIPCIONES] = ['id','activityId','misionId','templateId','fecha','rol','voluntario','nombre','tel','temp','estado','porLider','porEmail','creadoEm','motivo'];
   headers[SHEETS.CHECKLISTS] = ['activityId','itemId','texto','hecho','hechoPor','asignado','suelto','actualizadoEm'];
   headers[SHEETS.AUDIT] = ['timestamp','usuario','accion','tipo','ref'];
   Object.keys(headers).forEach(function(name){
     var sh = _sheet(name);
     if (name === SHEETS.CONFIG) return; // Config usa A1 libre
-    if (sh.getLastRow() === 0) sh.appendRow(headers[name]);
+    if (sh.getLastRow() === 0) { sh.appendRow(headers[name]); }
+    else { _ensureColumns(sh, headers[name]); }   // aba existente: añade columnas nuevas al final (migración no destructiva)
   });
   // Usuarios: sembrar el admin fallback si la aba está vacía (solo cabecera)
   var usr = _sheet(SHEETS.USUARIOS);
@@ -481,6 +483,14 @@ function _ensureSheets() {
   // NOTA: las abas 'Voluntarios' y 'Admin' quedaron obsoletas — bórralas manualmente en la planilha.
 }
 function _headers(name){ var sh=_sheet(name); return sh.getRange(1,1,1,Math.max(1,sh.getLastColumn())).getValues()[0]; }
+/* migración no destructiva: añade al final las columnas de 'wanted' que aún no existan en la cabecera */
+function _ensureColumns(sh, wanted){
+  var have = sh.getRange(1,1,1,Math.max(1,sh.getLastColumn())).getValues()[0].map(String);
+  var missing = wanted.filter(function(k){ return have.indexOf(k) < 0; });
+  if(!missing.length) return;
+  var startCol = sh.getLastColumn() + 1;
+  sh.getRange(1, startCol, 1, missing.length).setValues([missing]);
+}
 function _readRows(name){
   var sh=_sheet(name); var last=sh.getLastRow(); if(last<2) return [];
   var cols=sh.getLastColumn(); var vals=sh.getRange(2,1,last-1,cols).getValues(); var h=_headers(name);

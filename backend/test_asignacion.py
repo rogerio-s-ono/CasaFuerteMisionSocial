@@ -14,11 +14,12 @@ def uuid():
 
 class Insc:
     def __init__(self): self.rows=[]
-    def inscribir(self, activityId, rol, capacidad=0, voluntario='', nombre='', temp=False, porLider=False, email=''):
+    def inscribir(self, activityId, rol, capacidad=0, voluntario='', nombre='', temp=False, porLider=False, email='', tel=''):
         if not activityId or not rol: return {'error':'datos_incompletos'}
         esTemp=bool(temp)
         vol = ('temp:'+uuid()) if esTemp else norm(voluntario)
         nombre=(nombre or '').strip()
+        telp = norm(tel)   # teléfono del temporal (para real ya va en voluntario)
         if not esTemp and not vol: return {'error':'datos_incompletos'}
         if esTemp and not nombre: return {'error':'datos_incompletos'}
         if not esTemp:
@@ -28,7 +29,7 @@ class Insc:
         cap=int(capacidad or 0)
         estado='espera' if (cap>0 and conf>=cap) else 'confirmado'
         _id=uuid()
-        self.rows.append({'id':_id,'activityId':activityId,'rol':rol,'voluntario':vol,'nombre':nombre,'temp':esTemp,'estado':estado,'porLider':porLider})
+        self.rows.append({'id':_id,'activityId':activityId,'rol':rol,'voluntario':vol,'nombre':nombre,'tel':telp,'temp':esTemp,'estado':estado,'porLider':porLider})
         return {'ok':True,'estado':estado,'id':_id,'voluntario':vol}
     def cancelar(self, id=None, activityId=None, rol=None, voluntario=None):
         idx=-1
@@ -171,6 +172,14 @@ res=b.inscribir('A1','prep',capacidad=6,temp=True,nombre='Invitado',porLider=Tru
 r=b.set_estado('suspender', id=res['id'])
 check("temporal suspendido", r.get('estado')=='suspendido')
 check("0 confirmados", len(b.confirmados('A1','prep'))==0)
+
+print("CASO 16 — Temporal CON teléfono → se guarda en columna 'tel' (voluntario sigue siendo id sintético)")
+b=Insc()
+res=b.inscribir('A1','prep',capacidad=6,temp=True,nombre='Invitado con móvil',tel='+34600111222',porLider=True)
+check("inscrito ok", res.get('ok') and res.get('estado')=='confirmado')
+check("voluntario es id sintético temp:", str(res.get('voluntario')).startswith('temp:'))
+check("tel guardado (solo dígitos)", b.rows[0].get('tel')=='34600111222')
+check("real (no temp) no llena 'tel'", (lambda r=b.inscribir('A1','prep',capacidad=6,voluntario='+34699888777'): b.rows[1].get('tel')=='')())
 
 print(f"\n===== RESULTADO: {PASS} passaram, {FAIL} falharam =====")
 import sys; sys.exit(1 if FAIL else 0)

@@ -6,7 +6,7 @@
 
 'use strict';
 
-const APP_VERSION = '0.31.3';
+const APP_VERSION = '0.32.0';
 const CFG = window.CFMS_CONFIG || {};
 
 /* =========================================================================
@@ -42,7 +42,7 @@ const DEFAULT_CONFIG = {
     {
       id:'mercamadrid', nombre:'Misión MercaMadrid', color:'#f2711c', activo:true,
       descripcion:{ pt:'Recolhimento de perecíveis no MercaMadrid e distribuição dominical.', es:'Recogida de perecederos en MercaMadrid y reparto dominical.' },
-      lideres:['rogerio.s.ono@gmail.com'],
+      lideres:[],   // se define en la allowlist real (pestaña Usuarios / Admin); la semilla no lleva emails reales
       actividades:[
         { id:'A1', nombre:{ pt:'Retirada MercaMadrid', es:'Recogida MercaMadrid' }, horaInicio:'08:00', duracionMin:120, activo:true,
           recurrencia:{ tipo:RECURRENCE.MENSAL_POSICAO, weekday:6, ordinal:1 },
@@ -80,7 +80,7 @@ const DEFAULT_CONFIG = {
     {
       id:'banco', nombre:'Misión Banco de Alimentos', color:'#3a5a78', activo:true,
       descripcion:{ pt:'Recolhimento no Banco de Alimentos e distribuição na quarta.', es:'Recogida en el Banco de Alimentos y reparto el miércoles.' },
-      lideres:['tania.eustaqui@gmail.com'],
+      lideres:[],   // se define en la allowlist real (pestaña Usuarios / Admin); la semilla no lleva emails reales
       actividades:[
         { id:'B1', nombre:{ pt:'Retirada Banco de Alimentos', es:'Recogida Banco de Alimentos' }, horaInicio:'10:00', duracionMin:120, activo:true,
           recurrencia:{ tipo:RECURRENCE.MENSAL_POSICAO, weekday:3, ordinal:1 },

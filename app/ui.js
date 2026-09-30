@@ -18,14 +18,12 @@ let MI_ESPERA = {};              // { activityId: roleId }  (mis inscripciones e
 let wzState = { step:1, activity:null, role:null };
 
 /* =========================================================================
-   MODO DEMO — datos de ejemplo (simulan lo que vendrá del backend compartido)
-   Perfiles: voluntario / líder de una cadena / admin.
+   Estado de la vista líder. El rol (admin/líder/voluntario) viene SIEMPRE del
+   backend real: login Google + allowlist (PERMISOS del pull).
    ========================================================================= */
-let DEMO_PROFILE = 'voluntario';   // 'voluntario' | 'lider_A' | 'lider_B' | 'lider_AB' | 'admin'
 /* estado de la vista líder */
 let LIDER_SCOPE = 'all';           // 'all' | <misionId>  (misión mostrada)
 let LIDER_VIEW = 'dia';            // 'dia' | 'fn'  (agrupación)
-/* (datos demo removidos — el líder y sus asignaciones vienen del backend real) */
 function tmplId(activityId){
   // id de ocurrencia = "misionId:TMPL-YYYY-MM-DD" → extrae TMPL
   const afterColon = (activityId||'').split(':').pop();   // "TMPL-YYYY-MM-DD" o "TMPL"
@@ -53,21 +51,17 @@ function volByEmail(email){
   return v ? { name:v.nombre, phone:String(v.telefono), email:email } : null;
 }
 function myEmail(){ return (USER && USER.email) ? USER.email.toLowerCase() : ''; }
-/* si estoy logado con email y hay permisos del servidor, mandan ELLOS; si no, cae al modo demo (DEMO_PROFILE) */
+/* el rol viene SIEMPRE del servidor: login Google + allowlist (PERMISOS del pull).
+   Sin email logado o sin permisos → voluntario normal (ni admin ni líder). */
 function isAdmin(){
-  if(myEmail() && PERMISOS){ return (PERMISOS.admins||[]).indexOf(myEmail())>=0; }
-  return DEMO_PROFILE==='admin';
+  return !!(myEmail() && PERMISOS && (PERMISOS.admins||[]).indexOf(myEmail())>=0);
 }
 function isLider(){
-  if(myEmail() && PERMISOS){ return !!(PERMISOS.lideres && PERMISOS.lideres[myEmail()] && PERMISOS.lideres[myEmail()].length); }
-  return DEMO_PROFILE==='lider_A' || DEMO_PROFILE==='lider_B' || DEMO_PROFILE==='lider_AB';
+  return !!(myEmail() && PERMISOS && PERMISOS.lideres && PERMISOS.lideres[myEmail()] && PERMISOS.lideres[myEmail()].length);
 }
 /* misiones de las que la persona es líder */
 function liderCadenas(){
   if(myEmail() && PERMISOS && PERMISOS.lideres && PERMISOS.lideres[myEmail()]){ return PERMISOS.lideres[myEmail()].slice(); }
-  if(DEMO_PROFILE==='lider_A') return ['mercamadrid'];
-  if(DEMO_PROFILE==='lider_B') return ['banco'];
-  if(DEMO_PROFILE==='lider_AB') return ['mercamadrid','banco'];
   return [];
 }
 /* misiones visibles según el scope elegido */
@@ -90,7 +84,9 @@ function inscritosDetalle(activity, roleId){
   return SERVER_INSCR.filter(function(r){ return r.activityId===activity.id && r.rol===roleId && (r.estado==='confirmado' || r.estado==='suspendido'); })
     .map(function(r){
       var temp = (r.temp===true || String(r.temp).toLowerCase()==='true');
-      return { id:r.id, tel:String(r.voluntario), name: temp ? (r.nombre||'Temporal') : _volName(r.voluntario), temp:temp, estado:r.estado };
+      // telReal = teléfono para mostrar/contactar: temporal → columna 'tel'; real → el propio 'voluntario'
+      var telReal = temp ? String(r.tel||'') : String(r.voluntario||'');
+      return { id:r.id, tel:String(r.voluntario), telReal:telReal, name: temp ? (r.nombre||'Temporal') : _volName(r.voluntario), temp:temp, estado:r.estado };
     })
     .sort(function(a,b){ return (a.estado==='suspendido'?1:0)-(b.estado==='suspendido'?1:0); });  // suspendidos al final
 }
@@ -325,7 +321,6 @@ function enter(msg){
   document.getElementById('lgChecking').classList.add('on');
   setTimeout(()=>{ document.getElementById('loginGate').style.display='none'; startApp(); }, 1600);
 }
-function logout(){ localStorage.removeItem('mf_user'); location.reload(); }
 function goLogin(){
   // volver a la pantalla de login (cierra sesión)
   USER = null; localStorage.removeItem('mf_user');
@@ -358,36 +353,15 @@ function startApp(){
   }
 }
 
-/* ---------- MODO DEMO: selector de perfil ---------- */
+/* ---------- barra de rol (Admin/Líder) según la allowlist real ---------- */
 function renderDemoBar(){
   const bar = document.getElementById('demoBar');
-  // Backend activo (LIVE): NUNCA selector demo. El rol viene de la allowlist real (por email).
-  if(LIVE){
-    if(myEmail() && isAdmin()){ bar.innerHTML='<b>Admin</b> · '+myEmail(); }
-    else if(myEmail() && isLider()){ bar.innerHTML='<b>Líder</b> · '+myEmail(); }
-    else { bar.style.display='none'; }   // voluntario normal: sin barra
-    applyProfile();
-    return;
-  }
-  // modo LOCAL (sin backend): selector demo para probar
-  bar.style.display='';
-  bar.innerHTML = `<b>Demo · perfil:</b>
-    <select id="demoSel" onchange="setProfile(this.value)">
-      <option value="voluntario">Voluntario</option>
-      <option value="lider_A">Líder · MercaMadrid</option>
-      <option value="lider_B">Líder · Banco de Alimentos</option>
-      <option value="lider_AB">Líder · Ambas misiones</option>
-      <option value="admin">Admin</option>
-    </select>`;
-  document.getElementById('demoSel').value = DEMO_PROFILE;
+  // El rol viene de la allowlist real (por email). Admin/Líder ven una etiqueta; voluntario normal, sin barra.
+  if(myEmail() && isAdmin()){ bar.style.display=''; bar.innerHTML='<b>Admin</b> · '+myEmail(); }
+  else if(myEmail() && isLider()){ bar.style.display=''; bar.innerHTML='<b>Líder</b> · '+myEmail(); }
+  else { bar.style.display='none'; bar.innerHTML=''; }
   applyProfile();
 }
-function setProfile(p){ DEMO_PROFILE=p; LIDER_SCOPE='all'; LIDER_VIEW='dia'; ADMIN_NAV={screen:'list',misionId:null}; applyProfile(); renderAll();
-  // si dejo de ser líder/admin y estoy en su vista, vuelvo a inicio
-  if(!isLider() && document.getElementById('v-lider').classList.contains('active')) go('v-inicio');
-  if(!isAdmin() && document.getElementById('v-admin').classList.contains('active')) go('v-inicio');
-}
-window.setProfile=setProfile;
 function applyProfile(){
   const nav = document.getElementById('navLider');
   nav.style.display = isLider() ? 'flex' : 'none';
@@ -608,10 +582,15 @@ function acGoTemp(name){
   document.getElementById('addStTemp').style.display='block';
   document.getElementById('tNameLbl').textContent = name || '—';
   document.getElementById('tNameInput').value = name || '';
+  fillDdi(document.getElementById('tDdi'));      // DDI por defecto +34
+  document.getElementById('tPhone').value = '';  // teléfono opcional, limpio
 }
 function addTemp(){
   const name = document.getElementById('tNameInput').value.trim() || 'Temporal';
-  _liderInscribir(addCtx.activityId, addCtx.roleId, { tel:'', nombre:name, temp:true });
+  const ddi = document.getElementById('tDdi').value || '';
+  const local = normPhone(document.getElementById('tPhone').value.trim());
+  const tel = local ? (ddi + local) : '';   // teléfono opcional del temporal
+  _liderInscribir(addCtx.activityId, addCtx.roleId, { tel:tel, nombre:name, temp:true });
   closeAddSheet();
 }
 /* el líder inscribe a alguien (real por teléfono o temporal) → PERSISTE en el backend (con cola offline) */
@@ -623,6 +602,7 @@ function _liderInscribir(activityId, roleId, who){
     activityId:activityId, misionId:a.misionId||'', templateId:a.templateId||'', fecha:a.data||'',
     rol:roleId, capacidad:cap, porLider:true,
     voluntario: who.temp ? '' : String(who.tel||'').replace(/[^0-9]/g,''),
+    tel: who.temp ? String(who.tel||'') : '',   // teléfono del temporal (para real ya va en 'voluntario')
     nombre: who.nombre||'', temp: !!who.temp
   }};
   if(!window.MFSync || !window.MFSync.enabled){ toast('Necesita backend'); return; }
@@ -666,7 +646,10 @@ function _renderVolDetalle(){
   const suspendido = (estado==='suspendido');
   const v = esTemp ? {} : (_volByTel(VOL_CTX.tel) || {});
   const nombre = esTemp ? (rowInsc.nombre||'Temporal') : (v.nombre || _volName(VOL_CTX.tel));
-  const subLine = esTemp ? 'Servidor temporal' : (VOL_CTX.tel + (v.email?(' · '+v.email):''));
+  var telTemp = esTemp ? String(rowInsc.tel||'').trim() : '';
+  const subLine = esTemp
+    ? ('Servidor temporal' + (telTemp ? (' · <a href="https://wa.me/'+telTemp.replace(/[^0-9]/g,'')+'" target="_blank" rel="noopener">'+telTemp+'</a>') : ''))
+    : (VOL_CTX.tel + (v.email?(' · '+v.email):''));
   const f = a ? fmtFecha(a.data) : null;
   const tarea = (a?a.titulo[LANG]:'') + (f?(' · '+f.w+' '+f.d+' '+f.m):'') + (rd?(' · '+rd.label[LANG]):'');
   const dis = VOL_BUSY?'disabled':'';
@@ -1323,7 +1306,7 @@ window.chkToggle=chkToggle; window.chkAddSuelto=chkAddSuelto; window.chkDelSuelt
 let asgItemId=null;
 function chkAssign(itemId){
   asgItemId=itemId; const a=chkActivity();
-  // candidatos: inscritos demo/adds de esta actividad + temporal + sin asignar
+  // candidatos: inscritos reales de esta actividad (para asignar en el checklist)
   const cand=[];
   Object.keys(a.roles).forEach(r=>{ inscritosDe(a,r).forEach(n=>{ if(!cand.find(c=>c.name===n)) cand.push({name:n.replace(' (tú)',''), temp:false}); }); });
   const ini=n=>n.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase();
@@ -1537,7 +1520,6 @@ function renderInicio(){
   const misIds = Object.keys(INSCR);
   // hero: próxima actividad donde estoy inscrito (o la más próxima con plazas)
   const hoy = new Date();
-  const futuras = acts.filter(a=> new Date(a.data+'T'+a.hora) >= hoy || true);
   const minhas = acts.filter(a=>INSCR[a.id]).sort((x,y)=>(x.data+x.hora).localeCompare(y.data+y.hora));
   const hero = minhas[0] || acts.find(a=>totalLibres(a)>0) || acts[0];
   const heroBox = document.getElementById('heroBox');
@@ -1583,6 +1565,15 @@ function renderMios(){
 function go(id){
   // cerrar cualquier sheet/backdrop abierto al cambiar de pestaña (evita modales "colgados")
   document.querySelectorAll('.sheet.on, .backdrop.on').forEach(function(el){ el.classList.remove('on'); });
+  // cerrar también los overlays a pantalla completa (usan .active, no .on): wizard y checklist
+  document.querySelectorAll('.wz-overlay.active, #wizard.active, #chkOverlay.active').forEach(function(el){ el.classList.remove('active'); });
+  // al cambiar de pestaña, cada vista vuelve a su pantalla inicial (no queda "atascada" en una subtela)
+  ADMIN_NAV = { screen:'list', misionId:null };
+  ACC_VIEW = 'list';
+  LIDER_SCOPE = 'all';
+  LIDER_VIEW = 'dia';
+  if(id==='v-admin') renderAdmin();
+  if(id==='v-lider') renderLider();
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id===id));
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active', b.dataset.v===id));
   window.scrollTo(0,0);

@@ -31,3 +31,11 @@ node_modules/
 backend/Code.gs.real
 app/config.js.real
 config.js.real
+
+# === clasp / Apps Script deploy ===
+# Credenciais do clasp (login Google) — NUNCA versionar
+.clasprc.json
+backend/.clasprc.json
+# IDs locais de deploy — projeto/implementação (mantidos fora do repo)
+backend/.clasp.json
+backend/.deploy.json
