@@ -6,7 +6,7 @@
 
 'use strict';
 
-const APP_VERSION = '0.34.1';
+const APP_VERSION = '0.34.2';
 const CFG = window.CFMS_CONFIG || {};
 
 /* =========================================================================
@@ -48,18 +48,12 @@ const DEFAULT_CONFIG = {
           recurrencia:{ tipo:RECURRENCE.MENSAL_POSICAO, weekday:6, ordinal:1 },
           plazas:[ {rolId:'motorista',cap:2}, {rolId:'ajudante',cap:2} ],
           notas:{ pt:'Perecíveis (frutas, legumes, vegetais).', es:'Perecederos (frutas, verduras).' },
-          checklistTemplate:[
-            { id:'c1', texto:{ pt:'Conferir a furgoneta', es:'Comprobar furgoneta' }, orden:1, rolSugerido:'motorista' },
-            { id:'c2', texto:{ pt:'Levar sacos e caixas', es:'Llevar sacos y cajas' }, orden:2 }
-          ] },
+          checklistTemplate:[] },
         { id:'A2', nombre:{ pt:'Preparação (sábado)', es:'Preparación (sábado)' }, horaInicio:'15:00', duracionMin:180, activo:true,
           recurrencia:{ tipo:RECURRENCE.MENSAL_POSICAO, weekday:6, ordinal:1 },
           plazas:[ {rolId:'preparacao',cap:6} ],
           notas:{ pt:'Triagem parcial; separar distribuível; montar caixas dos pastores.', es:'Triaje parcial; separar distribuible; montar cajas de los pastores.' },
-          checklistTemplate:[
-            { id:'c1', texto:{ pt:'Triagem de frutas e vegetais', es:'Triaje de frutas y verduras' }, orden:1 },
-            { id:'c2', texto:{ pt:'Separar caixas dos pastores', es:'Separar cajas de los pastores' }, orden:2 }
-          ] },
+          checklistTemplate:[] },
         { id:'A3', nombre:{ pt:'Preparação (domingo)', es:'Preparación (domingo)' }, horaInicio:'08:00', duracionMin:180, activo:true,
           recurrencia:{ tipo:RECURRENCE.MENSAL_POSICAO, weekday:0, ordinal:1 },
           plazas:[ {rolId:'preparacao',cap:10} ],
