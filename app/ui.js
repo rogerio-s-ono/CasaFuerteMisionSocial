@@ -25,26 +25,7 @@ let DEMO_PROFILE = 'voluntario';   // 'voluntario' | 'lider_A' | 'lider_B' | 'li
 /* estado de la vista líder */
 let LIDER_SCOPE = 'all';           // 'all' | <misionId>  (misión mostrada)
 let LIDER_VIEW = 'dia';            // 'dia' | 'fn'  (agrupación)
-/* líderes autorizados por el admin, por misionId (en real: allowlist en la planilha) */
-const DEMO_LIDERES = {
-  mercamadrid: { name:'Rogério Ono', email:'rogerio.s.ono@gmail.com' },
-  banco:       { name:'Tânia Ono',   email:'tania.eustaqui@gmail.com' }
-};
-/* (datos demo de inscripciones/espera/servidores removidos en v0.16.0 — usa solo datos reales del backend) */
-/* adiciones hechas por el líder, por activityId -> roleId -> [{name, temp}] */
-let LIDER_ADDS = {};
-function loadAdds(){ try{ LIDER_ADDS = JSON.parse(localStorage.getItem('mf_lider_adds')||'{}'); }catch(e){ LIDER_ADDS={}; } }
-function saveAdds(){ localStorage.setItem('mf_lider_adds', JSON.stringify(LIDER_ADDS)); }
-function addsDe(activityId, roleId){ return (LIDER_ADDS[activityId] && LIDER_ADDS[activityId][roleId]) ? LIDER_ADDS[activityId][roleId] : []; }
-function pushAdd(activityId, roleId, name, temp){
-  LIDER_ADDS[activityId] = LIDER_ADDS[activityId] || {};
-  LIDER_ADDS[activityId][roleId] = LIDER_ADDS[activityId][roleId] || [];
-  LIDER_ADDS[activityId][roleId].push({ name, temp:!!temp });
-  saveAdds();
-}
-function removeAdd(activityId, roleId, idx){
-  if(LIDER_ADDS[activityId] && LIDER_ADDS[activityId][roleId]){ LIDER_ADDS[activityId][roleId].splice(idx,1); saveAdds(); }
-}
+/* (datos demo removidos — el líder y sus asignaciones vienen del backend real) */
 function tmplId(activityId){
   // id de ocurrencia = "misionId:TMPL-YYYY-MM-DD" → extrae TMPL
   const afterColon = (activityId||'').split(':').pop();   // "TMPL-YYYY-MM-DD" o "TMPL"
@@ -102,14 +83,16 @@ function inscritosDe(activity, roleId){
 }
 /* nombre del voluntario por su teléfono (para mostrar en vez del número) */
 function _volName(tel){ var k=String(tel).replace(/[^0-9]/g,''); var v=SERVER_VOLS.find(function(x){ return String(x.telefono).replace(/[^0-9]/g,'')===k; }); return v?v.nombre:String(tel); }
-/* inscritos REALES del servidor (solo LIVE) con datos completos, para el modal de detalle/quitar del líder */
+/* inscritos REALES del servidor (solo LIVE) — confirmados + suspendidos, para chips y modal.
+   El cupo cuenta SOLO confirmados; los suspendidos se muestran tachados y NO cuentan. */
 function inscritosDetalle(activity, roleId){
   if(!LIVE) return [];
-  return SERVER_INSCR.filter(function(r){ return r.activityId===activity.id && r.rol===roleId && r.estado==='confirmado'; })
+  return SERVER_INSCR.filter(function(r){ return r.activityId===activity.id && r.rol===roleId && (r.estado==='confirmado' || r.estado==='suspendido'); })
     .map(function(r){
       var temp = (r.temp===true || String(r.temp).toLowerCase()==='true');
       return { id:r.id, tel:String(r.voluntario), name: temp ? (r.nombre||'Temporal') : _volName(r.voluntario), temp:temp, estado:r.estado };
-    });
+    })
+    .sort(function(a,b){ return (a.estado==='suspendido'?1:0)-(b.estado==='suspendido'?1:0); });  // suspendidos al final
 }
 function esperaDe(activity, roleId){
   return SERVER_INSCR.filter(function(r){ return r.activityId===activity.id && r.rol===roleId && r.estado==='espera'; })
@@ -416,16 +399,18 @@ function applyProfile(){
 /* helpers de HTML reutilizables */
 function chipsRol(a, r){
   const cap = a.roles[r];
-  // SIEMPRE datos reales del servidor (inscritos + añadidos por el líder + temporales).
-  // Cada chip abre el detalle (quitar de la tarea). Sin datos demo.
-  const insc = inscritosDetalle(a, r);
-  const ocup = insc.length;
-  const falta = Math.max(0, cap - ocup);
+  const insc = inscritosDetalle(a, r);            // confirmados + suspendidos
+  const confirmados = insc.filter(function(p){ return p.estado!=='suspendido'; }).length;
+  const falta = Math.max(0, cap - confirmados);   // suspendidos NO ocupan plaza
   let html = insc.map(function(p){
+    var ini = String(p.name).split(' ').map(function(x){return x[0]||'';}).slice(0,2).join('').toUpperCase();
+    if(p.estado==='suspendido'){
+      return `<span class="chip susp clickable" onclick="volDetalle('${a.id}','${r}','${String(p.tel).replace(/'/g,"")}','${String(p.id||'').replace(/'/g,"")}')"><span class="av">${ini}</span><span class="nm-s">${p.name}</span> <span class="badge-s">suspendido</span></span>`;
+    }
     var extra = p.temp ? ' <span class="tg">· Temp</span>' : '';
-    return `<span class="chip ${p.temp?'temp':''} clickable" onclick="volDetalle('${a.id}','${r}','${String(p.tel).replace(/'/g,"")}','${String(p.id||'').replace(/'/g,"")}')">${p.name}${extra}</span>`;
+    return `<span class="chip ${p.temp?'temp':''} clickable" onclick="volDetalle('${a.id}','${r}','${String(p.tel).replace(/'/g,"")}','${String(p.id||'').replace(/'/g,"")}')"><span class="av">${ini}</span>${p.name}${extra}</span>`;
   }).join('');
-  html += Array.from({length:falta}).map(()=>`<span class="chip vac clickable" onclick="openAddSheet('${a.id}','${r}')">+ vacante</span>`).join('');
+  html += Array.from({length:falta}).map(()=>`<span class="chip vac clickable" onclick="openAddSheet('${a.id}','${r}')">+ libre</span>`).join('');
   return html || `<span class="chip vac clickable" onclick="openAddSheet('${a.id}','${r}')">+ sin inscritos</span>`;
 }
 function esperaHtml(a, r){
@@ -439,8 +424,11 @@ function actCardLider(a){
     const cap=a.roles[r]; const gente=inscritosDe(a,r); const falta=Math.max(0,cap-gente.length);
     const rd=window.CFMS.ROLES[r];
     return `<div class="lc-role">
-      <div class="lr-h"><span class="lr-name">${rd?rd.label[LANG]:r}</span>
-        <span class="lr-right"><button class="lr-add" title="Añadir servidor" onclick="openAddSheet('${a.id}','${r}')">+</button><span class="lr-count ${falta>0?'miss':'full'}">${gente.length}/${cap}${falta>0?` · faltan ${falta}`:' · completo'}</span></span></div>
+      <div class="lr-h">
+        <span class="lr-name">${rd?rd.label[LANG]:r}</span>
+        <button class="lr-add" title="Añadir servidor" onclick="openAddSheet('${a.id}','${r}')" aria-label="Añadir servidor"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3.3 2.6-5.5 5.5-5.5c1.2 0 2.3.4 3.2 1"/><line x1="18" y1="9" x2="18" y2="15"/><line x1="15" y1="12" x2="21" y2="12"/></svg></button>
+        <span class="lr-count ${falta>0?'miss':'full'}">${gente.length}/${cap}${falta>0?` · faltan ${falta}`:' · completo'}</span>
+      </div>
       <div class="people">${chipsRol(a,r)}</div>
       ${esperaHtml(a,r)}</div>`;
   }).join('');
@@ -476,9 +464,7 @@ function renderLider(){
   // ---- resumen general ----
   const cov = covOf(acts);
   const scopeTitle = (LIDER_SCOPE==='all' && mias.length>1) ? 'Todas las misiones' : window.CFMS.cadenaLabel(cadenas[0]);
-  const liderNombre = LIVE
-    ? ((USER && USER.name) ? USER.name : 'Líder')
-    : mias.map(c=>(DEMO_LIDERES[c]?DEMO_LIDERES[c].name:c)).filter((v,i,a)=>a.indexOf(v)===i).join(' · ');
+  const liderNombre = (USER && USER.name) ? USER.name : 'Líder';
   head.innerHTML = `<div class="lider-head">
     <div class="lh-cad">${scopeTitle}</div>
     <div class="lh-sub">Líder: ${liderNombre} · ${acts.length} actividades este mes</div>
@@ -582,22 +568,39 @@ function closeAddSheet(){ document.getElementById('addBackdrop').classList.remov
 function acBackSearch(){
   document.getElementById('addStSearch').style.display='block';
   document.getElementById('addStTemp').style.display='none';
-  document.getElementById('acInput').value=''; document.getElementById('acList').style.display='none';
+  document.getElementById('acInput').value='';
+  acType('');   // con campo vacío ya lista los disponibles
+}
+/* teléfonos ya asignados (confirmado/suspendido/espera, no cancelado) a esta actividad+rol */
+function _telsAsignados(){
+  var a=addCtx.activityId, r=addCtx.roleId;
+  var set={};
+  (SERVER_INSCR||[]).forEach(function(x){
+    if(x.activityId===a && x.rol===r && x.estado!=='cancelado'){ set[String(x.voluntario).replace(/[^0-9]/g,'')]=true; }
+  });
+  return set;
 }
 function acType(v){
-  const list=document.getElementById('acList'); const q=norm((v||'').trim());
-  if(!q){ list.style.display='none'; return; }
-  const fuente = SERVER_VOLS.map(function(x){ return { n:x.nombre, p:String(x.telefono) }; });
-  const hits = fuente.filter(s=>norm(String(s.n||'')).includes(q)).slice(0,5);
-  const ini = n => n.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase();
-  let html = hits.map(s=>`<div class="ac-item" onclick="acPick('${s.n.replace(/'/g,"\\'")}','${String(s.p).replace(/'/g,"")}')">
-      <div class="av">${ini(s.n)}</div>
-      <div class="nm"><div class="n1">${s.n}</div><div class="n2">${s.p}</div></div>
-      <span class="tag-reg">registrado</span></div>`).join('');
-  html += `<div class="ac-create" onclick="acGoTemp('${(v||'').replace(/'/g,"\\'")}')">
-      <div class="plus">+</div>
-      <div class="ct"><b>Añadir "${v}"</b><div class="sub">como servidor temporal (solo hoy)</div></div></div>`;
-  list.innerHTML = html; list.style.display='block';
+  const list=document.getElementById('acList');
+  const q=norm((v||'').trim());
+  const asign=_telsAsignados();
+  // disponibles = registrados con teléfono, NO asignados a esta tarea, y que coincidan con la búsqueda
+  const disp = (SERVER_VOLS||[]).filter(function(x){
+    var tel=String(x.telefono||'').replace(/[^0-9]/g,''); if(!tel) return false;
+    if(asign[tel]) return false;                          // ya está en la tarea
+    if(q && !norm(String(x.nombre||'')).includes(q)) return false;
+    return true;
+  }).sort(function(a,b){ return String(a.nombre||'').localeCompare(String(b.nombre||'')); });
+  const ini = n => String(n).split(' ').map(x=>x[0]||'').slice(0,2).join('').toUpperCase();
+  var rows = disp.map(function(s){
+    return `<div class="ac-item" onclick="acPick('${String(s.nombre).replace(/'/g,"\\'")}','${String(s.telefono).replace(/[^0-9]/g,'')}')">
+      <div class="av">${ini(s.nombre)}</div>
+      <div class="nm"><div class="n1">${s.nombre}</div><div class="n2">${s.telefono}</div></div>
+      <span class="tag-reg">registrado</span></div>`;
+  }).join('');
+  if(!rows){ rows = `<div class="ac-empty">${q?'Nadie coincide con “'+v+'”.':'No hay más voluntarios disponibles.'}</div>`; }
+  list.innerHTML = rows;
+  list.style.display='block';
 }
 function acPick(name, tel){ _liderInscribir(addCtx.activityId, addCtx.roleId, { tel:tel||'', nombre:name, temp:false }); closeAddSheet(); }
 function acGoTemp(name){
@@ -642,9 +645,8 @@ function _liderInscribir(activityId, roleId, who){
     toast('Sin conexión — se enviará al reconectar'); renderLider();
   });
 }
-function delAdd(activityId, roleId, idx){ removeAdd(activityId, roleId, idx); renderLider(); }
 window.openAddSheet=openAddSheet; window.closeAddSheet=closeAddSheet; window.acType=acType; window.acBackSearch=acBackSearch;
-window.acPick=acPick; window.acGoTemp=acGoTemp; window.addTemp=addTemp; window.delAdd=delAdd;
+window.acPick=acPick; window.acGoTemp=acGoTemp; window.addTemp=addTemp;
 
 /* ---------- DETALLE de voluntario asignado (vista líder) → quitar de la tarea con motivo ---------- */
 let VOL_CTX = null;      // { activityId, roleId, tel }
@@ -661,6 +663,8 @@ function _renderVolDetalle(){
   const rd = window.CFMS.ROLES[VOL_CTX.roleId];
   var esTemp = String(VOL_CTX.tel||'').indexOf('temp:')===0;
   var rowInsc = SERVER_INSCR.find(function(r){ return (VOL_CTX.id && String(r.id)===String(VOL_CTX.id)) || (String(r.voluntario)===String(VOL_CTX.tel) && r.activityId===VOL_CTX.activityId && r.rol===VOL_CTX.roleId); }) || {};
+  const estado = rowInsc.estado || 'confirmado';
+  const suspendido = (estado==='suspendido');
   const v = esTemp ? {} : (_volByTel(VOL_CTX.tel) || {});
   const nombre = esTemp ? (rowInsc.nombre||'Temporal') : (v.nombre || _volName(VOL_CTX.tel));
   const subLine = esTemp ? 'Servidor temporal' : (VOL_CTX.tel + (v.email?(' · '+v.email):''));
@@ -668,29 +672,51 @@ function _renderVolDetalle(){
   const tarea = (a?a.titulo[LANG]:'') + (f?(' · '+f.w+' '+f.d+' '+f.m):'') + (rd?(' · '+rd.label[LANG]):'');
   const dis = VOL_BUSY?'disabled':'';
   const ini = String(nombre).split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase();
+  // acciones según estado (íconos lado a lado — patrón action-bar)
+  const SVG_SUSP = '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
+  const SVG_REACT= '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+  const SVG_DEL  = '<svg viewBox="0 0 24 24"><path d="M6 7h12l-1 14H7L6 7zm3-3h6l1 2H8l1-2z"/></svg>';
+  const SVG_X    = '<svg viewBox="0 0 24 24"><path d="M18.3 5.7L12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3l6.3 6.3 6.3-6.3z"/></svg>';
+  var accionPrincipal = suspendido
+    ? `<div class="act reactivate" onclick="volReactivar()">${SVG_REACT}Reactivar</div>`
+    : `<div class="act suspend" onclick="volSuspender()">${SVG_SUSP}Suspender</div>`;
+  var delTxt = (_volConfirm==='del') ? '¿Seguro?' : 'Eliminar';
   document.getElementById('usrBody').innerHTML = `
-    <div class="md-icon verde" style="font-family:'Jost',sans-serif;font-weight:600;color:#2f7d4f;font-size:20px">${ini}</div>
-    <h3 class="usr-t">${nombre}</h3>
+    <div class="md-icon ${suspendido?'susp':'verde'}" style="font-family:'Jost',sans-serif;font-weight:600;font-size:20px">${ini}</div>
+    <h3 class="usr-t" ${suspendido?'style="text-decoration:line-through;color:#888"':''}>${nombre}</h3>
     <div class="usr-sub">${subLine}</div>
+    <div class="vd-badges"><span class="vd-tag ${suspendido?'susp':'act'}">${suspendido?'Suspendido · no cuenta':'Activo · cuenta en el cupo'}</span></div>
     <div class="vd-tarea"><span class="vd-lbl">Asignado a</span>${tarea}</div>
-    <div class="usr-sec">Motivo para quitarlo (opcional)</div>
-    <textarea id="volMotivo" ${dis} rows="2" placeholder="Ej. avisó que no puede venir" style="width:100%;padding:12px;border:1px solid var(--linea);border-radius:var(--raio);font-family:'Jost',sans-serif;font-size:14px;resize:vertical"></textarea>
-    <div class="usr-actions"><button class="btn ghost" ${dis} onclick="closeVolDetalle()">Cerrar</button>
-      <button class="btn danger ${_volConfirm?'armed':''}" ${dis} onclick="volQuitar()">${_volConfirm?'¿Seguro? Quitar':'Quitar de la tarea'}</button></div>`;
+    <div class="action-bar" ${dis}>
+      ${accionPrincipal}
+      <div class="act del ${_volConfirm==='del'?'confirm':''}" onclick="volEliminar()">${SVG_DEL}${delTxt}</div>
+      <div class="act cancel" onclick="closeVolDetalle()">${SVG_X}Cerrar</div>
+    </div>
+    <div class="vd-hint">${suspendido?'Si el cupo está lleno al reactivar, entrará en lista de espera.':'Suspender lo mantiene tachado y sin contar en el cupo; puedes reactivarlo luego.'}</div>`;
 }
-function volQuitar(){
-  if(!_volConfirm){ _volConfirm=true; _renderVolDetalle(); return; }   // 1º toque: confirma
+/* acción backend genérica del modal (suspender/reactivar/eliminar) con pull + refresco */
+function _volAccion(fn, okMsg){
   if(!LIVE || !window.MFSync || !window.MFSync.enabled){ toast('Necesita backend'); return; }
   if(VOL_BUSY) return; VOL_BUSY=true; _renderVolDetalle();
-  const motivo=(document.getElementById('volMotivo').value||'').trim();
-  toast('Quitando…');
-  window.MFSync.post('cancelar', { id:VOL_CTX.id||'', activityId:VOL_CTX.activityId, rol:VOL_CTX.roleId, voluntario:VOL_CTX.tel, motivo:motivo })
-    .then(function(j){ if(j&&j.ok) toast('Voluntario quitado de la tarea'); else toast('No se pudo'); return window.MFSync.pull(); })
+  toast('Guardando…');
+  fn().then(function(j){ if(j&&j.ok) toast(okMsg); else toast('No se pudo'); return window.MFSync.pull(); })
     .then(function(res){ if(res&&res.data&&res.data.inscripciones) setServerInscr(res.data.inscripciones); })
-    .catch(function(){ toast('Error'); })
+    .catch(function(){ toast('Error de conexión'); })
     .then(function(){ VOL_BUSY=false; closeVolDetalle(); renderLider(); });
 }
-window.volDetalle=volDetalle; window.closeVolDetalle=closeVolDetalle; window.volQuitar=volQuitar;
+function _volCapacidad(){ var a=currentActivities().find(function(x){return x.id===VOL_CTX.activityId;}); return a?(a.roles[VOL_CTX.roleId]||0):0; }
+function volSuspender(){
+  _volAccion(function(){ return window.MFSync.post('setEstadoInscripcion', { accion:'suspender', id:VOL_CTX.id||'', activityId:VOL_CTX.activityId, rol:VOL_CTX.roleId, voluntario:VOL_CTX.tel }); }, 'Voluntario suspendido');
+}
+function volReactivar(){
+  _volAccion(function(){ return window.MFSync.post('setEstadoInscripcion', { accion:'reactivar', id:VOL_CTX.id||'', activityId:VOL_CTX.activityId, rol:VOL_CTX.roleId, voluntario:VOL_CTX.tel, capacidad:_volCapacidad() }); }, 'Voluntario reactivado');
+}
+function volEliminar(){
+  if(_volConfirm!=='del'){ _volConfirm='del'; _renderVolDetalle(); return; }   // 1º toque confirma
+  _volAccion(function(){ return window.MFSync.post('cancelar', { id:VOL_CTX.id||'', activityId:VOL_CTX.activityId, rol:VOL_CTX.roleId, voluntario:VOL_CTX.tel }); }, 'Voluntario eliminado');
+}
+window.volDetalle=volDetalle; window.closeVolDetalle=closeVolDetalle;
+window.volSuspender=volSuspender; window.volReactivar=volReactivar; window.volEliminar=volEliminar;
 
 /* ---------- ADMIN (configuración de misiones/roles) ---------- */
 let ADMIN_NAV = { screen:'list', misionId:null };   // list | mision | roles
@@ -1823,7 +1849,6 @@ document.getElementById('prevL').onclick = ()=>{ cursor.setMonth(cursor.getMonth
 document.getElementById('nextL').onclick = ()=>{ cursor.setMonth(cursor.getMonth()+1); renderAll(); };
 loadConfig();
 loadState();
-loadAdds();
 loadChk();
 if(USER){ document.getElementById('loginGate').style.display='none'; startApp(); }
 

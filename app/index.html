@@ -178,6 +178,56 @@
   .sh-actions{ display:flex; gap:10px; margin-top:8px; }
   .btn{ flex:1; border:0; border-radius:var(--raio); padding:15px; font-size:14px; font-weight:600; font-family:"Jost",sans-serif; cursor:pointer; text-transform:uppercase; letter-spacing:.06em; }
   .btn.primary{ background:var(--oro); color:#111; } .btn.ghost{ background:none; color:var(--gris); flex:0 0 auto; }
+
+  /* ===== Vista líder reformulada (v0.31) ===== */
+  /* botón añadir en el header del rol (ícono persona+) */
+  #v-lider .lr-h{ display:flex; align-items:center; gap:8px; }
+  #v-lider .lr-name{ flex:1; }
+  #v-lider .lr-add{ width:30px; height:30px; flex:0 0 30px; border:1px solid var(--linea); background:#fff; border-radius:8px; display:grid; place-items:center; cursor:pointer; color:var(--oro-osc); padding:0; }
+  #v-lider .lr-add svg{ width:17px; height:17px; }
+  #v-lider .lr-add:active{ background:var(--oro-bg); }
+  /* chips: avatar + estados */
+  #v-lider .chip{ display:inline-flex; align-items:center; gap:6px; padding:6px 11px 6px 7px; }
+  #v-lider .chip .av{ width:20px; height:20px; border-radius:50%; background:var(--negro); color:var(--oro); font-size:9px; font-weight:600; display:grid; place-items:center; }
+  #v-lider .chip.temp{ background:#efeafa; border-color:#d9cdf0; color:#5a4494; } #v-lider .chip.temp .av{ background:#5a4494; color:#fff; }
+  #v-lider .chip.susp{ background:#f0f0f0; border-color:#ddd; color:#9a9a9a; }
+  #v-lider .chip.susp .av{ background:#bdbdbd; color:#fff; }
+  #v-lider .chip.susp .nm-s{ text-decoration:line-through; }
+  #v-lider .chip.susp .badge-s{ font-size:8.5px; background:#ddd; color:#666; padding:1px 5px; border-radius:6px; letter-spacing:.03em; }
+  /* barra de acciones (íconos lado a lado) en el modal — paleta Manos */
+  #usrSheet .action-bar{ display:flex; gap:8px; margin-top:16px; }
+  #usrSheet .action-bar .act{ flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:11px 4px; border-radius:10px; border:1px solid var(--linea); background:#fff; cursor:pointer; font-size:.72rem; font-weight:600; font-family:"Jost",sans-serif; color:var(--grafito); }
+  #usrSheet .action-bar .act svg{ width:22px; height:22px; fill:currentColor; }
+  #usrSheet .action-bar .act.suspend{ color:#8a6d3b; }
+  #usrSheet .action-bar .act.reactivate{ color:#4f9d69; }
+  #usrSheet .action-bar .act.del{ color:#c2560c; }
+  #usrSheet .action-bar .act.del.confirm{ background:#c2560c; border-color:#c2560c; color:#fff; box-shadow:0 0 0 3px #fdeadb; }
+  #usrSheet .action-bar .act.cancel{ color:var(--gris); }
+  #usrSheet .vd-badges{ display:flex; justify-content:center; margin:8px 0 4px; }
+  #usrSheet .vd-tag{ font-size:10px; font-weight:600; padding:3px 10px; border-radius:999px; text-transform:uppercase; letter-spacing:.04em; }
+  #usrSheet .vd-tag.act{ background:#e6f3ea; color:#2f7d4f; } #usrSheet .vd-tag.susp{ background:#f0f0f0; color:#666; }
+  #usrSheet .vd-hint{ font-size:11.5px; color:var(--gris); text-align:center; margin-top:10px; line-height:1.4; }
+  #usrSheet .md-icon.susp{ background:#f0f0f0; }
+  /* sheet añadir: header compacto + busca fija + lista scroll + temporal fijo */
+  #addSheet.add-sheet{ display:flex; flex-direction:column; max-height:88vh; }
+  #addSheet .add-head{ display:flex; align-items:center; gap:11px; margin-bottom:12px; }
+  #addSheet .add-ic{ width:40px; height:40px; flex:0 0 40px; border-radius:50%; background:#e6f3ea; display:flex; align-items:center; justify-content:center; color:#2f7d4f; }
+  #addSheet .add-ic svg{ width:20px; height:20px; }
+  #addSheet .add-htx h3{ margin:0; text-align:left; } #addSheet .add-htx .sh-sub{ text-align:left; margin:1px 0 0; }
+  #addSheet .add-body{ display:flex; flex-direction:column; min-height:0; flex:1; }
+  #addSheet .add-search{ position:relative; margin-bottom:10px; flex:0 0 auto; }
+  #addSheet .add-search input{ width:100%; padding:12px 12px 12px 40px; border:1px solid var(--linea); border-radius:var(--raio); font-family:"Jost",sans-serif; font-size:15px; }
+  #addSheet .add-search .add-si{ position:absolute; left:13px; top:50%; transform:translateY(-50%); width:18px; height:18px; color:var(--gris); }
+  #addSheet .add-list-lbl{ font-size:10.5px; text-transform:uppercase; letter-spacing:.1em; color:var(--gris); font-weight:600; margin:2px 2px 8px; flex:0 0 auto; }
+  #addSheet .ac-list{ position:static; box-shadow:none; border:0; overflow-y:auto; flex:1; min-height:60px; max-height:40vh; display:block; }
+  #addSheet .ac-item{ display:flex; align-items:center; gap:11px; padding:11px 12px; border:1px solid var(--linea); border-radius:var(--raio); margin-bottom:7px; cursor:pointer; }
+  #addSheet .ac-item .av{ width:34px; height:34px; border-radius:50%; background:#e6f3ea; color:#2f7d4f; font-size:12px; font-weight:600; display:grid; place-items:center; flex:0 0 34px; }
+  #addSheet .ac-item .nm{ flex:1; } #addSheet .ac-item .n1{ font-size:14px; } #addSheet .ac-item .n2{ font-size:11.5px; color:var(--gris); }
+  #addSheet .ac-empty{ font-size:13px; color:var(--gris); text-align:center; padding:18px; }
+  #addSheet .tag-reg{ font-size:9.5px; background:#e6f3ea; color:#2f7d4f; padding:3px 8px; border-radius:999px; font-weight:600; }
+  #addSheet .ac-create.temp{ flex:0 0 auto; margin-top:10px; background:#efeafa; border:1.5px dashed #d9cdf0; border-radius:var(--raio); }
+  #addSheet .ac-create.temp .plus{ background:#5a4494; } #addSheet .ac-create.temp .plus svg{ width:18px; height:18px; stroke:#fff; }
+  #addSheet .ac-create.temp .ct b{ color:#5a4494; } #addSheet .ac-create.temp .ct .sub{ color:#7a5bb0; }
   .temp-note{ background:#efeafa; border:1px solid #d9cdf0; border-radius:var(--raio); padding:10px 12px; font-size:12px; color:#5a4494; margin-bottom:14px; }
   .temp-note b{ color:#5a4494; }
 
@@ -577,15 +627,22 @@
 
 <!-- SHEET AÑADIR SERVIDOR (líder) -->
 <div class="backdrop" id="addBackdrop" onclick="closeAddSheet()"></div>
-<div class="sheet" id="addSheet">
+<div class="sheet add-sheet" id="addSheet">
   <div class="sh-grab"></div>
-  <h3 id="addTitle">Añadir servidor</h3>
-  <div class="sh-sub" id="addSub">Busca un servidor o añade uno temporal.</div>
-  <div id="addStSearch">
-    <div class="fld ac">
-      <label>Nombre</label>
-      <input type="text" id="acInput" placeholder="Escribe un nombre…" oninput="acType(this.value)" autocomplete="off" />
-      <div class="ac-list" id="acList" style="display:none"></div>
+  <div class="add-head">
+    <div class="add-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3.3 2.6-5.5 5.5-5.5c1.2 0 2.3.4 3.2 1"/><line x1="18" y1="9" x2="18" y2="15"/><line x1="15" y1="12" x2="21" y2="12"/></svg></div>
+    <div class="add-htx"><h3 id="addTitle">Añadir servidor</h3><div class="sh-sub" id="addSub">Busca un servidor o añade uno temporal.</div></div>
+  </div>
+  <div id="addStSearch" class="add-body">
+    <div class="add-search">
+      <svg class="add-si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+      <input type="text" id="acInput" placeholder="Buscar nombre…" oninput="acType(this.value)" autocomplete="off" />
+    </div>
+    <div class="add-list-lbl">Disponibles (no asignados a esta tarea)</div>
+    <div class="ac-list" id="acList"></div>
+    <div class="ac-create temp" onclick="acGoTemp('')">
+      <div class="plus"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg></div>
+      <div class="ct"><b>Añadir un temporal</b><div class="sub">alguien no registrado, solo para hoy</div></div>
     </div>
   </div>
   <div id="addStTemp" style="display:none">

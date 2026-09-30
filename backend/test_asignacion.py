@@ -40,6 +40,21 @@ class Insc:
         if idx<0: return {'ok':True,'dup':True}
         self.rows[idx]['estado']='cancelado'
         return {'ok':True}
+    def set_estado(self, accion, id=None, activityId=None, rol=None, voluntario=None, capacidad=0):
+        if accion not in ('suspender','reactivar'): return {'error':'accion_invalida'}
+        idx=-1
+        if id: idx=next((i for i,r in enumerate(self.rows) if str(r['id'])==str(id) and r['estado']!='cancelado'), -1)
+        if idx<0:
+            vk = str(voluntario) if (voluntario and str(voluntario).startswith('temp:')) else norm(voluntario)
+            idx=next((i for i,r in enumerate(self.rows) if r['activityId']==activityId and r['rol']==rol and str(r['voluntario'])==vk and r['estado']!='cancelado'), -1)
+        if idx<0: return {'error':'no_encontrado'}
+        row=self.rows[idx]
+        if accion=='suspender':
+            row['estado']='suspendido'; return {'ok':True,'estado':'suspendido'}
+        cap=int(capacidad or 0)
+        conf=len([r for j,r in enumerate(self.rows) if j!=idx and r['activityId']==row['activityId'] and r['rol']==row['rol'] and r['estado']=='confirmado'])
+        nuevo='espera' if (cap>0 and conf>=cap) else 'confirmado'
+        row['estado']=nuevo; return {'ok':True,'estado':nuevo}
     def confirmados(self, activityId, rol):
         return [r for r in self.rows if r['activityId']==activityId and r['rol']==rol and r['estado']=='confirmado']
 
@@ -113,6 +128,49 @@ r1=b.inscribir('A1','preparacao',capacidad=6,temp=True,nombre='Invitado',porLide
 r2=b.inscribir('A1','preparacao',capacidad=6,temp=True,nombre='Invitado',porLider=True)
 check("dos filas distintas (ids distintos)", r1['id']!=r2['id'])
 check("2 confirmados", len(b.confirmados('A1','preparacao'))==2)
+
+print("CASO 11 — Suspender libera la plaza (no cuenta en el cupo)")
+b=Insc()
+b.inscribir('A1','prep',capacidad=2,voluntario='+34600000001')
+r=b.inscribir('A1','prep',capacidad=2,voluntario='+34600000002')
+check("2/2 confirmados", len(b.confirmados('A1','prep'))==2)
+res=b.set_estado('suspender', activityId='A1', rol='prep', voluntario='+34600000001')
+check("suspendido", res.get('estado')=='suspendido')
+check("ahora 1 confirmado (plaza liberada)", len(b.confirmados('A1','prep'))==1)
+r3=b.inscribir('A1','prep',capacidad=2,voluntario='+34600000003')
+check("otro entra confirmado en la plaza liberada", r3.get('estado')=='confirmado')
+
+print("CASO 12 — Reactivar con plaza libre → confirmado")
+b=Insc()
+r1=b.inscribir('A1','prep',capacidad=3,voluntario='+34600000001')
+b.set_estado('suspender', id=r1['id'])
+res=b.set_estado('reactivar', id=r1['id'], capacidad=3)
+check("reactivado confirmado", res.get('estado')=='confirmado')
+check("1 confirmado", len(b.confirmados('A1','prep'))==1)
+
+print("CASO 13 — Reactivar con cupo LLENO → espera")
+b=Insc()
+r1=b.inscribir('A1','motor',capacidad=1,voluntario='+34600000001')
+b.set_estado('suspender', id=r1['id'])                          # libera
+b.inscribir('A1','motor',capacidad=1,voluntario='+34600000002') # otro ocupa la única plaza
+res=b.set_estado('reactivar', id=r1['id'], capacidad=1)         # ya no hay sitio
+check("reactivar lleno → espera", res.get('estado')=='espera')
+check("solo 1 confirmado", len(b.confirmados('A1','motor'))==1)
+
+print("CASO 14 — Eliminar un suspendido (definitivo)")
+b=Insc()
+r1=b.inscribir('A1','prep',capacidad=3,voluntario='+34600000001')
+b.set_estado('suspender', id=r1['id'])
+b.cancelar(id=r1['id'])
+check("cancelado (no aparece en confirmados)", len(b.confirmados('A1','prep'))==0)
+check("no reactivable tras cancelar", b.set_estado('reactivar', id=r1['id'], capacidad=3).get('error')=='no_encontrado')
+
+print("CASO 15 — Suspender un temporal por id")
+b=Insc()
+res=b.inscribir('A1','prep',capacidad=6,temp=True,nombre='Invitado',porLider=True)
+r=b.set_estado('suspender', id=res['id'])
+check("temporal suspendido", r.get('estado')=='suspendido')
+check("0 confirmados", len(b.confirmados('A1','prep'))==0)
 
 print(f"\n===== RESULTADO: {PASS} passaram, {FAIL} falharam =====")
 import sys; sys.exit(1 if FAIL else 0)

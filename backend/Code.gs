@@ -4,8 +4,8 @@
  *
  * Cómo usar: ver backend/SETUP.md
  * - Este archivo va pegado en el editor de Apps Script de la planilla.
- * - NO contiene secretos reales; el SYNC_TOKEN y CLIENT_ID se ponen abajo al desplegar
- *   (mantén una copia como Code.gs.real fuera del repo).
+ * - NO contiene secretos: SYNC_TOKEN / GOOGLE_CLIENT_ID / ADMIN_FALLBACK se leen de las
+ *   Script Properties (ver setupSecrets() y backend/SETUP.md).
  *
  * Arquitectura (ver design/CFMS_Concept_Backend_v1.html):
  *   doGet(pull)  -> devuelve { config, voluntarios, inscripciones, checklists }
@@ -14,11 +14,47 @@
  *   Pestañas:    Config (JSON en una celda), Voluntarios, Inscripciones, Checklists, Admin, Auditoria
  */
 
-/* ============ CONFIGURACIÓN (rellenar al desplegar; guardar en Code.gs.real) ============ */
-var SYNC_TOKEN   = 'TROCAR_POR_UM_TOKEN';                 // token compartido app<->backend
-var GOOGLE_CLIENT_ID = 'XXXXXXXXXX-xxxx.apps.googleusercontent.com'; // OAuth client (login Google)
-/* Fallback de admins si la pestaña Admin está vacía (la fuente real es la pestaña Admin). */
-var ADMIN_FALLBACK = ['rogerio.s.ono@gmail.com'];
+/* ============ CONFIGURACIÓN (Script Properties — SIN secretos en el código) ============ */
+/*
+ * Los secretos ya NO están en el código: se leen de las Script Properties del proyecto,
+ * así este archivo se puede versionar y desplegar automáticamente (clasp) sin exponer nada.
+ *
+ * Configúralos UNA vez ejecutando setupSecrets() desde el editor (ver abajo), o desde
+ * Configuración del proyecto → Propiedades del script, con estas claves:
+ *   SYNC_TOKEN        -> token compartido app<->backend
+ *   GOOGLE_CLIENT_ID  -> OAuth client id del login Google (…apps.googleusercontent.com)
+ *   ADMIN_FALLBACK    -> lista de emails admin separados por coma (fallback si la aba Usuarios está vacía)
+ */
+var _PROPS_CACHE = null;
+function _props() {
+  if (!_PROPS_CACHE) _PROPS_CACHE = PropertiesService.getScriptProperties();
+  return _PROPS_CACHE;
+}
+function SYNC_TOKEN() {
+  return _props().getProperty('SYNC_TOKEN') || '';
+}
+function GOOGLE_CLIENT_ID() {
+  return _props().getProperty('GOOGLE_CLIENT_ID') || '';
+}
+function ADMIN_FALLBACK() {
+  var raw = _props().getProperty('ADMIN_FALLBACK') || '';
+  return raw.split(',').map(function(e){ return e.trim().toLowerCase(); }).filter(function(e){ return e; });
+}
+
+/**
+ * Ejecuta ESTO UNA vez desde el editor de Apps Script para grabar los secretos en
+ * las Script Properties. Rellena los valores reales aquí, ejecuta la función, y luego
+ * BORRA los valores de esta función (o déjalos — el archivo no se versiona con secretos
+ * reales si mantienes placeholders). Guarda una copia real como Code.gs.real fuera del repo.
+ */
+function setupSecrets() {
+  _props().setProperties({
+    SYNC_TOKEN: 'TROCAR_POR_UM_TOKEN',
+    GOOGLE_CLIENT_ID: 'XXXXXXXXXX-xxxx.apps.googleusercontent.com',
+    ADMIN_FALLBACK: 'rogerio.s.ono@gmail.com'
+  }, false); // false = no borra otras propiedades existentes
+  Logger.log('Secretos grabados en Script Properties. Claves: ' + Object.keys(_props().getProperties()).join(', '));
+}
 
 /* ============ PESTAÑAS ============ */
 var SHEETS = {
@@ -36,7 +72,7 @@ function doGet(e) {
   try {
     _ensureSheets();
     var p = (e && e.parameter) || {};
-    if (p.token !== SYNC_TOKEN) return _json({ ok:false, error:'bad_token' });
+    if (p.token !== SYNC_TOKEN()) return _json({ ok:false, error:'bad_token' });
     var action = p.action || 'pull';
     if (action === 'pull') return _json({ ok:true, data: _pull() });
     return _json({ ok:false, error:'unknown_action' });
@@ -52,7 +88,7 @@ function doPost(e) {
     _ensureSheets();
     var body = {};
     try { body = JSON.parse(e.postData.contents); } catch (x) {}
-    if (body.token !== SYNC_TOKEN) return _json({ ok:false, error:'bad_token' });
+    if (body.token !== SYNC_TOKEN()) return _json({ ok:false, error:'bad_token' });
 
     var email = _verify(body.idToken); // null si no verificado / no login Google
     var action = body.action;
@@ -65,6 +101,7 @@ function doPost(e) {
       case 'dedupeVoluntarios':return _json(_dedupeVoluntarios(body, email));
       case 'inscribir':       return _json(_inscribir(body, email));
       case 'cancelar':        return _json(_cancelar(body, email));
+      case 'setEstadoInscripcion': return _json(_setEstadoInscripcion(body, email));
       case 'setChecklistItem':return _json(_setChecklistItem(body, email));
       default:                return _json({ ok:false, error:'unknown_action' });
     }
@@ -113,7 +150,7 @@ function _permisos() {
     }
   });
   var admins = Object.keys(adminsSet);   // dedup admins (email único por definición)
-  if(!admins.length) admins = ADMIN_FALLBACK.map(function(e){ return e.toLowerCase(); });
+  if(!admins.length) admins = ADMIN_FALLBACK();
   return { admins: admins, lideres: lideres };
 }
 
@@ -342,6 +379,43 @@ function _cancelar(body, email) {
   return { ok:true };
 }
 
+/* ============ SUSPENDER / REACTIVAR una inscripción ============
+   body: { id? , activityId, rol, voluntario?, accion:'suspender'|'reactivar', capacidad? }
+   - suspender: confirmado/espera → suspendido (libera plaza, no cuenta en el cupo).
+   - reactivar: suspendido → confirmado, pero si el cupo ya está lleno → espera.
+   El cupo se cuenta SOLO con estado 'confirmado' (suspendido/espera/cancelado no cuentan). */
+function _setEstadoInscripcion(body, email) {
+  var i = body || {};
+  var accion = String(i.accion||'').toLowerCase();
+  if (accion!=='suspender' && accion!=='reactivar') return { ok:false, error:'accion_invalida' };
+  var sh = _sheet(SHEETS.INSCRIPCIONES);
+  var rows = _readRows(SHEETS.INSCRIPCIONES);
+  // localizar la fila (por id o por activityId+rol+voluntario)
+  var idx = -1;
+  if (i.id) idx = rows.findIndex(function(r){ return String(r.id)===String(i.id) && r.estado!=='cancelado'; });
+  if (idx < 0) {
+    var volKey = (i.voluntario && String(i.voluntario).indexOf('temp:')===0) ? String(i.voluntario) : _normTel(i.voluntario);
+    idx = rows.findIndex(function(r){ return r.activityId===i.activityId && r.rol===i.rol && String(r.voluntario)===volKey && r.estado!=='cancelado'; });
+  }
+  if (idx < 0) return { ok:false, error:'no_encontrado' };
+  var row = rows[idx];
+
+  if (accion==='suspender') {
+    _setCell(sh, idx, 'estado', 'suspendido');
+    SpreadsheetApp.flush();
+    _audit(email||row.voluntario, 'suspender', 'inscripcion', row.activityId+'/'+row.rol);
+    return { ok:true, estado:'suspendido' };
+  }
+  // reactivar: si el cupo (confirmados) ya llegó a capacidad → espera; si no → confirmado
+  var cap = Number(i.capacidad || 0);
+  var confirmados = rows.filter(function(r,j){ return j!==idx && r.activityId===row.activityId && r.rol===row.rol && r.estado==='confirmado'; }).length;
+  var nuevo = (cap > 0 && confirmados >= cap) ? 'espera' : 'confirmado';
+  _setCell(sh, idx, 'estado', nuevo);
+  SpreadsheetApp.flush();
+  _audit(email||row.voluntario, 'reactivar:'+nuevo, 'inscripcion', row.activityId+'/'+row.rol);
+  return { ok:true, estado:nuevo };
+}
+
 /* ============ CHECKLISTS ============ */
 function _setChecklistItem(body, email) {
   var c = body.item || {}; // { activityId, itemId, texto, hecho, hechoPor, asignado, suelto }
@@ -365,7 +439,7 @@ function _verify(idToken) {
   try {
     var resp = UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken), { muteHttpExceptions:true });
     var info = JSON.parse(resp.getContentText());
-    if (info.aud !== GOOGLE_CLIENT_ID) return null;
+    if (info.aud !== GOOGLE_CLIENT_ID()) return null;
     if (info.email_verified !== 'true' && info.email_verified !== true) return null;
     return String(info.email || '').toLowerCase();
   } catch (x) { return null; }
@@ -380,7 +454,7 @@ function _adminList() {
   var rows = _readRows(SHEETS.USUARIOS);
   var list = rows.filter(function(r){ return _esAdminFlag(r.esAdmin) && String(r.email||'').trim(); })
                  .map(function(r){ return String(r.email||'').toLowerCase(); });
-  return list.length ? list : ADMIN_FALLBACK.map(function(e){ return e.toLowerCase(); });
+  return list.length ? list : ADMIN_FALLBACK();
 }
 
 /* ============ HELPERS DE PLANILLA ============ */
@@ -401,7 +475,8 @@ function _ensureSheets() {
   // Usuarios: sembrar el admin fallback si la aba está vacía (solo cabecera)
   var usr = _sheet(SHEETS.USUARIOS);
   if (usr.getLastRow() === 1) {
-    _appendRow(usr, { telefono:'', nombre:'Admin', email:ADMIN_FALLBACK[0], esAdmin:true, lider:'[]', idioma:'es', actualizadoEm:new Date().toISOString() });
+    var _af = ADMIN_FALLBACK();
+    _appendRow(usr, { telefono:'', nombre:'Admin', email:(_af[0] || ''), esAdmin:true, lider:'[]', idioma:'es', actualizadoEm:new Date().toISOString() });
   }
   // NOTA: las abas 'Voluntarios' y 'Admin' quedaron obsoletas — bórralas manualmente en la planilha.
 }
