@@ -1673,7 +1673,9 @@ function renderSyncBadge(s){
   var m=map[s]||map.off;
   el.style.display = m[0] ? 'inline-flex' : 'none';
   el.style.color = m[2];
-  el.innerHTML = m[0] ? (m[0]+' <span>'+m[1]+'</span>') : '';
+  el.title = m[1] || '';                       // texto solo como tooltip (accesibilidad)
+  el.setAttribute('aria-label', m[1] || '');
+  el.innerHTML = m[0] ? m[0] : '';             // solo el icono, sin texto visible
 }
 if(window.MFSync){
   window.MFSync.onStatus(renderSyncBadge);
