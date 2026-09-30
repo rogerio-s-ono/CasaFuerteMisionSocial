@@ -669,7 +669,10 @@ function _renderVolDetalle(){
   const a = currentActivities().find(x=>x.id===VOL_CTX.activityId);
   const rd = window.CFMS.ROLES[VOL_CTX.roleId];
   var esTemp = String(VOL_CTX.tel||'').indexOf('temp:')===0;
-  var rowInsc = SERVER_INSCR.find(function(r){ return (VOL_CTX.id && String(r.id)===String(VOL_CTX.id)) || (String(r.voluntario)===String(VOL_CTX.tel) && r.activityId===VOL_CTX.activityId && r.rol===VOL_CTX.roleId); }) || {};
+  var rowInsc = null;
+  if(VOL_CTX.id){ rowInsc = SERVER_INSCR.find(function(r){ return String(r.id)===String(VOL_CTX.id); }); }
+  if(!rowInsc){ rowInsc = SERVER_INSCR.find(function(r){ return String(r.voluntario)===String(VOL_CTX.tel) && r.activityId===VOL_CTX.activityId && r.rol===VOL_CTX.roleId && r.estado!=='cancelado'; }); }
+  rowInsc = rowInsc || {};
   const estado = rowInsc.estado || 'confirmado';
   const suspendido = (estado==='suspendido');
   const enEspera = (estado==='espera');
@@ -688,9 +691,6 @@ function _renderVolDetalle(){
   const SVG_REACT= '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
   const SVG_DEL  = '<svg viewBox="0 0 24 24"><path d="M6 7h12l-1 14H7L6 7zm3-3h6l1 2H8l1-2z"/></svg>';
   const SVG_X    = '<svg viewBox="0 0 24 24"><path d="M18.3 5.7L12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3l6.3 6.3 6.3-6.3z"/></svg>';
-  var accionPrincipal = suspendido
-    ? `<div class="act reactivate" onclick="volReactivar()">${SVG_REACT}Reactivar</div>`
-    : `<div class="act suspend" onclick="volSuspender()">${SVG_SUSP}Suspender</div>`;
   var accionPrincipal = (suspendido||enEspera)
     ? `<div class="act reactivate" onclick="volReactivar()">${SVG_REACT}${enEspera?'Confirmar':'Reactivar'}</div>`
     : `<div class="act suspend" onclick="volSuspender()">${SVG_SUSP}Suspender</div>`;
