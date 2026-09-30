@@ -947,11 +947,17 @@ function usrNew(){
   setTimeout(function(){ var el=document.getElementById('fNom'); if(el) el.focus(); },220);
 }
 function usrOpen(key){
-  var v=_volByTel(key); if(!v){ return; }
+  var v=_volByTel(key); if(!v){ toast('Usuario no encontrado — actualiza la lista'); return; }
   var pi=_permInfo(String(v.email||''));
-  var tel=String(v.telefono||'');
-  var m=tel.match(/^(\+\d{1,3})(.*)$/); var ddi=m?m[1]:'+34'; var local=m?m[2]:tel.replace(/^\+/,'');
-  ACC_FORM = { telefono:local, ddi:ddi, nombre:v.nombre||'', email:String(v.email||''), esAdmin:pi.admin, misiones:pi.lideres.slice(), esNuevo:false, err:'' };
+  var tel=String(v.telefono||'').replace(/^'/,'').trim();   // quita comilla de texto de Sheets si viene
+  var m=tel.match(/^(\+\d{1,3})[\s-]?(.*)$/); var ddi=m?m[1]:'+34'; var local=m?m[2].replace(/[^0-9]/g,''):tel.replace(/[^0-9]/g,'');
+  ACC_FORM = {
+    telefonoFull: tel,                 // teléfono canónico ORIGINAL (clave real — NUNCA reconstruir)
+    telKeyOrig: normPhone(tel),        // solo dígitos, para comparar
+    telefono:local, ddi:ddi,
+    nombre:v.nombre||'', email:String(v.email||''),
+    esAdmin:pi.admin, misiones:pi.lideres.slice(), esNuevo:false, err:''
+  };
   ACC_VIEW='form'; _delArm=null; accRender();
 }
 function closeUsr(){ if(ACC_BUSY) return; ACC_VIEW='list'; USR_KEY=null; ACC_FORM=null; _delArm=null; accRender(); }
@@ -1003,7 +1009,9 @@ function _renderFormBody(){
     : '<div class="f-hint">Necesario solo si será Admin o Líder (para el login con Google).</div>';
   const canSave = _formValido() && !ACC_BUSY;
   const primaryTxt = f.esNuevo ? 'Crear' : 'Guardar';
-  const delTxt = (_delArm==='del') ? '¿Seguro? Eliminar usuario' : 'Eliminar usuario';
+  const delTxt = (_delArm==='del')
+    ? ('¿Eliminar a '+_esc(f.nombre||'(sin nombre)')+' ('+_esc(f.telefonoFull||'')+')? Toca de nuevo')
+    : 'Eliminar usuario';
 
   document.getElementById('usrBody').innerHTML = `
     <h3 class="usr-t">${f.esNuevo?'Nuevo usuario':(f.nombre||'(sin nombre)')}</h3>
@@ -1047,7 +1055,10 @@ function usrSave(){
   _formSync();
   if(!ACC_FORM) return;
   var f=ACC_FORM;
-  var tel = (f.ddi||'+34') + normPhone(f.telefono||'');
+  // teléfono: al EDITAR usamos SIEMPRE la clave canónica original (no reconstruir → evita
+  // borrar/pisar otro usuario si el formato difiere). Al CREAR se arma de ddi+local.
+  var telNuevo = (f.ddi||'+34') + normPhone(f.telefono||'');
+  var tel = f.esNuevo ? telNuevo : (f.telefonoFull || telNuevo);
   if(!String(f.nombre||'').trim() || normPhone(tel).length<8){ _accSetErr('Faltan datos obligatorios (nombre y teléfono).'); _renderFormBody(); return; }
   if(_emailRequerido() && !String(f.email||'').trim()){ _accSetErr('Falta el email: un Admin o Líder necesita email de Google.'); _renderFormBody(); return; }
   mfMutate('saveUsuario', { usuario:{
@@ -1057,7 +1068,9 @@ function usrSave(){
 }
 function usrDelete(){
   if(ACC_BUSY || !ACC_FORM) return;
-  var tel=(ACC_FORM.ddi||'+34')+normPhone(ACC_FORM.telefono||'');
+  // SIEMPRE por la clave canónica original (nunca reconstruida) → borra EXACTAMENTE este usuario
+  var tel = ACC_FORM.telefonoFull || ((ACC_FORM.ddi||'+34')+normPhone(ACC_FORM.telefono||''));
+  if(!normPhone(tel)){ _accSetErr('No se pudo identificar el teléfono de este usuario.'); _renderFormBody(); return; }
   if(_delArm!=='del'){ _delArm='del'; _renderFormBody(); return; }   // 1º toque: arma confirmación
   mfMutate('delVoluntario', { telefono:tel }, 'Usuario eliminado').then(function(ok){ if(ok) closeUsr(); });
 }
@@ -1723,7 +1736,8 @@ if(window.MFSync){
       || (document.activeElement && /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName))
       || document.getElementById('wizard').classList.contains('active')
       || document.getElementById('chkOverlay').classList.contains('active')
-      || document.getElementById('asgSheet').classList.contains('on');
+      || document.getElementById('asgSheet').classList.contains('on')
+      || ACC_VIEW==='form';   // modal de gestión de usuario abierto → no re-render por debajo
     if(USER && (forceRender || !editing)){ renderDemoBar(); renderAll(); }
   }
   window.MFSync.init().then(function(res){ applyPull(res, true); });
