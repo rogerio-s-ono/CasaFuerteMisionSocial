@@ -628,19 +628,18 @@ function _liderInscribir(activityId, roleId, who){
   if(!window.MFSync || !window.MFSync.enabled){ toast('Necesita backend'); return; }
   toast('Añadiendo…');
   window.MFSync.post('inscribir', payload).then(function(j){
-    if(j && j.ok){
-      // reflejar de inmediato en local sin esperar el pull
-      SERVER_INSCR.push({ id:(j.id||'_local_'+Date.now()), activityId:activityId, rol:roleId,
-        voluntario:(j.voluntario|| (who.temp?'temp:local':String(who.tel||'').replace(/[^0-9]/g,''))),
-        nombre:who.nombre||'', temp:!!who.temp, estado:(j.estado||'confirmado') });
-      toast(j.estado==='espera'?'Añadido a lista de espera':'Añadido');
-    } else { toast('No se pudo añadir'); }
-    renderLider();
+    if(j && !j.ok){ toast('No se pudo añadir'); renderLider(); return; }
+    // releer del servidor para reflejar el estado real (evita que un pull concurrente pise el optimista)
+    return window.MFSync.pull().then(function(res){
+      if(res && res.data && res.data.inscripciones) setServerInscr(res.data.inscripciones);
+      toast((j&&j.estado==='espera')?'Añadido a lista de espera':'Añadido');
+      renderLider();
+    });
   }).catch(function(){
     // offline → encola y refleja local optimista
     window.MFSync.queue('inscribir', payload);
     SERVER_INSCR.push({ id:'_local_'+Date.now(), activityId:activityId, rol:roleId,
-      voluntario:(who.temp?'temp:local':String(who.tel||'').replace(/[^0-9]/g,'')),
+      voluntario:(who.temp?('temp:local'+Date.now()):String(who.tel||'').replace(/[^0-9]/g,'')),
       nombre:who.nombre||'', temp:!!who.temp, estado:'confirmado' });
     toast('Sin conexión — se enviará al reconectar'); renderLider();
   });
