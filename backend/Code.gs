@@ -137,6 +137,14 @@ function _delPermiso(body, email) {
   var e = String(body.email||'').toLowerCase().trim();
   var papel = String(body.papel||'').toLowerCase().trim();
   var mision = String(body.mision||'').trim();
+  // PROTECCIÓN DEL ÚLTIMO ADMIN: nunca dejar el app sin ningún administrador.
+  if (papel === 'admin') {
+    var perm = _permisos();
+    var admins = (perm.admins || []);
+    if (admins.length <= 1 && admins.indexOf(e) >= 0) {
+      return { ok:false, error:'last_admin', permisos:perm };
+    }
+  }
   var sh = _sheet(SHEETS.ADMIN);
   var rows = _readRows(SHEETS.ADMIN);
   // borrar de abajo hacia arriba las filas que coincidan

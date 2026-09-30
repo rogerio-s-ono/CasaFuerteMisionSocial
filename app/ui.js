@@ -826,6 +826,7 @@ function mfMutate(action, payload, okMsg){
     .then(function(j){
       if(j && j.ok){ toast(okMsg||'Hecho'); return true; }
       if(j && j.error==='forbidden_admin'){ toast('Sesión caducada — vuelve a entrar con Google'); return false; }
+      if(j && j.error==='last_admin'){ toast('No se puede: debe quedar al menos un administrador'); return false; }
       toast('No se pudo (revisa tu conexión o permiso)'); return false;
     })
     .catch(function(){ toast('Error de conexión'); return false; })
