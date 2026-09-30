@@ -1582,6 +1582,8 @@ function renderMios(){
 
 /* ---------- navegación ---------- */
 function go(id){
+  // cerrar cualquier sheet/backdrop abierto al cambiar de pestaña (evita modales "colgados")
+  document.querySelectorAll('.sheet.on, .backdrop.on').forEach(function(el){ el.classList.remove('on'); });
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id===id));
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active', b.dataset.v===id));
   window.scrollTo(0,0);
