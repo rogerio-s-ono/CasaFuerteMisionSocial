@@ -723,7 +723,7 @@ window.adminAddAct=adminAddAct; window.adminDelAct=adminDelAct; window.adminDelM
    ========================================================================= */
 let ACC_SEARCH = '';
 let ACC_VIEW = 'list';       // 'list' | 'user' | 'form'
-let USR_TEL = null;          // teléfono del usuario abierto en el modal
+let USR_KEY = null;          // clave del usuario abierto en el modal: teléfono O email
 let ACC_FORM = null;         // { tipo:'admin'|'lider'|'voluntario' } cuando ACC_VIEW='form'
 let ACC_BUSY = false;
 let _accSearchT = null, _delArm = null;
@@ -736,6 +736,18 @@ function _permInfo(email){
 }
 function _telByEmail(email){ var v=SERVER_VOLS.find(function(x){ return String(x.email||'').toLowerCase()===String(email||'').toLowerCase(); }); return v?String(v.telefono):''; }
 function _nameByEmail(email){ var v=SERVER_VOLS.find(function(x){ return String(x.email||'').toLowerCase()===String(email||'').toLowerCase(); }); return v?v.nombre:email; }
+/* resuelve un usuario a partir de una CLAVE que puede ser teléfono o email.
+   Devuelve identidad unificada: sirve para voluntarios (con tel) y para admins/líderes solo-email. */
+function _resolveUser(key){
+  var k=String(key||'');
+  var v=null;
+  if(/@/.test(k)){ v = SERVER_VOLS.find(function(x){ return String(x.email||'').toLowerCase()===k.toLowerCase(); }); }
+  else { var dig=k.replace(/[^0-9]/g,''); v = SERVER_VOLS.find(function(x){ return String(x.telefono).replace(/[^0-9]/g,'')===dig; }); }
+  if(v) return { email:String(v.email||''), tel:String(v.telefono||''), nombre:v.nombre||'', esVol:true };
+  // no es voluntario: admin/líder solo por email
+  if(/@/.test(k)) return { email:k, tel:'', nombre:_nameByEmail(k)||k, esVol:false };
+  return { email:'', tel:k, nombre:'', esVol:false };
+}
 function _volByTel(tel){ var k=String(tel).replace(/[^0-9]/g,''); return SERVER_VOLS.find(function(v){ return String(v.telefono).replace(/[^0-9]/g,'')===k; }); }
 
 /* ---- ÚNICO camino al backend: post → pull → refresca estado → re-render de la vista actual ---- */
@@ -767,7 +779,7 @@ function mfMutate(action, payload, okMsg){
 /* ---- render unificado: decide qué mostrar según ACC_VIEW ---- */
 function accRender(){
   // el usuario del modal puede haber sido eliminado tras un pull
-  if(ACC_VIEW==='user' && !_volByTel(USR_TEL)){ ACC_VIEW='list'; USR_TEL=null; }
+  if(ACC_VIEW==='user'){ var ru=_resolveUser(USR_KEY); if(!ru.email && !ru.esVol){ ACC_VIEW='list'; USR_KEY=null; } }
   _accSetModal(ACC_VIEW!=='list');       // abre/cierra el sheet
   renderAdmin();                          // re-render de la pantalla base (lista + resúmenes)
   if(ACC_VIEW==='user') _renderUsrBody();
@@ -782,9 +794,8 @@ function _accSetModal(open){
 function _accResumen(){
   const perm = PERMISOS || { admins:[], lideres:{} };
   function item(email, sub){
-    var tel=_telByEmail(email), nm=_nameByEmail(email);
-    var onclick = tel ? `onclick="usrOpen('${tel.replace(/'/g,"")}')"` : '';
-    return `<div class="res-item" ${onclick}><span class="res-nm">${nm}</span><span class="res-sub">${sub}</span></div>`;
+    var nm=_nameByEmail(email);
+    return `<div class="res-item" onclick="usrOpen('${String(email).replace(/'/g,"")}')"><span class="res-nm">${nm}</span><span class="res-sub">${sub}</span></div>`;
   }
   var adminsH = (perm.admins||[]).map(function(e){ return item(e,'Admin'); }).join('') || '<div class="admnote" style="padding:8px 14px">Sin administradores.</div>';
   var lidH = '';
@@ -822,21 +833,22 @@ function renderAdminAccesos(box, cfg){
 function accSearchInput(v){ ACC_SEARCH=v; clearTimeout(_accSearchT); _accSearchT=setTimeout(function(){ if(ACC_VIEW==='list') renderAdmin(); }, 220); }
 
 /* ---- MODAL: gestión de un usuario ---- */
-function usrOpen(tel){ USR_TEL=tel; ACC_VIEW='user'; _delArm=null; accRender(); }
-function closeUsr(){ ACC_VIEW='list'; USR_TEL=null; ACC_FORM=null; _delArm=null; accRender(); }
+function usrOpen(key){ USR_KEY=key; ACC_VIEW='user'; _delArm=null; accRender(); }
+function closeUsr(){ ACC_VIEW='list'; USR_KEY=null; ACC_FORM=null; _delArm=null; accRender(); }
 window.usrOpen=usrOpen; window.closeUsr=closeUsr;
 function _renderUsrBody(){
   const cfg=window.CFMS.getConfig();
-  const v=_volByTel(USR_TEL)||{}; const em=String(v.email||''); const pi=_permInfo(em);
+  const u=_resolveUser(USR_KEY); const em=u.email; const pi=_permInfo(em);
   const dis = ACC_BUSY?'disabled':'';
   const misChips = cfg.misiones.map(function(m){
     const on = pi.lideres.indexOf(m.id)>=0;
     return `<button class="tog-chip ${on?'on':''}" ${dis} onclick="usrToggleLider('${m.id}',${on})">${m.nombre}${on?' ✓':''}</button>`;
   }).join('');
-  const delTxt = (_delArm===USR_TEL) ? '¿Seguro? Eliminar' : 'Eliminar voluntario';
+  const subLine = [u.tel, em].filter(Boolean).join(' · ') || '—';
+  const delTxt = (_delArm===USR_KEY) ? '¿Seguro? Eliminar' : 'Eliminar voluntario';
   document.getElementById('usrBody').innerHTML = `
-    <h3 class="usr-t">${v.nombre||'(sin nombre)'}</h3>
-    <div class="usr-sub">${USR_TEL}${em?(' · '+em):''}</div>
+    <h3 class="usr-t">${u.nombre||'(sin nombre)'}</h3>
+    <div class="usr-sub">${subLine}</div>
     ${!em ? '<div class="usr-note">Sin email de Google. Para ser Admin o Líder, esta persona debe entrar con Google al menos una vez.</div>' : `
       <div class="usr-sec">Administrador</div>
       <label class="usr-toggle"><span>Es administrador</span>
@@ -845,13 +857,14 @@ function _renderUsrBody(){
       <div class="tog-chips">${misChips}</div>
     `}
     <button class="btn primary" style="margin-top:18px;width:100%" ${dis} onclick="closeUsr()">Hecho</button>
-    <button class="usr-del ${_delArm===USR_TEL?'armed':''}" ${dis} onclick="usrDelete('${USR_TEL.replace(/'/g,"")}')">${delTxt}</button>`;
+    ${u.esVol ? `<button class="usr-del ${_delArm===USR_KEY?'armed':''}" ${dis} onclick="usrDelete()">${delTxt}</button>` : ''}`;
 }
-function usrToggleAdmin(isOn){ const v=_volByTel(USR_TEL); if(!v||!v.email) return; mfMutate(isOn?'delPermiso':'setPermiso', { email:v.email, papel:'admin', mision:'' }, isOn?'Admin quitado':'Admin concedido'); }
-function usrToggleLider(mid, isOn){ const v=_volByTel(USR_TEL); if(!v||!v.email) return; mfMutate(isOn?'delPermiso':'setPermiso', { email:v.email, papel:'lider', mision:mid }, isOn?'Líder quitado':'Líder concedido'); }
-function usrDelete(tel){
-  if(_delArm!==tel){ _delArm=tel; _renderUsrBody(); return; }   // 1º toque: arma confirmación
-  mfMutate('delVoluntario', { telefono:tel }, 'Voluntario eliminado').then(function(ok){ if(ok){ ACC_VIEW='list'; USR_TEL=null; accRender(); } });
+function usrToggleAdmin(isOn){ const u=_resolveUser(USR_KEY); if(!u.email) return; mfMutate(isOn?'delPermiso':'setPermiso', { email:u.email, papel:'admin', mision:'' }, isOn?'Admin quitado':'Admin concedido'); }
+function usrToggleLider(mid, isOn){ const u=_resolveUser(USR_KEY); if(!u.email) return; mfMutate(isOn?'delPermiso':'setPermiso', { email:u.email, papel:'lider', mision:mid }, isOn?'Líder quitado':'Líder concedido'); }
+function usrDelete(){
+  const u=_resolveUser(USR_KEY); if(!u.tel){ toast('No es un voluntario con teléfono'); return; }
+  if(_delArm!==USR_KEY){ _delArm=USR_KEY; _renderUsrBody(); return; }   // 1º toque: arma confirmación
+  mfMutate('delVoluntario', { telefono:u.tel }, 'Voluntario eliminado').then(function(ok){ if(ok){ ACC_VIEW='list'; USR_KEY=null; accRender(); } });
 }
 window.usrToggleAdmin=usrToggleAdmin; window.usrToggleLider=usrToggleLider; window.usrDelete=usrDelete;
 
