@@ -996,7 +996,15 @@ function usrOpen(key){
   var v=_volByTel(key); if(!v){ toast('Usuario no encontrado — actualiza la lista'); return; }
   var pi=_permInfo(String(v.email||''));
   var tel=String(v.telefono||'').replace(/^'/,'').trim();   // quita comilla de texto de Sheets si viene
-  var m=tel.match(/^(\+\d{1,3})[\s-]?(.*)$/); var ddi=m?m[1]:'+34'; var local=m?m[2].replace(/[^0-9]/g,''):tel.replace(/[^0-9]/g,'');
+  // separar DDI + local casando contra la LISTA REAL de DDIS (prefijo más largo primero).
+  // (el regex \+\d{1,3} era greedy y capturaba "+346" de "+34600...", rompiendo el select)
+  var ddi='', local='';
+  var telDigits = tel.replace(/[^0-9+]/g,'');
+  var candidatos = DDIS.map(function(d){ return d.c; }).sort(function(a,b){ return b.length-a.length; });
+  for(var ci=0; ci<candidatos.length; ci++){
+    if(telDigits.indexOf(candidatos[ci])===0){ ddi=candidatos[ci]; local=telDigits.slice(candidatos[ci].length).replace(/[^0-9]/g,''); break; }
+  }
+  if(!ddi){ ddi='+34'; local=telDigits.replace(/^\+/,'').replace(/[^0-9]/g,''); }
   ACC_FORM = {
     telefonoFull: tel,                 // teléfono canónico ORIGINAL (clave real — NUNCA reconstruir)
     telKeyOrig: normPhone(tel),        // solo dígitos, para comparar
