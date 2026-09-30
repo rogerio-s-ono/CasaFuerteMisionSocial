@@ -181,6 +181,10 @@ function submitPhone(){
   const local = normPhone(document.getElementById('inPhone').value.trim());
   if(local.length < 6){ document.getElementById('inPhone').focus(); return; }
   const full = ddi + local;
+  // login por teléfono: limpiar cualquier idToken de una sesión Google anterior (p.ej. del Admin)
+  // para que el backend NO estampe el email de otra persona en este usuario.
+  try{ sessionStorage.removeItem('mf_idtoken'); }catch(e){}
+  window._googleEmail='';
   // 1) ¿existe en el SERVIDOR (creado por el Admin o registrado en otro dispositivo)?
   var srv = volByTelServer(full);
   if(srv && srv.name){ USER={ name:srv.name, phone:srv.phone, email:srv.email||'' }; enter('Entrando…'); return; }
@@ -887,6 +891,7 @@ function _errMsg(code){
   if(code==='datos_incompletos') return 'Faltan datos obligatorios (nombre y teléfono).';
   if(code==='sin_telefono') return 'No se pudo identificar el teléfono del usuario.';
   if(code==='telefono_en_uso') return 'Ese teléfono ya pertenece a otro usuario. Usa un número distinto.';
+  if(code==='email_en_uso') return 'Ese email ya pertenece a otro usuario. Cada persona debe tener un email único.';
   if(code==='bad_token') return 'Token inválido — revisa la configuración del backend.';
   if(code==='conexion') return 'No se pudo guardar: sin respuesta del servidor. Revisa tu conexión.';
   if(!code || code==='desconocido') return 'No se pudo completar la operación. Inténtalo de nuevo.';

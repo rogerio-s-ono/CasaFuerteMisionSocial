@@ -101,13 +101,18 @@ function _esAdminFlag(val){
 /* Permisos desde la aba Usuarios: esAdmin (flag) + lider (JSON de misiones). Clave de permiso = email. */
 function _permisos() {
   var rows = _readRows(SHEETS.USUARIOS);
-  var admins = [], lideres = {};
+  var adminsSet = {}, lideres = {};
   rows.forEach(function(r){
     var email = String(r.email||'').toLowerCase().trim(); if(!email) return;   // admin/líder requieren email
-    if(_esAdminFlag(r.esAdmin)) admins.push(email);
+    if(_esAdminFlag(r.esAdmin)) adminsSet[email] = true;
     var mis = _parseLider(r.lider);
-    if(mis.length) lideres[email] = (lideres[email]||[]).concat(mis);
+    if(mis.length){
+      var cur = lideres[email] || [];
+      mis.forEach(function(m){ if(cur.indexOf(m)<0) cur.push(m); });   // dedup misiones
+      lideres[email] = cur;
+    }
   });
+  var admins = Object.keys(adminsSet);   // dedup admins (email único por definición)
   if(!admins.length) admins = ADMIN_FALLBACK.map(function(e){ return e.toLowerCase(); });
   return { admins: admins, lideres: lideres };
 }
@@ -132,19 +137,43 @@ function _saveConfig(body, email) {
 function _normTel(t){ return String(t==null?'':t).replace(/[^0-9]/g,''); } // solo dígitos, para comparar
 function _telText(tel){ var k=_normTel(tel); return "'+" + k; } // texto con "+" (Sheets no lo vuelve número)
 
-/* login/auto-registro: crea o actualiza SOLO los datos (no toca roles esAdmin/lider) */
+/* login/auto-registro: crea o actualiza SOLO los datos (no toca roles esAdmin/lider).
+   IMPORTANTE (fix identidad): NO se debe estampar el email VERIFICADO del token (que puede ser
+   el del Admin logado en el dispositivo) sobre el registro. El email solo se toma del email
+   EXPLÍCITO enviado por el cliente (v.email = el de la propia persona), y solo se acepta si
+   coincide con el email verificado del token (login Google del propio dueño) o si el registro
+   aún no tiene email. Para login por teléfono (sin idToken propio), el email NO se toca. */
 function _upsertVoluntario(body, email) {
   var v = body.voluntario || {};
   if (!v.telefono || !v.nombre) return { ok:false, error:'datos_incompletos' };
   var telKey = _normTel(v.telefono);
+  var emailExplicito = String(v.email||'').toLowerCase().trim();   // el que envía el cliente (dueño)
+  var emailVerificado = String(email||'').toLowerCase().trim();    // el del idToken (puede ser de otro)
   var sh = _sheet(SHEETS.USUARIOS);
   var rows = _readRows(SHEETS.USUARIOS);
   var idx = rows.findIndex(function(r){ return _normTel(r.telefono) === telKey; });
+
   if (idx >= 0) {
-    // actualizar datos, preservar esAdmin/lider existentes
-    _updateRow(sh, idx, { telefono:_telText(v.telefono), nombre:v.nombre, email:(email||v.email||rows[idx].email||''), idioma:(v.idioma||rows[idx].idioma||'es'), actualizadoEm:new Date().toISOString() });
+    // EXISTE: actualizar solo nombre/idioma; el email SOLO se cambia si el cliente manda
+    // explícitamente uno que coincide con el token verificado (el propio dueño con Google).
+    var emailFila = String(rows[idx].email||'').toLowerCase().trim();
+    var nuevoEmail = emailFila;   // por defecto, NO tocar el email existente
+    if (emailExplicito && emailExplicito === emailVerificado) {
+      // el dueño entró con SU Google → puede fijar/actualizar su propio email
+      // pero no si ese email ya es de OTRA fila (unicidad)
+      var otro = rows.findIndex(function(r){ return String(r.email||'').toLowerCase().trim()===emailExplicito; });
+      if (otro < 0 || otro === idx) nuevoEmail = emailExplicito;
+    }
+    _updateRow(sh, idx, { telefono:_telText(v.telefono), nombre:v.nombre, email:nuevoEmail, idioma:(v.idioma||rows[idx].idioma||'es'), actualizadoEm:new Date().toISOString() });
   } else {
-    _appendRow(sh, { telefono:_telText(v.telefono), nombre:v.nombre, email:(email||v.email||''), esAdmin:false, lider:'[]', idioma:(v.idioma||'es'), actualizadoEm:new Date().toISOString() });
+    // NUEVO: solo fija email si el cliente lo mandó Y coincide con el token verificado (dueño Google)
+    var emailNuevo = (emailExplicito && emailExplicito === emailVerificado) ? emailExplicito : '';
+    // y solo si ese email no está ya en uso por otra fila
+    if (emailNuevo) {
+      var dup = rows.findIndex(function(r){ return String(r.email||'').toLowerCase().trim()===emailNuevo; });
+      if (dup >= 0) emailNuevo = '';   // no duplicar identidad por email
+    }
+    _appendRow(sh, { telefono:_telText(v.telefono), nombre:v.nombre, email:emailNuevo, esAdmin:false, lider:'[]', idioma:(v.idioma||'es'), actualizadoEm:new Date().toISOString() });
   }
   _audit(email||v.telefono, 'upsertVoluntario', 'usuario', telKey);
   return { ok:true };
@@ -197,6 +226,15 @@ function _saveUsuario(body, email) {
     }
   } else {
     idx = rows.findIndex(function(r){ return _normTel(r.telefono) === telKey; });
+  }
+
+  // UNICIDAD DE EMAIL (best practice: email es identidad de login → no puede repetirse).
+  // Si el email ya pertenece a OTRA fila (distinta de la que estamos editando), rechazar.
+  if (mail) {
+    var emailIdx = rows.findIndex(function(r){ return String(r.email||'').toLowerCase().trim() === mail; });
+    if (emailIdx >= 0 && emailIdx !== idx) {
+      return { ok:false, error:'email_en_uso' };
+    }
   }
 
   var rec = {
