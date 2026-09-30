@@ -209,24 +209,48 @@ function _onGoogleCredential(resp){
   // 2) ¿vínculo local (este dispositivo)?
   var vinc = _emailPhone(email);
   if(vinc){ USER={ name:vinc.name||nombre, phone:vinc.phone, email:email }; enter('Entrando…'); return; }
-  // 3) por si el pull inicial aún no trajo voluntarios: pull fresco y reintenta
+  // 3) por si el pull inicial aún no trajo voluntarios: pull fresco y reintenta.
+  //    Mostramos "Entrando…" desde ya (ocultando los botones de login); si el usuario
+  //    existe seguimos entrando, si es 1ª vez pedimos teléfono, y si FALLA volvemos a los botones.
   if(window.MFSync && window.MFSync.enabled){
-    document.getElementById('lgCheckTxt') && (document.getElementById('lgCheckTxt').textContent='Verificando…');
-    document.getElementById('lgChecking').classList.add('on');
+    _showEntering();
     window.MFSync.pull().then(function(res){
-      document.getElementById('lgChecking').classList.remove('on');
       if(res && res.data && res.data.voluntarios){ setServerVols(res.data.voluntarios); if(res.data.permisos) setPermisos(res.data.permisos); }
       var s2 = volByEmail(email);
-      if(s2 && s2.phone){ USER={ name:s2.name||nombre, phone:s2.phone, email:email }; enter('Entrando…'); }
-      else { _googleFirstTime(nombre, email); }
+      if(s2 && s2.phone){ USER={ name:s2.name||nombre, phone:s2.phone, email:email }; enter('Entrando…'); return; }
+      // si el pull falló (sin datos utilizables) → volver a los botones de login
+      if(res && res.error && !(res.data && res.data.voluntarios)){
+        _backToLogin();
+        toast && toast('No se pudo conectar. Inténtalo de nuevo.');
+        return;
+      }
+      // pull ok pero el email no está registrado → 1ª vez: pedir teléfono
+      _googleFirstTime(nombre, email);
+    }).catch(function(){
+      // salvaguarda: cualquier rechazo inesperado → volver a los botones de login
+      _backToLogin();
+      toast && toast('No se pudo conectar. Inténtalo de nuevo.');
     });
     return;
   }
   // 4) sin servidor → pide teléfono (1ª vez)
   _googleFirstTime(nombre, email);
 }
+/* muestra el estado "Entrando…" ocultando los paneles de login (Google/teléfono) */
+function _showEntering(){
+  document.getElementById('panelPhone').classList.add('hidden');
+  document.getElementById('panelRegister').classList.add('hidden');
+  document.getElementById('lgCheckTxt').textContent = 'Entrando…';
+  document.getElementById('lgChecking').classList.add('on');
+}
+/* vuelve a la pantalla inicial con los botones de login (tras un fallo) */
+function _backToLogin(){
+  document.getElementById('lgChecking').classList.remove('on');
+  document.getElementById('panelRegister').classList.add('hidden');
+  document.getElementById('panelPhone').classList.remove('hidden');
+}
 function _googleFirstTime(nombre, email){
-  // garante que o spinner intermediário ("Verificando…") suma antes de mostrar o formulário
+  // oculta el spinner "Entrando…" antes de mostrar el formulario de teléfono (1ª vez)
   document.getElementById('lgChecking').classList.remove('on');
   document.getElementById('panelPhone').classList.add('hidden');
   document.getElementById('ddi2').disabled=false; document.getElementById('ddi2').value='+34';
