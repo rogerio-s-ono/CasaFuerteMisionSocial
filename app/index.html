@@ -263,12 +263,16 @@
   /* modal unificado */
   #usrSheet .usr-badges{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin:8px 0 4px; }
   #usrSheet .f-fld{ margin-bottom:12px; }
-  #usrSheet .f-fld label{ display:flex; justify-content:space-between; align-items:center; font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--gris); margin-bottom:6px; font-weight:600; }
-  #usrSheet .f-tag{ font-size:9px; letter-spacing:.05em; padding:2px 7px; border-radius:10px; font-weight:600; }
+  #usrSheet .f-fld label{ display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--gris); margin-bottom:6px; font-weight:600; }
+  #usrSheet .f-fld label > :first-child{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #usrSheet .f-tag{ flex:0 0 auto; font-size:9px; letter-spacing:.05em; padding:2px 7px; border-radius:10px; font-weight:600; white-space:nowrap; }
   #usrSheet .f-tag.req{ background:#fbf3e0; color:#b8801f; } #usrSheet .f-tag.opt{ background:var(--hueso); color:var(--gris); }
+  #usrSheet .f-input{ width:100%; box-sizing:border-box; padding:12px 13px; border:1px solid var(--linea); border-radius:var(--raio); font-family:"Jost",sans-serif; font-size:14.5px; background:#fff; color:var(--grafito); }
   #usrSheet input.req-empty{ border-color:#b8801f !important; background:#fbf3e0 !important; }
   #usrSheet .f-hint{ font-size:11.5px; margin-top:5px; color:var(--gris); } #usrSheet .f-hint.req{ color:#b8801f; }
-  #usrSheet .phone-row{ display:flex; gap:8px; }
+  #usrSheet .phone-row{ display:flex; gap:8px; align-items:stretch; }
+  #usrSheet .phone-row .f-ddi{ flex:0 0 92px; width:92px; padding-left:8px; padding-right:6px; }
+  #usrSheet .phone-row .f-tel{ flex:1 1 auto; min-width:0; }
   #usrSheet .f-div{ height:1px; background:var(--linea); margin:18px 0 4px; }
   #usrSheet .f-secrow{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin:16px 0 6px; }
   #usrSheet .f-secname{ font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--gris); font-weight:600; }

@@ -992,7 +992,6 @@ function _renderFormBody(){
   const liderOn = (f.misiones && f.misiones.length>0) || f.__liderOn;
   const emailReq = _emailRequerido();
   const emailEmpty = !String(f.email||'').trim();
-  const inputStyle="width:100%;padding:12px 13px;border:1px solid var(--linea);border-radius:var(--raio);font-family:'Jost',sans-serif;font-size:14.5px;background:#fff";
   const misChips = cfg.misiones.map(function(m){
     const on = f.misiones.indexOf(m.id)>=0;
     return `<button class="tog-chip ${on?'on':''}" ${dis} onclick="fToggleMision('${m.id}')">${m.nombre}${on?' ✓':''}</button>`;
@@ -1013,12 +1012,12 @@ function _renderFormBody(){
     ${f.err?`<div class="f-err"><span>⚠</span><span>${f.err}</span></div>`:''}
 
     <div class="f-fld" style="margin-top:12px"><label>Nombre <span class="f-tag req">Obligatorio</span></label>
-      <input id="fNom" ${dis} value="${String(f.nombre||'').replace(/"/g,'&quot;')}" placeholder="Ej. María González" style="${inputStyle}" oninput="_formSync()" /></div>
+      <input id="fNom" class="f-input" ${dis} value="${String(f.nombre||'').replace(/"/g,'&quot;')}" placeholder="Ej. María González" oninput="_formSync()" /></div>
     <div class="f-fld"><label>Teléfono <span class="f-tag req">Obligatorio</span></label>
-      <div class="phone-row"><select id="fDdi" ${dis} style="width:96px;${inputStyle}"></select>
-      <input id="fTel" ${dis} type="tel" value="${String(f.telefono||'').replace(/"/g,'&quot;')}" placeholder="600 000 000" style="flex:1;${inputStyle}" oninput="_formSync()" /></div></div>
+      <div class="phone-row"><select id="fDdi" class="f-input f-ddi" ${dis}></select>
+      <input id="fTel" class="f-input f-tel" ${dis} type="tel" value="${String(f.telefono||'').replace(/"/g,'&quot;')}" placeholder="600 000 000" oninput="_formSync()" /></div></div>
     <div class="f-fld"><label>Email ${emailTag}</label>
-      <input id="fEmail" ${dis} type="email" value="${String(f.email||'').replace(/"/g,'&quot;')}" placeholder="email@gmail.com" style="${inputStyle}" class="${emailReq&&emailEmpty?'req-empty':''}" oninput="_formSync()" />
+      <input id="fEmail" class="f-input ${emailReq&&emailEmpty?'req-empty':''}" ${dis} type="email" value="${String(f.email||'').replace(/"/g,'&quot;')}" placeholder="email@gmail.com" oninput="_formSync()" />
       ${emailHint}</div>
 
     <div class="f-div"></div>
