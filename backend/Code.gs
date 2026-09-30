@@ -23,10 +23,11 @@ var ADMIN_FALLBACK = ['rogerio.s.ono@gmail.com'];
 /* ============ PESTAÑAS ============ */
 var SHEETS = {
   CONFIG: 'Config',
-  VOLUNTARIOS: 'Voluntarios',
+  USUARIOS: 'Usuarios',          // NUEVA aba única: reemplaza Voluntarios + Admin
+  VOLUNTARIOS: 'Voluntarios',    // (obsoleta — se puede borrar manualmente)
   INSCRIPCIONES: 'Inscripciones',
   CHECKLISTS: 'Checklists',
-  ADMIN: 'Admin',
+  ADMIN: 'Admin',                // (obsoleta — se puede borrar manualmente)
   AUDIT: 'Auditoria'
 };
 
@@ -58,8 +59,6 @@ function doPost(e) {
 
     switch (action) {
       case 'saveConfig':      return _json(_saveConfig(body, email));
-      case 'setPermiso':      return _json(_setPermiso(body, email));
-      case 'delPermiso':      return _json(_delPermiso(body, email));
       case 'upsertVoluntario':return _json(_upsertVoluntario(body, email));
       case 'saveUsuario':     return _json(_saveUsuario(body, email));
       case 'delVoluntario':   return _json(_delVoluntario(body, email));
@@ -78,24 +77,36 @@ function doPost(e) {
 
 /* ============ PULL ============ */
 function _pull() {
+  var usuarios = _readRows(SHEETS.USUARIOS);
   return {
     config:        _readConfig(),
-    voluntarios:   _readRows(SHEETS.VOLUNTARIOS),
+    voluntarios:   usuarios,          // compat: el cliente sigue leyendo "voluntarios" (ahora = Usuarios)
+    usuarios:      usuarios,
     inscripciones: _readRows(SHEETS.INSCRIPCIONES),
     checklists:    _readRows(SHEETS.CHECKLISTS),
     permisos:      _permisos(),   // { admins:[email], lideres:{email:[misionId]} }
     serverTime:    new Date().toISOString()
   };
 }
-/* Allowlist desde la pestaña Admin: papel 'admin' o 'lider' (+ columna mision para líderes) */
+/* parse tolerante del JSON de líder (puede venir vacío, array o string JSON) */
+function _parseLider(val){
+  if(!val) return [];
+  if(Array.isArray(val)) return val;
+  try{ var a=JSON.parse(val); return Array.isArray(a)?a:[]; }catch(e){ return []; }
+}
+function _esAdminFlag(val){
+  var s=String(val==null?'':val).toLowerCase().trim();
+  return s==='true' || s==='1' || s==='sí' || s==='si' || s==='yes' || val===true;
+}
+/* Permisos desde la aba Usuarios: esAdmin (flag) + lider (JSON de misiones). Clave de permiso = email. */
 function _permisos() {
-  var rows = _readRows(SHEETS.ADMIN);
+  var rows = _readRows(SHEETS.USUARIOS);
   var admins = [], lideres = {};
   rows.forEach(function(r){
-    var email = String(r.email||'').toLowerCase(); if(!email) return;
-    var papel = String(r.papel||'').toLowerCase();
-    if(papel==='admin') admins.push(email);
-    if(papel==='lider'){ var mis=String(r.mision||'').trim(); lideres[email]=(lideres[email]||[]); if(mis) lideres[email].push(mis); }
+    var email = String(r.email||'').toLowerCase().trim(); if(!email) return;   // admin/líder requieren email
+    if(_esAdminFlag(r.esAdmin)) admins.push(email);
+    var mis = _parseLider(r.lider);
+    if(mis.length) lideres[email] = (lideres[email]||[]).concat(mis);
   });
   if(!admins.length) admins = ADMIN_FALLBACK.map(function(e){ return e.toLowerCase(); });
   return { admins: admins, lideres: lideres };
@@ -117,63 +128,25 @@ function _saveConfig(body, email) {
   return { ok:true };
 }
 
-/* ============ PERMISOS (gestión de la pestaña Admin — solo admin) ============ */
-function _setPermiso(body, email) {
-  if (!_isAdmin(email)) return { ok:false, error:'forbidden_admin' };
-  var e = String(body.email||'').toLowerCase().trim();
-  var papel = String(body.papel||'').toLowerCase().trim();  // 'admin' | 'lider'
-  var mision = String(body.mision||'').trim();
-  if (!e || (papel!=='admin' && papel!=='lider')) return { ok:false, error:'datos_incompletos' };
-  var sh = _sheet(SHEETS.ADMIN);
-  var rows = _readRows(SHEETS.ADMIN);
-  // evitar duplicado exacto (email+papel+mision)
-  var dup = rows.some(function(r){ return String(r.email||'').toLowerCase()===e && String(r.papel||'').toLowerCase()===papel && String(r.mision||'')===mision; });
-  if (!dup) _appendRow(sh, { email:e, papel:papel, mision:mision });
-  SpreadsheetApp.flush();
-  _audit(email, 'setPermiso:'+papel, 'admin', e+(mision?('/'+mision):''));
-  return { ok:true, permisos:_permisos() };
-}
-function _delPermiso(body, email) {
-  if (!_isAdmin(email)) return { ok:false, error:'forbidden_admin' };
-  var e = String(body.email||'').toLowerCase().trim();
-  var papel = String(body.papel||'').toLowerCase().trim();
-  var mision = String(body.mision||'').trim();
-  // PROTECCIÓN DEL ÚLTIMO ADMIN: nunca dejar el app sin ningún administrador.
-  if (papel === 'admin') {
-    var perm = _permisos();
-    var admins = (perm.admins || []);
-    if (admins.length <= 1 && admins.indexOf(e) >= 0) {
-      return { ok:false, error:'last_admin', permisos:perm };
-    }
-  }
-  var sh = _sheet(SHEETS.ADMIN);
-  var rows = _readRows(SHEETS.ADMIN);
-  // borrar de abajo hacia arriba las filas que coincidan
-  for (var i = rows.length - 1; i >= 0; i--) {
-    var r = rows[i];
-    if (String(r.email||'').toLowerCase()===e && String(r.papel||'').toLowerCase()===papel && (!mision || String(r.mision||'')===mision)) {
-      sh.deleteRow(i + 2); // +2: header + 0-index
-    }
-  }
-  SpreadsheetApp.flush();
-  _audit(email, 'delPermiso:'+papel, 'admin', e+(mision?('/'+mision):''));
-  return { ok:true, permisos:_permisos() };
-}
-
-/* ============ VOLUNTARIOS ============ */
+/* ============ USUARIOS (aba única — reemplaza Voluntarios + Admin) ============ */
 function _normTel(t){ return String(t==null?'':t).replace(/[^0-9]/g,''); } // solo dígitos, para comparar
+function _telText(tel){ var k=_normTel(tel); return "'+" + k; } // texto con "+" (Sheets no lo vuelve número)
+
+/* login/auto-registro: crea o actualiza SOLO los datos (no toca roles esAdmin/lider) */
 function _upsertVoluntario(body, email) {
   var v = body.voluntario || {};
   if (!v.telefono || !v.nombre) return { ok:false, error:'datos_incompletos' };
   var telKey = _normTel(v.telefono);
-  var sh = _sheet(SHEETS.VOLUNTARIOS);
-  var rows = _readRows(SHEETS.VOLUNTARIOS);
+  var sh = _sheet(SHEETS.USUARIOS);
+  var rows = _readRows(SHEETS.USUARIOS);
   var idx = rows.findIndex(function(r){ return _normTel(r.telefono) === telKey; });
-  // guardar como TEXTO con "+" para que Sheets no lo convierta en número
-  var telText = "'" + (String(v.telefono).charAt(0)==='+' ? v.telefono : ('+'+telKey));
-  var rec = { telefono:telText, nombre:v.nombre, email:(email||v.email||''), idioma:(v.idioma||'es'), actualizadoEm:new Date().toISOString() };
-  if (idx >= 0) _updateRow(sh, idx, rec); else _appendRow(sh, rec);
-  _audit(email||v.telefono, 'upsertVoluntario', 'voluntario', telKey);
+  if (idx >= 0) {
+    // actualizar datos, preservar esAdmin/lider existentes
+    _updateRow(sh, idx, { telefono:_telText(v.telefono), nombre:v.nombre, email:(email||v.email||rows[idx].email||''), idioma:(v.idioma||rows[idx].idioma||'es'), actualizadoEm:new Date().toISOString() });
+  } else {
+    _appendRow(sh, { telefono:_telText(v.telefono), nombre:v.nombre, email:(email||v.email||''), esAdmin:false, lider:'[]', idioma:(v.idioma||'es'), actualizadoEm:new Date().toISOString() });
+  }
+  _audit(email||v.telefono, 'upsertVoluntario', 'usuario', telKey);
   return { ok:true };
 }
 
@@ -206,74 +179,59 @@ function _saveUsuario(body, email) {
     }
   }
 
-  // 1) upsert en Voluntarios (datos)
-  var shV = _sheet(SHEETS.VOLUNTARIOS);
-  var rowsV = _readRows(SHEETS.VOLUNTARIOS);
-  var idxV = rowsV.findIndex(function(r){ return _normTel(r.telefono) === telKey; });
-  var telText = "'+" + telKey;
-  var recV = { telefono:telText, nombre:nombre, email:mail, idioma:(u.idioma||'es'), actualizadoEm:new Date().toISOString() };
-  if (idxV >= 0) _updateRow(shV, idxV, recV); else _appendRow(shV, recV);
-
-  // 2) reconciliar roles en Admin (solo si hay email): borrar todo lo de este email y reescribir
-  if (mail) {
-    var shA = _sheet(SHEETS.ADMIN);
-    var rowsA = _readRows(SHEETS.ADMIN);
-    for (var i = rowsA.length - 1; i >= 0; i--) {
-      if (String(rowsA[i].email||'').toLowerCase() === mail) shA.deleteRow(i + 2);
-    }
-    if (esAdmin) _appendRow(shA, { email:mail, papel:'admin', mision:'' });
-    misiones.forEach(function(mid){ _appendRow(shA, { email:mail, papel:'lider', mision:mid }); });
-  }
+  // upsert de UNA fila en Usuarios: datos + esAdmin (flag) + lider (JSON de misiones)
+  var sh = _sheet(SHEETS.USUARIOS);
+  var rows = _readRows(SHEETS.USUARIOS);
+  var idx = rows.findIndex(function(r){ return _normTel(r.telefono) === telKey; });
+  var rec = {
+    telefono:_telText(telKey), nombre:nombre, email:mail,
+    esAdmin: (esAdmin ? true : false),
+    lider: JSON.stringify(misiones),
+    idioma:(u.idioma||'es'), actualizadoEm:new Date().toISOString()
+  };
+  if (idx >= 0) _updateRow(sh, idx, rec); else _appendRow(sh, rec);
 
   SpreadsheetApp.flush();
   _audit(email, 'saveUsuario', 'usuario', telKey + (mail?('/'+mail):'') + ' admin='+esAdmin+' lider='+misiones.join(','));
-  return { ok:true, permisos:_permisos(), voluntarios:_readRows(SHEETS.VOLUNTARIOS) };
+  return { ok:true, permisos:_permisos(), voluntarios:_readRows(SHEETS.USUARIOS) };
 }
 
 function _delVoluntario(body, email){
   if (!_isAdmin(email)) return { ok:false, error:'forbidden_admin' };
   var telKey = _normTel(body.telefono);
   if (!telKey) return { ok:false, error:'sin_telefono' };
-  var sh = _sheet(SHEETS.VOLUNTARIOS);
-  var rows = _readRows(SHEETS.VOLUNTARIOS);
-  // email de la persona (para limpiar permisos órfãos y proteger el último admin)
-  var mail = '';
-  rows.forEach(function(r){ if(_normTel(r.telefono)===telKey && r.email) mail=String(r.email).toLowerCase().trim(); });
-  // protección del último admin: no permitir eliminar al único administrador
-  if (mail) {
+  var sh = _sheet(SHEETS.USUARIOS);
+  var rows = _readRows(SHEETS.USUARIOS);
+  // email + si es admin (para proteger el último admin)
+  var mail = '', eraAdmin = false;
+  rows.forEach(function(r){ if(_normTel(r.telefono)===telKey){ if(r.email) mail=String(r.email).toLowerCase().trim(); if(_esAdminFlag(r.esAdmin)) eraAdmin=true; } });
+  if (eraAdmin && mail) {
     var perm = _permisos(); var admins = perm.admins || [];
     if (admins.length <= 1 && admins.indexOf(mail) >= 0) {
       return { ok:false, error:'last_admin', permisos:perm };
     }
   }
+  // borrar la(s) fila(s) de este teléfono
   for (var i = rows.length - 1; i >= 0; i--) {
     if (_normTel(rows[i].telefono) === telKey) sh.deleteRow(i + 2);
   }
-  // limpiar permisos órfãos de este email en la pestaña Admin
-  if (mail) {
-    var shA = _sheet(SHEETS.ADMIN);
-    var rowsA = _readRows(SHEETS.ADMIN);
-    for (var j = rowsA.length - 1; j >= 0; j--) {
-      if (String(rowsA[j].email||'').toLowerCase() === mail) shA.deleteRow(j + 2);
-    }
-  }
   SpreadsheetApp.flush();
-  _audit(email, 'delVoluntario', 'voluntario', telKey);
-  return { ok:true, permisos:_permisos(), voluntarios:_readRows(SHEETS.VOLUNTARIOS) };
+  _audit(email, 'delVoluntario', 'usuario', telKey);
+  return { ok:true, permisos:_permisos(), voluntarios:_readRows(SHEETS.USUARIOS) };
 }
 
 function _dedupeVoluntarios(body, email){
   if (!_isAdmin(email)) return { ok:false, error:'forbidden_admin' };
-  var sh = _sheet(SHEETS.VOLUNTARIOS);
-  var rows = _readRows(SHEETS.VOLUNTARIOS);
-  // quedarse con la ÚLTIMA fila por teléfono; borrar las demás (de abajo hacia arriba)
+  var sh = _sheet(SHEETS.USUARIOS);
+  var rows = _readRows(SHEETS.USUARIOS);
+  // quedarse con la ÚLTIMA fila por teléfono; borrar las demás
   var lastByTel = {};
   rows.forEach(function(r,i){ var k=_normTel(r.telefono); if(k) lastByTel[k]=i; });
   var keep = {}; Object.keys(lastByTel).forEach(function(k){ keep[lastByTel[k]]=true; });
   for (var i = rows.length - 1; i >= 0; i--) {
     if (!keep[i]) sh.deleteRow(i + 2);
   }
-  _audit(email, 'dedupeVoluntarios', 'voluntario', String(rows.length)+'→'+Object.keys(lastByTel).length);
+  _audit(email, 'dedupeVoluntarios', 'usuario', String(rows.length)+'→'+Object.keys(lastByTel).length);
   return { ok:true, antes:rows.length, despues:Object.keys(lastByTel).length };
 }
 
@@ -347,8 +305,9 @@ function _isAdmin(email) {
   return admins.indexOf(email) >= 0;
 }
 function _adminList() {
-  var rows = _readRows(SHEETS.ADMIN);
-  var list = rows.filter(function(r){ return String(r.papel||'').toLowerCase()==='admin'; }).map(function(r){ return String(r.email||'').toLowerCase(); });
+  var rows = _readRows(SHEETS.USUARIOS);
+  var list = rows.filter(function(r){ return _esAdminFlag(r.esAdmin) && String(r.email||'').trim(); })
+                 .map(function(r){ return String(r.email||'').toLowerCase(); });
   return list.length ? list : ADMIN_FALLBACK.map(function(e){ return e.toLowerCase(); });
 }
 
@@ -358,19 +317,21 @@ function _sheet(name){ var s=_ss().getSheetByName(name); if(!s) s=_ss().insertSh
 function _ensureSheets() {
   var headers = {};
   headers[SHEETS.CONFIG] = ['config_json'];
-  headers[SHEETS.VOLUNTARIOS] = ['telefono','nombre','email','idioma','actualizadoEm'];
+  headers[SHEETS.USUARIOS] = ['telefono','nombre','email','esAdmin','lider','idioma','actualizadoEm'];
   headers[SHEETS.INSCRIPCIONES] = ['id','activityId','misionId','templateId','fecha','rol','voluntario','estado','porEmail','creadoEm','motivo'];
   headers[SHEETS.CHECKLISTS] = ['activityId','itemId','texto','hecho','hechoPor','asignado','suelto','actualizadoEm'];
-  headers[SHEETS.ADMIN] = ['email','papel','mision'];
   headers[SHEETS.AUDIT] = ['timestamp','usuario','accion','tipo','ref'];
   Object.keys(headers).forEach(function(name){
     var sh = _sheet(name);
     if (name === SHEETS.CONFIG) return; // Config usa A1 libre
     if (sh.getLastRow() === 0) sh.appendRow(headers[name]);
   });
-  // Admin: sembrar fila de instrucciones si vacío
-  var adm = _sheet(SHEETS.ADMIN);
-  if (adm.getLastRow() === 1) adm.appendRow([ADMIN_FALLBACK[0], 'admin', '']);
+  // Usuarios: sembrar el admin fallback si la aba está vacía (solo cabecera)
+  var usr = _sheet(SHEETS.USUARIOS);
+  if (usr.getLastRow() === 1) {
+    _appendRow(usr, { telefono:'', nombre:'Admin', email:ADMIN_FALLBACK[0], esAdmin:true, lider:'[]', idioma:'es', actualizadoEm:new Date().toISOString() });
+  }
+  // NOTA: las abas 'Voluntarios' y 'Admin' quedaron obsoletas — bórralas manualmente en la planilha.
 }
 function _headers(name){ var sh=_sheet(name); return sh.getRange(1,1,1,Math.max(1,sh.getLastColumn())).getValues()[0]; }
 function _readRows(name){
