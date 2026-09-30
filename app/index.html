@@ -424,7 +424,11 @@
 
   /* ============ Tab Más ============ */
   #v-mas{ padding:24px 16px 0; }
-  .mas-card{ background:var(--blanco); border:1px solid var(--linea); border-radius:var(--raio); padding:28px 20px 24px; text-align:center; margin-bottom:20px; }
+  .mas-card{ background:var(--blanco); border:1px solid var(--linea); border-radius:var(--raio); padding:28px 20px 24px; text-align:center; margin-bottom:20px; position:relative; }
+  .mas-lang{ position:absolute; top:12px; right:12px; display:flex; gap:6px; }
+  .mas-flag{ padding:2px; border:1.5px solid var(--linea); border-radius:6px; background:#fff; cursor:pointer; line-height:0; opacity:.45; filter:grayscale(.6); transition:.15s; }
+  .mas-flag svg{ display:block; border-radius:3px; }
+  .mas-flag.on{ opacity:1; filter:none; border-color:var(--oro-osc); box-shadow:0 0 0 2px var(--oro-bg); }
   .mas-avatar{ width:72px; height:72px; border-radius:50%; background:var(--negro); color:var(--oro); font-family:"Oswald",sans-serif; font-size:26px; font-weight:600; display:grid; place-items:center; margin:0 auto 14px; letter-spacing:.05em; }
   .mas-name{ font-family:"Cormorant Garamond",serif; font-size:22px; font-weight:600; margin-bottom:4px; }
   .mas-email{ font-size:13px; color:var(--gris); font-weight:300; margin-bottom:10px; word-break:break-all; }

@@ -5,7 +5,10 @@
 'use strict';
 
 /* ---------- estado ---------- */
-const LANG = (window.CFMS_CONFIG && window.CFMS_CONFIG.DEFAULT_LANG) || 'es';
+let LANG = (function(){
+  try{ var saved = localStorage.getItem('mf_lang'); if(saved==='es'||saved==='pt') return saved; }catch(e){}
+  return (window.CFMS_CONFIG && window.CFMS_CONFIG.DEFAULT_LANG) || 'es';
+})();
 const MESES = { es:['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
                 pt:['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'] };
 const cursor = new Date(); cursor.setDate(1);
@@ -1306,6 +1309,37 @@ function actCardHTML(a, opts={}){
     ${right}</div>`;
 }
 
+/* ---------- SELECTOR DE IDIOMA (banderas SVG ES/BR) ---------- */
+/* banderas dibujadas en SVG (consistentes en todas las plataformas, no emoji) */
+function _flagES(){
+  return '<svg viewBox="0 0 24 16" width="26" height="17" aria-label="Español">'
+    + '<rect width="24" height="16" fill="#c60b1e"/><rect y="4" width="24" height="8" fill="#ffc400"/></svg>';
+}
+function _flagBR(){
+  return '<svg viewBox="0 0 24 16" width="26" height="17" aria-label="Português (Brasil)">'
+    + '<rect width="24" height="16" fill="#009b3a"/>'
+    + '<polygon points="12,2 22,8 12,14 2,8" fill="#fedf00"/>'
+    + '<circle cx="12" cy="8" r="3.2" fill="#002776"/></svg>';
+}
+function _langSelectorHtml(){
+  return '<div class="mas-lang">'
+    + '<button class="mas-flag '+(LANG==='es'?'on':'')+'" title="Español" aria-label="Español" onclick="setLang(\'es\')">'+_flagES()+'</button>'
+    + '<button class="mas-flag '+(LANG==='pt'?'on':'')+'" title="Português" aria-label="Português" onclick="setLang(\'pt\')">'+_flagBR()+'</button>'
+    + '</div>';
+}
+function setLang(l){
+  if(l!=='es' && l!=='pt') return;
+  if(l===LANG){ return; }
+  LANG = l;
+  try{ localStorage.setItem('mf_lang', l); }catch(e){}
+  // persistir en el backend (columna idioma del usuario), sin bloquear la UI
+  if(USER && USER.phone && window.MFSync && window.MFSync.enabled){
+    try{ window.MFSync.queue('upsertVoluntario', { voluntario:{ telefono:USER.phone, nombre:USER.name, email:USER.email||'', idioma:l } }); }catch(e){}
+  }
+  try{ renderAll(); }catch(e){ renderMas(); }
+}
+window.setLang=setLang;
+
 function renderMas(){
   var box = document.getElementById('masBody'); if(!box) return;
   var nombre  = (USER && USER.name)  ? USER.name  : '—';
@@ -1345,6 +1379,7 @@ function renderMas(){
 
   box.innerHTML =
     '<div class="mas-card">'
+    +_langSelectorHtml()
     +'<div class="mas-avatar">'+nombre.split(' ').map(function(w){return w[0]||'';}).slice(0,2).join('').toUpperCase()+'</div>'
     +'<div class="mas-name">'+nombre+'</div>'
     +'<div class="mas-email">'+email+'</div>'
