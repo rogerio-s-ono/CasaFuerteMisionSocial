@@ -332,10 +332,15 @@
   .lc-role{ padding:10px 14px; border-bottom:1px solid var(--linea); } .lc-role:last-child{ border-bottom:0; }
   .lc-role .lr-h{ display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
   .lc-role .lr-name{ font-weight:500; font-size:13px; } .lc-role .lr-count{ font-size:12px; font-weight:600; }
+  .lc-role .lr-right{ display:inline-flex; align-items:center; gap:8px; }
+  .lc-role .lr-add{ width:24px; height:24px; flex:0 0 24px; border:0; border-radius:50%; background:var(--oro); color:#111; font-size:16px; line-height:1; cursor:pointer; display:grid; place-items:center; font-family:"Jost",sans-serif; box-shadow:0 1px 3px rgba(0,0,0,.15); }
+  .lc-role .lr-add:active{ background:var(--oro-osc); }
   .lc-role .lr-count.full{ color:var(--t-distri-tx); } .lc-role .lr-count.miss{ color:var(--warn); }
   .people{ display:flex; flex-wrap:wrap; gap:6px; }
   .chip{ font-size:12px; background:var(--t-distri-bg); border:1px solid #cfe6ad; color:var(--t-distri-tx); border-radius:999px; padding:4px 11px; display:inline-flex; align-items:center; gap:6px; }
   .chip.vac{ border-style:dashed; color:#c2560c; background:#fdeadb; border-color:transparent; }
+  .chip.vac.clickable{ cursor:pointer; border-color:#e8b98f; }
+  .chip.vac.clickable:active{ background:#f8dcc4; }
   .chip.esp{ background:#fdf4e8; border-color:#ead9bf; color:#8a6d3b; }
   .chip.temp{ background:#efeafa; border-color:#d9cdf0; color:#5a4494; }
   .chip.temp .tg{ font-size:10px; color:#7c5cbf; font-weight:500; }

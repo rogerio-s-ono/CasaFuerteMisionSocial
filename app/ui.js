@@ -392,9 +392,8 @@ function chipsRol(a, r){
         ? `<span class="chip temp">${ad.name} <span class="tg">· Temp</span> <span class="x" onclick="delAdd('${a.id}','${r}',${i})">×</span></span>`
         : `<span class="chip">${ad.name} <span class="x" onclick="delAdd('${a.id}','${r}',${i})">×</span></span>`
       ).join('');
-    html += Array.from({length:falta}).map(()=>`<span class="chip vac">vacante</span>`).join('');
-    if(falta>0){ html += `<button class="add-btn" onclick="openAddSheet('${a.id}','${r}')">+ Añadir servidor</button>`; }
-    return html || '<span class="chip vac">sin inscritos</span>';
+    html += Array.from({length:falta}).map(()=>`<span class="chip vac clickable" onclick="openAddSheet('${a.id}','${r}')">+ vacante</span>`).join('');
+    return html || `<span class="chip vac clickable" onclick="openAddSheet('${a.id}','${r}')">+ sin inscritos</span>`;
   }
   const t = tmplId(a.id);
   const demo = (DEMO_INSCR[t] && DEMO_INSCR[t][r]) ? DEMO_INSCR[t][r].slice() : [];
@@ -407,9 +406,8 @@ function chipsRol(a, r){
       ? `<span class="chip temp">${ad.name} <span class="tg">· Temp</span> <span class="x" onclick="delAdd('${a.id}','${r}',${i})">×</span></span>`
       : `<span class="chip">${ad.name} <span class="x" onclick="delAdd('${a.id}','${r}',${i})">×</span></span>`
     ).join('');
-  html += Array.from({length:falta}).map(()=>`<span class="chip vac">vacante</span>`).join('');
-  if(falta>0){ html += `<button class="add-btn" onclick="openAddSheet('${a.id}','${r}')">+ Añadir servidor</button>`; }
-  return html || '<span class="chip vac">sin inscritos</span>';
+  html += Array.from({length:falta}).map(()=>`<span class="chip vac clickable" onclick="openAddSheet('${a.id}','${r}')">+ vacante</span>`).join('');
+  return html || `<span class="chip vac clickable" onclick="openAddSheet('${a.id}','${r}')">+ sin inscritos</span>`;
 }
 function esperaHtml(a, r){
   const esp = esperaDe(a,r);
@@ -422,7 +420,8 @@ function actCardLider(a){
     const cap=a.roles[r]; const gente=inscritosDe(a,r); const falta=Math.max(0,cap-gente.length);
     const rd=window.CFMS.ROLES[r];
     return `<div class="lc-role">
-      <div class="lr-h"><span class="lr-name">${rd?rd.label[LANG]:r}</span><span class="lr-count ${falta>0?'miss':'full'}">${gente.length}/${cap}${falta>0?` · faltan ${falta}`:' · completo'}</span></div>
+      <div class="lr-h"><span class="lr-name">${rd?rd.label[LANG]:r}</span>
+        <span class="lr-right"><button class="lr-add" title="Añadir servidor" onclick="openAddSheet('${a.id}','${r}')">+</button><span class="lr-count ${falta>0?'miss':'full'}">${gente.length}/${cap}${falta>0?` · faltan ${falta}`:' · completo'}</span></span></div>
       <div class="people">${chipsRol(a,r)}</div>
       ${esperaHtml(a,r)}</div>`;
   }).join('');
