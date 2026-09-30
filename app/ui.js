@@ -27,34 +27,7 @@ const DEMO_LIDERES = {
   mercamadrid: { name:'Rogério Ono', email:'rogerio.s.ono@gmail.com' },
   banco:       { name:'Tânia Ono',   email:'tania.eustaqui@gmail.com' }
 };
-/* inscripciones de ejemplo de OTROS voluntarios, por templateId+rol.
-   En real esto vendrá del backend (todas las inscripciones de todos). */
-const DEMO_INSCR = {
-  // Cadena A
-  A1:{ motorista:['Carlos R.'], ajudante:['Marcos','Alessandra'] },      // retirada sáb (2 mot / 2 ayu) -> falta 1 motorista
-  A2:{ preparacao:['Débora M.','Everton','Daniel'] },                     // prep sáb (6) -> faltan 3
-  A3:{ preparacao:['Ana L.','Célio','María G.','Sofía','Lucas','Pedro','Marta'] }, // prep dom (10) -> faltan 3
-  A4:{ distribuicao:['Carlos R.','Marcos','Ana L.','Daniel'] },          // distri (6) -> faltan 2
-  A5:{ limpeza:['Everton','Sofía'] },                                    // limpieza (4) -> faltan 2
-  // Cadena B
-  B1:{ motorista:['João','Ricardo'], ajudante:['Bruno','Tiago'] },       // retirada (2/2) -> LLENO
-  B2:{ preparacao:['Cláudia','Beatriz','Rafael','Inés','Nuria','Hugo','Elena','Diego'] }, // prep (10) -> faltan 2
-  B3:{ distribuicao:['Cláudia','Rafael','Hugo'] },                       // distri (6) -> faltan 3
-  B4:{ limpeza:['Beatriz','Diego','Inés','Nuria'] }                      // limpieza (4) -> LLENO
-};
-/* lista de espera de ejemplo, por templateId+rol */
-const DEMO_ESPERA = {
-  B1:{ motorista:['Andrés'], ajudante:['Paula'] },   // recogida B llena -> hay reservas
-  B4:{ limpeza:['Sara'] }
-};
-
-/* servidores registrados (para el autocompletar del líder) — en real: del backend */
-const DEMO_SERVIDORES = [
-  { n:'María González', p:'+34 611 111 111' }, { n:'Marta Ruiz', p:'+34 622 222 222' },
-  { n:'Mario Souza', p:'+34 633 333 333' }, { n:'Lucía Pérez', p:'+34 644 444 444' },
-  { n:'Sofía Lima', p:'+34 655 555 555' }, { n:'Pedro Alves', p:'+34 666 666 666' },
-  { n:'Carlos Ruiz', p:'+34 677 777 777' }, { n:'Elena Torres', p:'+34 688 888 888' }
-];
+/* (datos demo de inscripciones/espera/servidores removidos en v0.16.0 — usa solo datos reales del backend) */
 /* adiciones hechas por el líder, por activityId -> roleId -> [{name, temp}] */
 let LIDER_ADDS = {};
 function loadAdds(){ try{ LIDER_ADDS = JSON.parse(localStorage.getItem('mf_lider_adds')||'{}'); }catch(e){ LIDER_ADDS={}; } }
@@ -121,18 +94,11 @@ function scopeCadenas(){
 }
 /* inscritos (demo + los míos + añadidos por el líder) por actividad/rol */
 function inscritosDe(activity, roleId){
-  if(LIVE){
-    // datos REALES del servidor: inscripciones confirmadas de esta actividad+rol
-    var names = SERVER_INSCR.filter(function(r){ return r.activityId===activity.id && r.rol===roleId && r.estado==='confirmado'; })
-                            .map(function(r){ return _volName(r.voluntario); });
-    addsDe(activity.id, roleId).forEach(function(a){ names.push(a.name); });   // encajes de última hora del líder
-    return names;
-  }
-  const t = tmplId(activity.id);
-  const base = (DEMO_INSCR[t] && DEMO_INSCR[t][roleId]) ? DEMO_INSCR[t][roleId].slice() : [];
-  if(INSCR[activity.id]===roleId && USER){ base.push((USER.name||'Yo') + ' (tú)'); }
-  addsDe(activity.id, roleId).forEach(a=>base.push(a.name));
-  return base;
+  // dados reais do servidor: inscrições confirmadas nesta atividade+rol
+  var names = SERVER_INSCR.filter(function(r){ return r.activityId===activity.id && r.rol===roleId && r.estado==='confirmado'; })
+                          .map(function(r){ return _volName(r.voluntario); });
+  addsDe(activity.id, roleId).forEach(function(a){ names.push(a.name); });
+  return names;
 }
 /* nombre del voluntario por su teléfono (para mostrar en vez del número) */
 function _volName(tel){ var k=String(tel).replace(/[^0-9]/g,''); var v=SERVER_VOLS.find(function(x){ return String(x.telefono).replace(/[^0-9]/g,'')===k; }); return v?v.nombre:String(tel); }
@@ -143,14 +109,8 @@ function inscritosDetalle(activity, roleId){
     .map(function(r){ return { id:r.id, tel:String(r.voluntario), name:_volName(r.voluntario), estado:r.estado }; });
 }
 function esperaDe(activity, roleId){
-  if(LIVE){
-    return SERVER_INSCR.filter(function(r){ return r.activityId===activity.id && r.rol===roleId && r.estado==='espera'; })
-                       .map(function(r){ return _volName(r.voluntario); });
-  }
-  const t = tmplId(activity.id);
-  const base = (DEMO_ESPERA[t] && DEMO_ESPERA[t][roleId]) ? DEMO_ESPERA[t][roleId].slice() : [];
-  if(MI_ESPERA[activity.id]===roleId && USER){ base.push((USER.name||'Yo') + ' (tú)'); }
-  return base;
+  return SERVER_INSCR.filter(function(r){ return r.activityId===activity.id && r.rol===roleId && r.estado==='espera'; })
+                     .map(function(r){ return _volName(r.voluntario); });
 }
 /* ocupación considerando demo: cuántos inscritos reales hay en un rol */
 function ocupados(activity, roleId){ return inscritosDe(activity, roleId).length; }
@@ -568,9 +528,7 @@ function acBackSearch(){
 function acType(v){
   const list=document.getElementById('acList'); const q=norm((v||'').trim());
   if(!q){ list.style.display='none'; return; }
-  const fuente = LIVE
-    ? SERVER_VOLS.map(function(x){ return { n:x.nombre, p:String(x.telefono) }; })
-    : DEMO_SERVIDORES;
+  const fuente = SERVER_VOLS.map(function(x){ return { n:x.nombre, p:String(x.telefono) }; });
   const hits = fuente.filter(s=>norm(String(s.n||'')).includes(q)).slice(0,5);
   const ini = n => n.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase();
   let html = hits.map(s=>`<div class="ac-item" onclick="acPick('${s.n.replace(/'/g,"\\'")}')">
@@ -1184,7 +1142,45 @@ function actCardHTML(a, opts={}){
     ${right}</div>`;
 }
 
-function renderAll(){ renderInicio(); renderAgenda(); renderMios(); renderLider(); renderAdmin(); }
+function renderMas(){
+  var box = document.getElementById('masBody'); if(!box) return;
+  var nombre  = (USER && USER.name)  ? USER.name  : '—';
+  var email   = (USER && USER.email) ? USER.email : (USER && USER.phone ? USER.phone : '—');
+  var papel   = isAdmin() ? 'Administrador' : (isLider() ? 'Líder' : 'Voluntario');
+  var syncSt  = window.MFSync ? window.MFSync.status() : 'off';
+  var syncTxt = { ok:'Sincronizado', pending:'Pendiente', syncing:'Sincronizando…',
+                  offline:'Sin conexión', error:'Error de sync', off:'Sin servidor' };
+  var syncCol = { ok:'#4f9d69', pending:'#d9a90a', syncing:'#d9a90a',
+                  offline:'#c2560c', error:'#c2560c', off:'#9a9a9a' };
+  var queueLen = 0;
+  try{ queueLen = JSON.parse(localStorage.getItem('mf_sync_queue')||'[]').length; }catch(e){}
+
+  box.innerHTML =
+    '<div class="mas-card">'
+    +'<div class="mas-avatar">'+nombre.split(' ').map(function(w){return w[0]||'';}).slice(0,2).join('').toUpperCase()+'</div>'
+    +'<div class="mas-name">'+nombre+'</div>'
+    +'<div class="mas-email">'+email+'</div>'
+    +'<div class="mas-pill">'+papel+'</div>'
+    +'</div>'
+
+    +'<div class="mas-sec">Sincronización</div>'
+    +'<div class="mas-row">'
+    +  '<span class="mas-lbl">Estado</span>'
+    +  '<span class="mas-val" style="color:'+syncCol[syncSt]+'">'+( syncTxt[syncSt]||'—')+'</span>'
+    +'</div>'
+    +(queueLen > 0
+      ? '<div class="mas-row"><span class="mas-lbl">Pendientes de envío</span><span class="mas-val">'+queueLen+'</span></div>'
+      : '')
+
+    +'<div class="mas-sec">Aplicación</div>'
+    +'<div class="mas-row"><span class="mas-lbl">Versión</span><span class="mas-val">v'+window.CFMS.APP_VERSION+'</span></div>'
+
+    +'<div class="mas-logout-wrap">'
+    +'<button class="mas-logout" onclick="goLogin()">Cerrar sesión</button>'
+    +'</div>';
+}
+
+function renderAll(){ renderInicio(); renderAgenda(); renderMios(); renderLider(); renderAdmin(); renderMas(); }
 
 function renderInicio(){
   const acts = currentActivities();
@@ -1373,21 +1369,82 @@ window.nextStep=nextStep; window.prevStep=prevStep;
 
 function confirmInscr(){
   const sel = selectedActsSorted();
-  sel.forEach(a=>{
-    const r = wzState.roles[a.id];
-    if(libresRol(a,r) > 0){ INSCR[a.id]=r; delete MI_ESPERA[a.id]; }   // hay plaza -> confirmado
-    else { MI_ESPERA[a.id]=r; delete INSCR[a.id]; }                    // lleno -> lista de espera
-  });
-  saveInscr(); saveEspera();
-  document.querySelectorAll('.wz-step').forEach(s=>s.classList.remove('active'));
+
+  if(LIVE && window.MFSync){
+    // --- modo LIVE: enviar ao backend ---
+    // desabilitar botão para evitar double-tap
+    var btn = document.getElementById('wzNext');
+    if(btn){ btn.disabled=true; btn.textContent='Enviando…'; }
+
+    var tel = USER && USER.phone ? String(USER.phone).replace(/[^0-9+]/g,'') : '';
+    var promises = sel.map(function(a){
+      var r = wzState.roles[a.id];
+      var cap = a.roles[r] || 0;
+      var payload = {
+        inscripcion: {
+          activityId: a.id,
+          misionId:   a.misionId || a.cadeia || '',
+          templateId: a.templateId || '',
+          fecha:      a.data || '',
+          rol:        r,
+          capacidad:  cap,
+          voluntario: tel
+        }
+      };
+      return window.MFSync.post('inscribir', payload).then(function(j){
+        return { activityId: a.id, rol: r, res: j };
+      }).catch(function(err){
+        // offline ou erro de rede → enfileira
+        window.MFSync.queue('inscribir', payload);
+        return { activityId: a.id, rol: r, res: { ok:true, estado:'confirmado', queued:true } };
+      });
+    });
+
+    Promise.all(promises).then(function(results){
+      // atualizar SERVER_INSCR local e estado INSCR/MI_ESPERA com base na resposta
+      results.forEach(function(item){
+        var estado = (item.res && item.res.estado) || 'confirmado';
+        if(estado === 'espera'){ MI_ESPERA[item.activityId]=item.rol; delete INSCR[item.activityId]; }
+        else                   { INSCR[item.activityId]=item.rol;     delete MI_ESPERA[item.activityId]; }
+        // adicionar à lista local para refletir imediatamente sem precisar de pull
+        if(!item.res.dup){
+          SERVER_INSCR.push({ activityId:item.activityId, rol:item.rol, voluntario:tel, estado:estado, id:'_local_'+Date.now() });
+        }
+      });
+      saveInscr(); saveEspera();
+      _showWzOk(sel, results);
+    });
+
+  } else {
+    // --- modo offline/local: grava só em localStorage ---
+    var results = sel.map(function(a){
+      var r = wzState.roles[a.id];
+      var estado = libresRol(a,r) > 0 ? 'confirmado' : 'espera';
+      if(estado === 'espera'){ MI_ESPERA[a.id]=r; delete INSCR[a.id]; }
+      else                   { INSCR[a.id]=r; delete MI_ESPERA[a.id]; }
+      return { activityId: a.id, rol: r, res: { ok:true, estado: estado } };
+    });
+    saveInscr(); saveEspera();
+    _showWzOk(sel, results);
+  }
+}
+
+function _showWzOk(sel, results){
+  // mapeia activityId → estado para montar o resumo
+  var estadoMap = {};
+  results.forEach(function(item){ estadoMap[item.activityId] = (item.res && item.res.estado) || 'confirmado'; });
+
+  document.querySelectorAll('.wz-step').forEach(function(s){ s.classList.remove('active'); });
   document.querySelector('.wz-step[data-step="ok"]').classList.add('active');
   document.getElementById('stepper').style.visibility='hidden';
-  document.getElementById('wzOkResumo').innerHTML = sel.map(a=>{
-    const f=fmtFecha(a.data); const r=wzState.roles[a.id]; const espera = !!MI_ESPERA[a.id];
-    return `<div class="row"><span class="k">${a.titulo[LANG]}<br><span style="text-transform:none;letter-spacing:0;font-size:12px">${f.w} ${f.d} ${f.m} · ${a.hora}</span></span><span class="v">${window.CFMS.ROLES[r]?window.CFMS.ROLES[r].label[LANG]:r}${espera?' <span style="color:var(--warn);font-size:11px">· en espera</span>':''}</span></div>`;
+  document.getElementById('wzOkResumo').innerHTML = sel.map(function(a){
+    var f=fmtFecha(a.data); var r=wzState.roles[a.id]; var espera = estadoMap[a.id]==='espera';
+    return '<div class="row"><span class="k">'+a.titulo[LANG]+'<br><span style="text-transform:none;letter-spacing:0;font-size:12px">'+f.w+' '+f.d+' '+f.m+' · '+a.hora+'</span></span>'
+      +'<span class="v">'+(window.CFMS.ROLES[r]?window.CFMS.ROLES[r].label[LANG]:r)
+      +(espera?' <span style="color:var(--warn);font-size:11px">· en espera</span>':'')+'</span></div>';
   }).join('');
-  const anyEspera = sel.some(a=>MI_ESPERA[a.id]);
-  const okTitle = document.querySelector('.wz-step[data-step="ok"] h2');
+  var anyEspera = sel.some(function(a){ return estadoMap[a.id]==='espera'; });
+  var okTitle = document.querySelector('.wz-step[data-step="ok"] h2');
   if(okTitle) okTitle.textContent = anyEspera ? '¡Estás en la lista!' : '¡Estás apuntado!';
   document.getElementById('wzFoot').innerHTML='<button class="next" onclick="closeWizard();renderAll();go(\'v-mios\')">Listo</button>';
 }
@@ -1448,11 +1505,24 @@ if(USER){ document.getElementById('loginGate').style.display='none'; startApp();
 /* ---------- SYNC con backend (si está configurado) ---------- */
 function renderSyncBadge(s){
   var el=document.getElementById('syncBadge'); if(!el) return;
-  var map={ ok:['✓','sincronizado','#4f9d69'], pending:['⏳','pendiente','#d9a90a'], syncing:['↻','sincronizando…','#d9a90a'],
-            offline:['⚡','sin conexión','#c2560c'], error:['⚠','error de sync','#c2560c'], off:['','',''] };
+  // SVGs inline — 12×12, currentColor, sem dependência externa
+  var SVG_OK      = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-label="sincronizado"><polyline points="2,9 6,13 14,4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var SVG_SYNC    = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-label="sincronizando" style="animation:mf-spin 1s linear infinite"><path d="M14 8A6 6 0 1 1 8 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+  var SVG_PENDING = '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-label="pendiente"><circle cx="4" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="12" cy="8" r="1.5"/></svg>';
+  var SVG_OFFLINE = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-label="sin conexión"><line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4.5 6A5 5 0 0 1 13 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M2 4A8 8 0 0 1 16 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="8" cy="13" r="1.5" fill="currentColor"/></svg>';
+  var SVG_ERROR   = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-label="error"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="2"/><line x1="8" y1="5" x2="8" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="8" cy="12" r="1" fill="currentColor"/></svg>';
+  var map={
+    ok:      [SVG_OK,      'sincronizado',   '#4f9d69'],
+    pending: [SVG_PENDING, 'pendiente',      '#d9a90a'],
+    syncing: [SVG_SYNC,    'sincronizando…', '#d9a90a'],
+    offline: [SVG_OFFLINE, 'sin conexión',   '#c2560c'],
+    error:   [SVG_ERROR,   'error de sync',  '#c2560c'],
+    off:     ['','','']
+  };
   var m=map[s]||map.off;
   el.style.display = m[0] ? 'inline-flex' : 'none';
-  el.style.color = m[2]; el.innerHTML = m[0] ? (m[0]+' <span>'+m[1]+'</span>') : '';
+  el.style.color = m[2];
+  el.innerHTML = m[0] ? (m[0]+' <span>'+m[1]+'</span>') : '';
 }
 if(window.MFSync){
   window.MFSync.onStatus(renderSyncBadge);
