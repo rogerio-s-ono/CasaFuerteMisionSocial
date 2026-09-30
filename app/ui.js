@@ -95,13 +95,10 @@ function scopeCadenas(){
   if(LIDER_SCOPE==='all') return mias;
   return mias.includes(LIDER_SCOPE) ? [LIDER_SCOPE] : mias;
 }
-/* inscritos (demo + los míos + añadidos por el líder) por actividad/rol */
+/* inscritos (reales del servidor) por actividad/rol — nombres para mostrar */
 function inscritosDe(activity, roleId){
-  // dados reais do servidor: inscrições confirmadas nesta atividade+rol
-  var names = SERVER_INSCR.filter(function(r){ return r.activityId===activity.id && r.rol===roleId && r.estado==='confirmado'; })
-                          .map(function(r){ return _volName(r.voluntario); });
-  addsDe(activity.id, roleId).forEach(function(a){ names.push(a.name); });
-  return names;
+  return SERVER_INSCR.filter(function(r){ return r.activityId===activity.id && r.rol===roleId && r.estado==='confirmado'; })
+                     .map(function(r){ return r.temp ? (r.nombre||'Temporal') : _volName(r.voluntario); });
 }
 /* nombre del voluntario por su teléfono (para mostrar en vez del número) */
 function _volName(tel){ var k=String(tel).replace(/[^0-9]/g,''); var v=SERVER_VOLS.find(function(x){ return String(x.telefono).replace(/[^0-9]/g,'')===k; }); return v?v.nombre:String(tel); }
@@ -109,11 +106,14 @@ function _volName(tel){ var k=String(tel).replace(/[^0-9]/g,''); var v=SERVER_VO
 function inscritosDetalle(activity, roleId){
   if(!LIVE) return [];
   return SERVER_INSCR.filter(function(r){ return r.activityId===activity.id && r.rol===roleId && r.estado==='confirmado'; })
-    .map(function(r){ return { id:r.id, tel:String(r.voluntario), name:_volName(r.voluntario), estado:r.estado }; });
+    .map(function(r){
+      var temp = (r.temp===true || String(r.temp).toLowerCase()==='true');
+      return { id:r.id, tel:String(r.voluntario), name: temp ? (r.nombre||'Temporal') : _volName(r.voluntario), temp:temp, estado:r.estado };
+    });
 }
 function esperaDe(activity, roleId){
   return SERVER_INSCR.filter(function(r){ return r.activityId===activity.id && r.rol===roleId && r.estado==='espera'; })
-                     .map(function(r){ return _volName(r.voluntario); });
+                     .map(function(r){ return r.temp ? (r.nombre||'Temporal') : _volName(r.voluntario); });
 }
 /* ocupación considerando demo: cuántos inscritos reales hay en un rol */
 function ocupados(activity, roleId){ return inscritosDe(activity, roleId).length; }
@@ -416,33 +416,15 @@ function applyProfile(){
 /* helpers de HTML reutilizables */
 function chipsRol(a, r){
   const cap = a.roles[r];
-  if(LIVE){
-    // inscritos REALES del servidor → chip clicable (abre detalle + quitar de la tarea)
-    const insc = inscritosDetalle(a, r);
-    const adds = addsDe(a.id, r);
-    const ocup = insc.length + adds.length;
-    const falta = Math.max(0, cap - ocup);
-    let html = insc.map(function(p){
-      return `<span class="chip clickable" onclick="volDetalle('${a.id}','${r}','${p.tel.replace(/'/g,"")}')">${p.name}</span>`;
-    }).join('');
-    html += adds.map((ad,i)=> ad.temp
-        ? `<span class="chip temp">${ad.name} <span class="tg">· Temp</span> <span class="x" onclick="delAdd('${a.id}','${r}',${i})">×</span></span>`
-        : `<span class="chip">${ad.name} <span class="x" onclick="delAdd('${a.id}','${r}',${i})">×</span></span>`
-      ).join('');
-    html += Array.from({length:falta}).map(()=>`<span class="chip vac clickable" onclick="openAddSheet('${a.id}','${r}')">+ vacante</span>`).join('');
-    return html || `<span class="chip vac clickable" onclick="openAddSheet('${a.id}','${r}')">+ sin inscritos</span>`;
-  }
-  const t = tmplId(a.id);
-  const demo = (DEMO_INSCR[t] && DEMO_INSCR[t][r]) ? DEMO_INSCR[t][r].slice() : [];
-  if(INSCR[a.id]===r && USER) demo.push((USER.name||'Yo') + ' (tú)');
-  const adds = addsDe(a.id, r);
-  const ocup = demo.length + adds.length;
+  // SIEMPRE datos reales del servidor (inscritos + añadidos por el líder + temporales).
+  // Cada chip abre el detalle (quitar de la tarea). Sin datos demo.
+  const insc = inscritosDetalle(a, r);
+  const ocup = insc.length;
   const falta = Math.max(0, cap - ocup);
-  let html = demo.map(n=>`<span class="chip">${n}</span>`).join('');
-  html += adds.map((ad,i)=> ad.temp
-      ? `<span class="chip temp">${ad.name} <span class="tg">· Temp</span> <span class="x" onclick="delAdd('${a.id}','${r}',${i})">×</span></span>`
-      : `<span class="chip">${ad.name} <span class="x" onclick="delAdd('${a.id}','${r}',${i})">×</span></span>`
-    ).join('');
+  let html = insc.map(function(p){
+    var extra = p.temp ? ' <span class="tg">· Temp</span>' : '';
+    return `<span class="chip ${p.temp?'temp':''} clickable" onclick="volDetalle('${a.id}','${r}','${String(p.tel).replace(/'/g,"")}','${String(p.id||'').replace(/'/g,"")}')">${p.name}${extra}</span>`;
+  }).join('');
   html += Array.from({length:falta}).map(()=>`<span class="chip vac clickable" onclick="openAddSheet('${a.id}','${r}')">+ vacante</span>`).join('');
   return html || `<span class="chip vac clickable" onclick="openAddSheet('${a.id}','${r}')">+ sin inscritos</span>`;
 }
@@ -608,7 +590,7 @@ function acType(v){
   const fuente = SERVER_VOLS.map(function(x){ return { n:x.nombre, p:String(x.telefono) }; });
   const hits = fuente.filter(s=>norm(String(s.n||'')).includes(q)).slice(0,5);
   const ini = n => n.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase();
-  let html = hits.map(s=>`<div class="ac-item" onclick="acPick('${s.n.replace(/'/g,"\\'")}')">
+  let html = hits.map(s=>`<div class="ac-item" onclick="acPick('${s.n.replace(/'/g,"\\'")}','${String(s.p).replace(/'/g,"")}')">
       <div class="av">${ini(s.n)}</div>
       <div class="nm"><div class="n1">${s.n}</div><div class="n2">${s.p}</div></div>
       <span class="tag-reg">registrado</span></div>`).join('');
@@ -617,7 +599,7 @@ function acType(v){
       <div class="ct"><b>Añadir "${v}"</b><div class="sub">como servidor temporal (solo hoy)</div></div></div>`;
   list.innerHTML = html; list.style.display='block';
 }
-function acPick(name){ pushAdd(addCtx.activityId, addCtx.roleId, name, false); closeAddSheet(); renderLider(); }
+function acPick(name, tel){ _liderInscribir(addCtx.activityId, addCtx.roleId, { tel:tel||'', nombre:name, temp:false }); closeAddSheet(); }
 function acGoTemp(name){
   document.getElementById('addStSearch').style.display='none';
   document.getElementById('addStTemp').style.display='block';
@@ -626,8 +608,39 @@ function acGoTemp(name){
 }
 function addTemp(){
   const name = document.getElementById('tNameInput').value.trim() || 'Temporal';
-  pushAdd(addCtx.activityId, addCtx.roleId, name, true);
-  closeAddSheet(); renderLider();
+  _liderInscribir(addCtx.activityId, addCtx.roleId, { tel:'', nombre:name, temp:true });
+  closeAddSheet();
+}
+/* el líder inscribe a alguien (real por teléfono o temporal) → PERSISTE en el backend (con cola offline) */
+function _liderInscribir(activityId, roleId, who){
+  var a = currentActivities().find(function(x){ return x.id===activityId; });
+  if(!a){ toast('Actividad no encontrada'); return; }
+  var cap = a.roles[roleId] || 0;
+  var payload = { inscripcion:{
+    activityId:activityId, misionId:a.misionId||'', templateId:a.templateId||'', fecha:a.data||'',
+    rol:roleId, capacidad:cap, porLider:true,
+    voluntario: who.temp ? '' : String(who.tel||'').replace(/[^0-9]/g,''),
+    nombre: who.nombre||'', temp: !!who.temp
+  }};
+  if(!window.MFSync || !window.MFSync.enabled){ toast('Necesita backend'); return; }
+  toast('Añadiendo…');
+  window.MFSync.post('inscribir', payload).then(function(j){
+    if(j && j.ok){
+      // reflejar de inmediato en local sin esperar el pull
+      SERVER_INSCR.push({ id:(j.id||'_local_'+Date.now()), activityId:activityId, rol:roleId,
+        voluntario:(j.voluntario|| (who.temp?'temp:local':String(who.tel||'').replace(/[^0-9]/g,''))),
+        nombre:who.nombre||'', temp:!!who.temp, estado:(j.estado||'confirmado') });
+      toast(j.estado==='espera'?'Añadido a lista de espera':'Añadido');
+    } else { toast('No se pudo añadir'); }
+    renderLider();
+  }).catch(function(){
+    // offline → encola y refleja local optimista
+    window.MFSync.queue('inscribir', payload);
+    SERVER_INSCR.push({ id:'_local_'+Date.now(), activityId:activityId, rol:roleId,
+      voluntario:(who.temp?'temp:local':String(who.tel||'').replace(/[^0-9]/g,'')),
+      nombre:who.nombre||'', temp:!!who.temp, estado:'confirmado' });
+    toast('Sin conexión — se enviará al reconectar'); renderLider();
+  });
 }
 function delAdd(activityId, roleId, idx){ removeAdd(activityId, roleId, idx); renderLider(); }
 window.openAddSheet=openAddSheet; window.closeAddSheet=closeAddSheet; window.acType=acType; window.acBackSearch=acBackSearch;
@@ -636,8 +649,8 @@ window.acPick=acPick; window.acGoTemp=acGoTemp; window.addTemp=addTemp; window.d
 /* ---------- DETALLE de voluntario asignado (vista líder) → quitar de la tarea con motivo ---------- */
 let VOL_CTX = null;      // { activityId, roleId, tel }
 let VOL_BUSY = false, _volConfirm = false;
-function volDetalle(activityId, roleId, tel){
-  VOL_CTX = { activityId, roleId, tel }; _volConfirm=false;
+function volDetalle(activityId, roleId, tel, id){
+  VOL_CTX = { activityId, roleId, tel, id:id||'' }; _volConfirm=false;
   _renderVolDetalle();
   document.getElementById('usrBackdrop').classList.add('on');
   document.getElementById('usrSheet').classList.add('on');
@@ -646,8 +659,11 @@ function closeVolDetalle(){ VOL_CTX=null; _volConfirm=false; document.getElement
 function _renderVolDetalle(){
   const a = currentActivities().find(x=>x.id===VOL_CTX.activityId);
   const rd = window.CFMS.ROLES[VOL_CTX.roleId];
-  const v = _volByTel(VOL_CTX.tel) || {};
-  const nombre = v.nombre || _volName(VOL_CTX.tel);
+  var esTemp = String(VOL_CTX.tel||'').indexOf('temp:')===0;
+  var rowInsc = SERVER_INSCR.find(function(r){ return (VOL_CTX.id && String(r.id)===String(VOL_CTX.id)) || (String(r.voluntario)===String(VOL_CTX.tel) && r.activityId===VOL_CTX.activityId && r.rol===VOL_CTX.roleId); }) || {};
+  const v = esTemp ? {} : (_volByTel(VOL_CTX.tel) || {});
+  const nombre = esTemp ? (rowInsc.nombre||'Temporal') : (v.nombre || _volName(VOL_CTX.tel));
+  const subLine = esTemp ? 'Servidor temporal' : (VOL_CTX.tel + (v.email?(' · '+v.email):''));
   const f = a ? fmtFecha(a.data) : null;
   const tarea = (a?a.titulo[LANG]:'') + (f?(' · '+f.w+' '+f.d+' '+f.m):'') + (rd?(' · '+rd.label[LANG]):'');
   const dis = VOL_BUSY?'disabled':'';
@@ -655,7 +671,7 @@ function _renderVolDetalle(){
   document.getElementById('usrBody').innerHTML = `
     <div class="md-icon verde" style="font-family:'Jost',sans-serif;font-weight:600;color:#2f7d4f;font-size:20px">${ini}</div>
     <h3 class="usr-t">${nombre}</h3>
-    <div class="usr-sub">${VOL_CTX.tel}${v.email?(' · '+v.email):''}</div>
+    <div class="usr-sub">${subLine}</div>
     <div class="vd-tarea"><span class="vd-lbl">Asignado a</span>${tarea}</div>
     <div class="usr-sec">Motivo para quitarlo (opcional)</div>
     <textarea id="volMotivo" ${dis} rows="2" placeholder="Ej. avisó que no puede venir" style="width:100%;padding:12px;border:1px solid var(--linea);border-radius:var(--raio);font-family:'Jost',sans-serif;font-size:14px;resize:vertical"></textarea>
@@ -668,7 +684,7 @@ function volQuitar(){
   if(VOL_BUSY) return; VOL_BUSY=true; _renderVolDetalle();
   const motivo=(document.getElementById('volMotivo').value||'').trim();
   toast('Quitando…');
-  window.MFSync.post('cancelar', { activityId:VOL_CTX.activityId, rol:VOL_CTX.roleId, voluntario:VOL_CTX.tel, motivo:motivo })
+  window.MFSync.post('cancelar', { id:VOL_CTX.id||'', activityId:VOL_CTX.activityId, rol:VOL_CTX.roleId, voluntario:VOL_CTX.tel, motivo:motivo })
     .then(function(j){ if(j&&j.ok) toast('Voluntario quitado de la tarea'); else toast('No se pudo'); return window.MFSync.pull(); })
     .then(function(res){ if(res&&res.data&&res.data.inscripciones) setServerInscr(res.data.inscripciones); })
     .catch(function(){ toast('Error'); })

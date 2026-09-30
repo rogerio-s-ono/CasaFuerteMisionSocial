@@ -292,35 +292,53 @@ function _dedupeVoluntarios(body, email){
 /* ============ INSCRIPCIONES (con validación de cupo) ============ */
 function _inscribir(body, email) {
   var i = body.inscripcion || {};
-  // { activityId, misionId, templateId, fecha, rol, capacidad, voluntario }
-  if (!i.activityId || !i.rol || !i.voluntario) return { ok:false, error:'datos_incompletos' };
+  // { activityId, misionId, templateId, fecha, rol, capacidad, voluntario?, nombre?, temp?, porLider? }
+  // voluntario = teléfono (dígitos) para persona real; para TEMPORAL no hay teléfono → se genera id sintético.
+  if (!i.activityId || !i.rol) return { ok:false, error:'datos_incompletos' };
+  var esTemp = !!i.temp;
+  var vol = esTemp ? ('temp:' + Utilities.getUuid().slice(0,8)) : _normTel(i.voluntario);
+  var nombre = String(i.nombre||'').trim();
+  if (!vol && !esTemp) return { ok:false, error:'datos_incompletos' };
+  if (esTemp && !nombre) return { ok:false, error:'datos_incompletos' };
+
+  var sh = _sheet(SHEETS.INSCRIPCIONES);
   var rows = _readRows(SHEETS.INSCRIPCIONES);
-  // ya inscrito en esa actividad+rol?
-  var yaExiste = rows.some(function(r){ return r.activityId===i.activityId && r.rol===i.rol && r.voluntario===i.voluntario && r.estado!=='cancelado'; });
-  if (yaExiste) return { ok:true, estado:'confirmado', dup:true };
-  // contar confirmados en ese activityId+rol
+  // dup: misma actividad+rol+voluntario (no aplica a temporales, que siempre son nuevos)
+  if (!esTemp) {
+    var yaExiste = rows.some(function(r){ return r.activityId===i.activityId && r.rol===i.rol && String(r.voluntario)===vol && r.estado!=='cancelado'; });
+    if (yaExiste) return { ok:true, estado:'confirmado', dup:true };
+  }
+  // cupo: contar confirmados en ese activityId+rol
   var confirmados = rows.filter(function(r){ return r.activityId===i.activityId && r.rol===i.rol && r.estado==='confirmado'; }).length;
   var cap = Number(i.capacidad || 0);
   var estado = (cap > 0 && confirmados >= cap) ? 'espera' : 'confirmado';
-  var sh = _sheet(SHEETS.INSCRIPCIONES);
+  var id = Utilities.getUuid();
   _appendRow(sh, {
-    id: Utilities.getUuid(), activityId:i.activityId, misionId:i.misionId||'', templateId:i.templateId||'',
-    fecha:i.fecha||'', rol:i.rol, voluntario:i.voluntario, estado:estado,
-    porEmail:(email||''), creadoEm:new Date().toISOString()
+    id: id, activityId:i.activityId, misionId:i.misionId||'', templateId:i.templateId||'',
+    fecha:i.fecha||'', rol:i.rol, voluntario:vol, nombre:nombre, temp:(esTemp?true:false),
+    estado:estado, porLider:(i.porLider?true:false), porEmail:(email||''), creadoEm:new Date().toISOString()
   });
-  _audit(email||i.voluntario, 'inscribir:'+estado, 'inscripcion', i.activityId+'/'+i.rol);
-  return { ok:true, estado:estado };
+  _audit(email||vol, 'inscribir:'+estado+(i.porLider?'(lider)':''), 'inscripcion', i.activityId+'/'+i.rol);
+  return { ok:true, estado:estado, id:id, voluntario:vol };
 }
 function _cancelar(body, email) {
   var i = body.inscripcion || body || {};
   var motivo = String(body.motivo || i.motivo || '').trim();
   var sh = _sheet(SHEETS.INSCRIPCIONES);
   var rows = _readRows(SHEETS.INSCRIPCIONES);
-  var idx = rows.findIndex(function(r){ return r.activityId===i.activityId && r.rol===i.rol && r.voluntario===i.voluntario && r.estado!=='cancelado'; });
+  var idx = -1;
+  if (i.id) {
+    // cancelar por id (temporales o cuando el cliente lo conoce)
+    idx = rows.findIndex(function(r){ return String(r.id)===String(i.id) && r.estado!=='cancelado'; });
+  }
+  if (idx < 0) {
+    var volKey = (i.voluntario && String(i.voluntario).indexOf('temp:')===0) ? String(i.voluntario) : _normTel(i.voluntario);
+    idx = rows.findIndex(function(r){ return r.activityId===i.activityId && r.rol===i.rol && String(r.voluntario)===volKey && r.estado!=='cancelado'; });
+  }
   if (idx < 0) return { ok:true, dup:true };
   _setCell(sh, idx, 'estado', 'cancelado');
-  if (motivo) { try { _setCell(sh, idx, 'motivo', motivo); } catch(e){} }   // columna opcional
-  _audit(email||i.voluntario, 'cancelar'+(motivo?(' ('+motivo+')'):''), 'inscripcion', i.activityId+'/'+i.rol);
+  if (motivo) { try { _setCell(sh, idx, 'motivo', motivo); } catch(e){} }
+  _audit(email||i.voluntario||i.id, 'cancelar'+(motivo?(' ('+motivo+')'):''), 'inscripcion', (i.activityId||'')+'/'+(i.rol||''));
   return { ok:true };
 }
 
@@ -372,7 +390,7 @@ function _ensureSheets() {
   var headers = {};
   headers[SHEETS.CONFIG] = ['config_json'];
   headers[SHEETS.USUARIOS] = ['telefono','nombre','email','esAdmin','lider','idioma','actualizadoEm'];
-  headers[SHEETS.INSCRIPCIONES] = ['id','activityId','misionId','templateId','fecha','rol','voluntario','estado','porEmail','creadoEm','motivo'];
+  headers[SHEETS.INSCRIPCIONES] = ['id','activityId','misionId','templateId','fecha','rol','voluntario','nombre','temp','estado','porLider','porEmail','creadoEm','motivo'];
   headers[SHEETS.CHECKLISTS] = ['activityId','itemId','texto','hecho','hechoPor','asignado','suelto','actualizadoEm'];
   headers[SHEETS.AUDIT] = ['timestamp','usuario','accion','tipo','ref'];
   Object.keys(headers).forEach(function(name){
