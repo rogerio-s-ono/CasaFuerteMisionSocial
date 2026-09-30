@@ -808,17 +808,18 @@ function _rolesDe(v){
 /* ---- ÚNICO camino al backend: gate online → post → pull → refresca estado → re-render.
    Online-only: la gestión de usuarios NO usa la cola offline. Bloquea navegación mientras dura. ---- */
 function mfMutate(action, payload, okMsg){
-  if(!window.MFSync || !window.MFSync.enabled){ _accSetErr('Necesita backend configurado'); return Promise.resolve(false); }
-  if(!navigator.onLine){ _accSetErr('Sin conexión. La gestión de usuarios necesita internet.'); return Promise.resolve(false); }
-  if(ACC_BUSY) return Promise.resolve(false);
-  ACC_BUSY = true; _accLockNav(true); accRender();     // overlay + navegación bloqueada + controles disabled
+  if(!window.MFSync || !window.MFSync.enabled){ _accSetErr('Necesita backend configurado'); _renderFormBody(); return Promise.resolve(false); }
+  if(!navigator.onLine){ _accSetErr('Sin conexión. La gestión de usuarios necesita internet.'); _renderFormBody(); return Promise.resolve(false); }
+  if(ACC_BUSY){ _accSetErr('Espera: guardando la operación anterior…'); _renderFormBody(); return Promise.resolve(false); }
+  ACC_BUSY = true; _accLockNav(true);
+  try{ accRender(); }catch(_){}                        // overlay + navegación bloqueada + controles disabled
+  var releaseAndRender = function(){ ACC_BUSY=false; _accLockNav(false); try{ accRender(); }catch(_){} };
   return window.MFSync.post(action, payload)
     .then(function(j){
       if(j && j.ok){ return { ok:true }; }
-      var err = (j && j.error) || 'desconocido';
-      return { ok:false, err:err };
+      return { ok:false, err:(j && j.error) || 'desconocido' };
     })
-    .catch(function(){ return { ok:false, err:'conexion' }; })
+    .catch(function(e){ return { ok:false, err:(e&&e.message)?e.message:'conexion' }; })
     .then(function(res){
       // siempre releer del servidor antes de liberar (lista nunca queda desactualizada)
       return window.MFSync.pull().then(function(pr){
@@ -834,17 +835,28 @@ function mfMutate(action, payload, okMsg){
       ACC_BUSY=false; _accLockNav(false);
       if(res.ok){ toast(okMsg||'Hecho'); }
       else { _accSetErr(_errMsg(res.err)); }   // error inline persistente en el modal
-      accRender();
+      try{ accRender(); }catch(_){}
       return res.ok;
+    })
+    .catch(function(e){
+      // salvaguarda final: nunca dejar ACC_BUSY colgado ni fallar en silencio
+      releaseAndRender();
+      _accSetErr('Error inesperado: '+((e&&e.message)?e.message:e));
+      try{ _renderFormBody(); }catch(_){}
+      return false;
     });
 }
 function _errMsg(code){
   if(code==='email_requerido') return 'Falta el email: un Admin o Líder necesita email de Google.';
   if(code==='last_admin') return 'No se puede: debe quedar al menos un administrador.';
-  if(code==='forbidden_admin') return 'Sesión caducada — vuelve a entrar con Google.';
+  if(code==='forbidden_admin') return 'Sesión caducada o sin permiso — vuelve a entrar con Google.';
   if(code==='datos_incompletos') return 'Faltan datos obligatorios (nombre y teléfono).';
+  if(code==='sin_telefono') return 'No se pudo identificar el teléfono del usuario.';
+  if(code==='bad_token') return 'Token inválido — revisa la configuración del backend.';
   if(code==='conexion') return 'No se pudo guardar: sin respuesta del servidor. Revisa tu conexión.';
-  return 'No se pudo completar la operación. Inténtalo de nuevo.';
+  if(!code || code==='desconocido') return 'No se pudo completar la operación. Inténtalo de nuevo.';
+  // código no reconocido (p.ej. "HTTP 404 — ...") → mostrarlo tal cual para no ocultar el problema
+  return 'Error: ' + String(code);
 }
 function _accSetErr(msg){ if(ACC_FORM) ACC_FORM.err=msg||''; else toast(msg); }
 
@@ -984,12 +996,15 @@ window.fToggleAdmin=fToggleAdmin; window.fToggleLiderOn=fToggleLiderOn; window.f
 
 /* email obligatorio si es admin o hay misiones de líder */
 function _emailRequerido(){ return !!(ACC_FORM && (ACC_FORM.esAdmin || (ACC_FORM.misiones && ACC_FORM.misiones.length))); }
-function _formValido(){
-  if(!ACC_FORM) return false;
-  var telOk = normPhone((ACC_FORM.ddi||'')+ (ACC_FORM.telefono||'')).length>=8;
-  var nomOk = !!String(ACC_FORM.nombre||'').trim();
-  var mailOk = !_emailRequerido() || !!String(ACC_FORM.email||'').trim();
-  return telOk && nomOk && mailOk;
+/* valida el formulario y DEVUELVE EL MOTIVO exacto si algo falta (para mostrarlo en pantalla) */
+function _validarForm(){
+  if(!ACC_FORM) return { ok:false, msg:'Formulario no disponible.' };
+  var f=ACC_FORM;
+  if(!String(f.nombre||'').trim()) return { ok:false, msg:'Falta el nombre (obligatorio).' };
+  var tel = f.esNuevo ? ((f.ddi||'+34')+normPhone(f.telefono||'')) : (f.telefonoFull || (f.ddi||'+34')+normPhone(f.telefono||''));
+  if(normPhone(tel).length < 8) return { ok:false, msg:'El teléfono es obligatorio y debe tener al menos 8 dígitos.' };
+  if(_emailRequerido() && !String(f.email||'').trim()) return { ok:false, msg:'Falta el email: un Admin o Líder necesita email de Google.' };
+  return { ok:true };
 }
 
 function _renderFormBody(){
@@ -1007,7 +1022,7 @@ function _renderFormBody(){
   const emailHint = emailReq
     ? '<div class="f-hint req">Un Admin o Líder necesita email de Google para iniciar sesión.</div>'
     : '<div class="f-hint">Necesario solo si será Admin o Líder (para el login con Google).</div>';
-  const canSave = _formValido() && !ACC_BUSY;
+  const canSave = !ACC_BUSY;   // siempre clicable (salvo mientras guarda) — la validación con mensaje ocurre al pulsar
   const primaryTxt = f.esNuevo ? 'Crear' : 'Guardar';
   const delTxt = (_delArm==='del')
     ? ('¿Eliminar a '+_esc(f.nombre||'(sin nombre)')+' ('+_esc(f.telefonoFull||'')+')? Toca de nuevo')
@@ -1052,27 +1067,38 @@ function _renderFormBody(){
 }
 
 function usrSave(){
-  _formSync();
-  if(!ACC_FORM) return;
-  var f=ACC_FORM;
-  // teléfono: al EDITAR usamos SIEMPRE la clave canónica original (no reconstruir → evita
-  // borrar/pisar otro usuario si el formato difiere). Al CREAR se arma de ddi+local.
-  var telNuevo = (f.ddi||'+34') + normPhone(f.telefono||'');
-  var tel = f.esNuevo ? telNuevo : (f.telefonoFull || telNuevo);
-  if(!String(f.nombre||'').trim() || normPhone(tel).length<8){ _accSetErr('Faltan datos obligatorios (nombre y teléfono).'); _renderFormBody(); return; }
-  if(_emailRequerido() && !String(f.email||'').trim()){ _accSetErr('Falta el email: un Admin o Líder necesita email de Google.'); _renderFormBody(); return; }
-  mfMutate('saveUsuario', { usuario:{
-    telefono:tel, nombre:String(f.nombre).trim(), email:String(f.email||'').trim().toLowerCase(),
-    esAdmin:!!f.esAdmin, misionesLider:(f.misiones||[]).slice(), idioma:'es'
-  }}, f.esNuevo?'Usuario creado':'Cambios guardados').then(function(ok){ if(ok) closeUsr(); });
+  try{
+    _formSync();
+    if(!ACC_FORM){ toast('Error: formulario no disponible'); return; }
+    if(ACC_BUSY){ _accSetErr('Espera: guardando la operación anterior…'); _renderFormBody(); return; }
+    var f=ACC_FORM;
+    var val=_validarForm();
+    if(!val.ok){ _accSetErr(val.msg); _renderFormBody(); return; }   // muestra el motivo EXACTO en pantalla
+    var telNuevo = (f.ddi||'+34') + normPhone(f.telefono||'');
+    var tel = f.esNuevo ? telNuevo : (f.telefonoFull || telNuevo);
+    mfMutate('saveUsuario', { usuario:{
+      telefono:tel, nombre:String(f.nombre).trim(), email:String(f.email||'').trim().toLowerCase(),
+      esAdmin:!!f.esAdmin, misionesLider:(f.misiones||[]).slice(), idioma:'es'
+    }}, f.esNuevo?'Usuario creado':'Cambios guardados').then(function(ok){ if(ok) closeUsr(); });
+  }catch(e){
+    ACC_BUSY=false; _accLockNav(false);
+    _accSetErr('Error inesperado al guardar: '+(e&&e.message?e.message:e));
+    try{ _renderFormBody(); }catch(_){}
+  }
 }
 function usrDelete(){
-  if(ACC_BUSY || !ACC_FORM) return;
-  // SIEMPRE por la clave canónica original (nunca reconstruida) → borra EXACTAMENTE este usuario
-  var tel = ACC_FORM.telefonoFull || ((ACC_FORM.ddi||'+34')+normPhone(ACC_FORM.telefono||''));
-  if(!normPhone(tel)){ _accSetErr('No se pudo identificar el teléfono de este usuario.'); _renderFormBody(); return; }
-  if(_delArm!=='del'){ _delArm='del'; _renderFormBody(); return; }   // 1º toque: arma confirmación
-  mfMutate('delVoluntario', { telefono:tel }, 'Usuario eliminado').then(function(ok){ if(ok) closeUsr(); });
+  try{
+    if(!ACC_FORM){ toast('Error: formulario no disponible'); return; }
+    if(ACC_BUSY){ _accSetErr('Espera: guardando la operación anterior…'); _renderFormBody(); return; }
+    var tel = ACC_FORM.telefonoFull || ((ACC_FORM.ddi||'+34')+normPhone(ACC_FORM.telefono||''));
+    if(!normPhone(tel)){ _accSetErr('No se pudo identificar el teléfono de este usuario.'); _renderFormBody(); return; }
+    if(_delArm!=='del'){ _delArm='del'; _renderFormBody(); return; }   // 1º toque: arma confirmación
+    mfMutate('delVoluntario', { telefono:tel }, 'Usuario eliminado').then(function(ok){ if(ok) closeUsr(); });
+  }catch(e){
+    ACC_BUSY=false; _accLockNav(false);
+    _accSetErr('Error inesperado al eliminar: '+(e&&e.message?e.message:e));
+    try{ _renderFormBody(); }catch(_){}
+  }
 }
 window.usrSave=usrSave; window.usrDelete=usrDelete; window._formSync=_formSync;
 
