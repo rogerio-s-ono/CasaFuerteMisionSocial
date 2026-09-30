@@ -1280,6 +1280,21 @@ function renderMas(){
                   offline:'#c2560c', error:'#c2560c', off:'#9a9a9a' };
   var queueLen = 0;
   try{ queueLen = JSON.parse(localStorage.getItem('mf_sync_queue')||'[]').length; }catch(e){}
+  var lastErr = (window.MFSync && window.MFSync.lastError) ? window.MFSync.lastError() : null;
+
+  function _fmtErrTime(iso){ try{ var d=new Date(iso); return d.toLocaleString(LANG==='pt'?'pt-BR':'es-ES'); }catch(e){ return iso; } }
+  var errBlock = '';
+  if(lastErr && lastErr.detail){
+    errBlock =
+      '<div class="mas-row" style="align-items:flex-start;flex-direction:column;gap:6px">'
+      + '<span class="mas-lbl">Último error</span>'
+      + '<div class="mas-errbox">'
+      +   '<div class="mas-err-msg">'+_esc(lastErr.detail)+'</div>'
+      +   '<div class="mas-err-meta">'+_esc(lastErr.where||'')+' · '+_fmtErrTime(lastErr.ts)+' · '+(lastErr.online?'en línea':'sin conexión')+'</div>'
+      + '</div>'
+      + '<button class="mas-retry" onclick="mfRetrySync()">Reintentar sincronización</button>'
+      + '</div>';
+  }
 
   box.innerHTML =
     '<div class="mas-card">'
@@ -1297,6 +1312,7 @@ function renderMas(){
     +(queueLen > 0
       ? '<div class="mas-row"><span class="mas-lbl">Pendientes de envío</span><span class="mas-val">'+queueLen+'</span></div>'
       : '')
+    + errBlock
 
     +'<div class="mas-sec">Aplicación</div>'
     +'<div class="mas-row"><span class="mas-lbl">Versión</span><span class="mas-val">v'+window.CFMS.APP_VERSION+'</span></div>'
@@ -1305,6 +1321,15 @@ function renderMas(){
     +'<button class="mas-logout" onclick="goLogin()">Cerrar sesión</button>'
     +'</div>';
 }
+/* escape simple para el detalle del error (evita romper el HTML) */
+function _esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+/* reintenta un pull manual desde la pestaña Más y re-renderiza el estado */
+function mfRetrySync(){
+  if(!window.MFSync || !window.MFSync.enabled){ toast('Sin servidor configurado'); return; }
+  toast('Reintentando…');
+  window.MFSync.pull().then(function(){ renderMas(); });
+}
+window.mfRetrySync=mfRetrySync;
 
 function renderAll(){ renderInicio(); renderAgenda(); renderMios(); renderLider(); renderAdmin(); renderMas(); }
 
