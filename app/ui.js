@@ -1040,7 +1040,7 @@ function _renderFormBody(){
     <div class="f-fld" style="margin-top:12px"><label>Nombre <span class="f-tag req">Obligatorio</span></label>
       <input id="fNom" class="f-input" ${dis} value="${String(f.nombre||'').replace(/"/g,'&quot;')}" placeholder="Ej. María González" oninput="_formSync()" /></div>
     <div class="f-fld"><label>Teléfono <span class="f-tag req">Obligatorio</span></label>
-      <div class="phone-row"><select id="fDdi" class="f-input f-ddi" ${dis}></select>
+      <div class="phone-row"><select id="fDdi" class="f-input f-ddi" ${dis}>${DDIS.map(function(dd){ return '<option value="'+dd.c+'"'+(dd.c===(f.ddi||'+34')?' selected':'')+'>'+dd.f+' '+dd.c+'</option>'; }).join('')}</select>
       <input id="fTel" class="f-input f-tel" ${dis} type="tel" value="${String(f.telefono||'').replace(/"/g,'&quot;')}" placeholder="600 000 000" oninput="_formSync()" /></div></div>
     <div class="f-fld"><label>Email ${emailTag}</label>
       <input id="fEmail" class="f-input ${emailReq&&emailEmpty?'req-empty':''}" ${dis} type="email" value="${String(f.email||'').replace(/"/g,'&quot;')}" placeholder="email@gmail.com" oninput="_formSync()" />
@@ -1060,7 +1060,7 @@ function _renderFormBody(){
       <button class="btn primary" ${canSave?'':'disabled'} onclick="usrSave()">${primaryTxt}</button></div>
     ${!f.esNuevo ? `<button class="usr-del ${_delArm==='del'?'armed':''}" ${dis} onclick="usrDelete()">${delTxt}</button>` : ''}`;
 
-  var d=document.getElementById('fDdi'); if(d && !d.options.length){ fillDdi(d); d.value=f.ddi||'+34'; }
+  // (el select fDdi ya viene con la opción correcta marcada como 'selected' en el HTML)
 
   // overlay "Guardando…" cuando está ocupado (bloqueo visual)
   var sheet=document.getElementById('usrSheet');
