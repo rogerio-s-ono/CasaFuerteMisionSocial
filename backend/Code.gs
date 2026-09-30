@@ -61,6 +61,7 @@ function doPost(e) {
       case 'setPermiso':      return _json(_setPermiso(body, email));
       case 'delPermiso':      return _json(_delPermiso(body, email));
       case 'upsertVoluntario':return _json(_upsertVoluntario(body, email));
+      case 'saveUsuario':     return _json(_saveUsuario(body, email));
       case 'delVoluntario':   return _json(_delVoluntario(body, email));
       case 'dedupeVoluntarios':return _json(_dedupeVoluntarios(body, email));
       case 'inscribir':       return _json(_inscribir(body, email));
@@ -176,18 +177,89 @@ function _upsertVoluntario(body, email) {
   return { ok:true };
 }
 
+/* ============ GESTIÓN UNIFICADA DE USUARIO (solo admin) ============
+   Reconcilia en UNA transacción: fila de Voluntarios (datos) + filas de Admin (roles).
+   body.usuario = { telefono, nombre, email, esAdmin:bool, misionesLider:[misionId] }
+   - telefono y nombre: obligatorios siempre (clave = telefono).
+   - email: obligatorio si esAdmin o hay misionesLider (vínculo Voluntarios<->Admin).
+   - Protección del último admin: si se desmarca admin y quedaría 0 admins, se rechaza.
+   Devuelve permisos + voluntarios frescos para que el cliente refresque. */
+function _saveUsuario(body, email) {
+  if (!_isAdmin(email)) return { ok:false, error:'forbidden_admin' };
+  var u = body.usuario || {};
+  var nombre = String(u.nombre||'').trim();
+  var telKey = _normTel(u.telefono);
+  var mail = String(u.email||'').toLowerCase().trim();
+  var esAdmin = !!u.esAdmin;
+  var misiones = Array.isArray(u.misionesLider) ? u.misionesLider.map(function(m){ return String(m).trim(); }).filter(Boolean) : [];
+  var esLider = misiones.length > 0;
+
+  if (!telKey || !nombre) return { ok:false, error:'datos_incompletos' };
+  if ((esAdmin || esLider) && !mail) return { ok:false, error:'email_requerido' };
+
+  // protección del último admin: si esta persona es el único admin y se está desmarcando, rechazar
+  if (!esAdmin && mail) {
+    var permPre = _permisos();
+    var admins = permPre.admins || [];
+    if (admins.length <= 1 && admins.indexOf(mail) >= 0) {
+      return { ok:false, error:'last_admin', permisos:permPre };
+    }
+  }
+
+  // 1) upsert en Voluntarios (datos)
+  var shV = _sheet(SHEETS.VOLUNTARIOS);
+  var rowsV = _readRows(SHEETS.VOLUNTARIOS);
+  var idxV = rowsV.findIndex(function(r){ return _normTel(r.telefono) === telKey; });
+  var telText = "'+" + telKey;
+  var recV = { telefono:telText, nombre:nombre, email:mail, idioma:(u.idioma||'es'), actualizadoEm:new Date().toISOString() };
+  if (idxV >= 0) _updateRow(shV, idxV, recV); else _appendRow(shV, recV);
+
+  // 2) reconciliar roles en Admin (solo si hay email): borrar todo lo de este email y reescribir
+  if (mail) {
+    var shA = _sheet(SHEETS.ADMIN);
+    var rowsA = _readRows(SHEETS.ADMIN);
+    for (var i = rowsA.length - 1; i >= 0; i--) {
+      if (String(rowsA[i].email||'').toLowerCase() === mail) shA.deleteRow(i + 2);
+    }
+    if (esAdmin) _appendRow(shA, { email:mail, papel:'admin', mision:'' });
+    misiones.forEach(function(mid){ _appendRow(shA, { email:mail, papel:'lider', mision:mid }); });
+  }
+
+  SpreadsheetApp.flush();
+  _audit(email, 'saveUsuario', 'usuario', telKey + (mail?('/'+mail):'') + ' admin='+esAdmin+' lider='+misiones.join(','));
+  return { ok:true, permisos:_permisos(), voluntarios:_readRows(SHEETS.VOLUNTARIOS) };
+}
+
 function _delVoluntario(body, email){
   if (!_isAdmin(email)) return { ok:false, error:'forbidden_admin' };
   var telKey = _normTel(body.telefono);
   if (!telKey) return { ok:false, error:'sin_telefono' };
   var sh = _sheet(SHEETS.VOLUNTARIOS);
   var rows = _readRows(SHEETS.VOLUNTARIOS);
+  // email de la persona (para limpiar permisos órfãos y proteger el último admin)
+  var mail = '';
+  rows.forEach(function(r){ if(_normTel(r.telefono)===telKey && r.email) mail=String(r.email).toLowerCase().trim(); });
+  // protección del último admin: no permitir eliminar al único administrador
+  if (mail) {
+    var perm = _permisos(); var admins = perm.admins || [];
+    if (admins.length <= 1 && admins.indexOf(mail) >= 0) {
+      return { ok:false, error:'last_admin', permisos:perm };
+    }
+  }
   for (var i = rows.length - 1; i >= 0; i--) {
     if (_normTel(rows[i].telefono) === telKey) sh.deleteRow(i + 2);
   }
+  // limpiar permisos órfãos de este email en la pestaña Admin
+  if (mail) {
+    var shA = _sheet(SHEETS.ADMIN);
+    var rowsA = _readRows(SHEETS.ADMIN);
+    for (var j = rowsA.length - 1; j >= 0; j--) {
+      if (String(rowsA[j].email||'').toLowerCase() === mail) shA.deleteRow(j + 2);
+    }
+  }
   SpreadsheetApp.flush();
   _audit(email, 'delVoluntario', 'voluntario', telKey);
-  return { ok:true };
+  return { ok:true, permisos:_permisos(), voluntarios:_readRows(SHEETS.VOLUNTARIOS) };
 }
 
 function _dedupeVoluntarios(body, email){

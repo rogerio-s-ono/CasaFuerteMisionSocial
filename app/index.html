@@ -241,6 +241,57 @@
   #usrSheet .tog-chip:disabled{ opacity:.5; }
   #usrSheet .btn.primary{ background:var(--oro); color:#111; border:0; border-radius:var(--raio); padding:14px; font-size:14px; font-weight:600; font-family:"Jost",sans-serif; cursor:pointer; text-transform:uppercase; letter-spacing:.06em; }
 
+  /* ===== Gestión de usuarios v0.19 — header, filtros, modal unificado ===== */
+  #v-admin .acc-head-row{ display:flex; align-items:center; gap:10px; }
+  #v-admin .acc-head-row .htxt{ flex:1; min-width:0; }
+  #v-admin .add-top{ flex:0 0 auto; display:inline-flex; align-items:center; gap:5px; font-size:13.5px; font-weight:600; padding:8px 14px; border-radius:999px; border:0; background:var(--oro); color:#111; cursor:pointer; font-family:"Jost",sans-serif; box-shadow:0 1px 4px rgba(0,0,0,.15); }
+  #v-admin .add-top .plus{ font-size:16px; line-height:1; }
+  #v-admin .add-top:disabled{ opacity:.4; }
+  #v-admin .acc-offline{ background:#fbeaea; border:1px solid #eecccc; color:#7d2a2a; border-radius:var(--raio); padding:10px 12px; font-size:12.5px; margin-bottom:12px; }
+  #v-admin .filter-bar{ display:flex; gap:8px; overflow-x:auto; padding:2px 0 6px; margin:2px 0 4px; scrollbar-width:none; }
+  #v-admin .filter-bar::-webkit-scrollbar{ display:none; }
+  #v-admin .fchip{ flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; font-size:13px; padding:8px 13px; border-radius:999px; border:1px solid var(--linea); background:#fff; color:var(--grafito); cursor:pointer; white-space:nowrap; font-family:"Jost",sans-serif; }
+  #v-admin .fchip .cnt{ font-size:11px; color:var(--gris); background:var(--hueso); border-radius:10px; padding:1px 7px; }
+  #v-admin .fchip .tick{ display:none; font-size:12px; }
+  #v-admin .fchip.on{ font-weight:600; } #v-admin .fchip.on .tick{ display:inline; }
+  #v-admin .fchip.on.admin{ background:var(--oro-bg); border-color:#e8d489; color:var(--oro-osc); } #v-admin .fchip.on.admin .cnt{ background:#f4e4a8; color:var(--oro-osc); }
+  #v-admin .fchip.on.lider{ background:#efeafa; border-color:#d9cdf0; color:#5a4494; } #v-admin .fchip.on.lider .cnt{ background:#e2d4f4; color:#5a4494; }
+  #v-admin .fchip.on.vol{ background:var(--t-limpieza-bg); border-color:#bfe0cc; color:var(--t-limpieza-tx); } #v-admin .fchip.on.vol .cnt{ background:#d2ead9; color:var(--t-limpieza-tx); }
+  #v-admin .grp-label{ font-size:11px; text-transform:uppercase; letter-spacing:.14em; color:var(--gris); font-weight:600; margin:14px 2px 7px; }
+  #v-admin .acc-roles{ display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; }
+  #v-admin .acc-role.vol{ background:var(--t-limpieza-bg); color:var(--t-limpieza-tx); }
+  /* modal unificado */
+  #usrSheet .usr-badges{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin:8px 0 4px; }
+  #usrSheet .f-fld{ margin-bottom:12px; }
+  #usrSheet .f-fld label{ display:flex; justify-content:space-between; align-items:center; font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--gris); margin-bottom:6px; font-weight:600; }
+  #usrSheet .f-tag{ font-size:9px; letter-spacing:.05em; padding:2px 7px; border-radius:10px; font-weight:600; }
+  #usrSheet .f-tag.req{ background:#fbf3e0; color:#b8801f; } #usrSheet .f-tag.opt{ background:var(--hueso); color:var(--gris); }
+  #usrSheet input.req-empty{ border-color:#b8801f !important; background:#fbf3e0 !important; }
+  #usrSheet .f-hint{ font-size:11.5px; margin-top:5px; color:var(--gris); } #usrSheet .f-hint.req{ color:#b8801f; }
+  #usrSheet .phone-row{ display:flex; gap:8px; }
+  #usrSheet .f-div{ height:1px; background:var(--linea); margin:18px 0 4px; }
+  #usrSheet .f-secrow{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin:16px 0 6px; }
+  #usrSheet .f-secname{ font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--gris); font-weight:600; }
+  #usrSheet .f-secdesc{ font-size:12.5px; color:var(--gris); line-height:1.4; margin:0 0 10px; }
+  #usrSheet .f-err{ display:flex; align-items:flex-start; gap:8px; background:#fbeaea; border:1px solid #eecccc; color:#7d2a2a; font-size:13px; border-radius:var(--raio); padding:10px 12px; margin:10px 0 0; line-height:1.4; }
+  #usrSheet .multi-hint{ font-size:11.5px; color:var(--gris-cl); margin-top:8px; }
+  /* switch */
+  #usrSheet .sw{ position:relative; width:44px; height:26px; flex:0 0 auto; display:inline-block; }
+  #usrSheet .sw input{ position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer; z-index:2; }
+  #usrSheet .sw .track{ position:absolute; inset:0; background:#d8d6d1; border-radius:20px; transition:.15s; }
+  #usrSheet .sw .knob{ position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:.15s; }
+  #usrSheet .sw input:checked ~ .track{ background:#4a7052; }
+  #usrSheet .sw input:checked ~ .knob{ left:21px; }
+  #usrSheet .sw.dis{ opacity:.5; }
+  /* overlay guardando */
+  #usrSheet{ position:relative; }
+  .acc-saving{ position:absolute; inset:0; background:rgba(255,255,255,.74); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; z-index:10; border-radius:inherit; }
+  .acc-spin{ width:34px; height:34px; border-radius:50%; border:3px solid #e2e0db; border-top-color:var(--negro); animation:accsp .8s linear infinite; }
+  @keyframes accsp{ to{ transform:rotate(360deg); } }
+  .acc-savetx{ font-size:13.5px; color:var(--grafito); font-weight:600; }
+  /* navegación bloqueada mientras guarda */
+  #bottomNav.nav-locked{ opacity:.45; pointer-events:none; }
+
   /* ===== Checklist del líder ===== */
   .lc-foot{ padding:10px 14px; border-top:1px solid var(--linea); }
   .chk-btn{ background:var(--hueso); border:1px solid var(--linea); border-radius:999px; padding:7px 14px; font-size:12px; font-weight:500; font-family:"Jost",sans-serif; cursor:pointer; color:var(--grafito); }
