@@ -6,7 +6,7 @@
 
 'use strict';
 
-const APP_VERSION = '0.26.1';
+const APP_VERSION = '0.27.0';
 const CFG = window.CFMS_CONFIG || {};
 
 /* =========================================================================

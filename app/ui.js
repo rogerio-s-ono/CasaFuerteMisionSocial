@@ -886,6 +886,7 @@ function _errMsg(code){
   if(code==='forbidden_admin') return 'Sesión caducada o sin permiso — vuelve a entrar con Google.';
   if(code==='datos_incompletos') return 'Faltan datos obligatorios (nombre y teléfono).';
   if(code==='sin_telefono') return 'No se pudo identificar el teléfono del usuario.';
+  if(code==='telefono_en_uso') return 'Ese teléfono ya pertenece a otro usuario. Usa un número distinto.';
   if(code==='bad_token') return 'Token inválido — revisa la configuración del backend.';
   if(code==='conexion') return 'No se pudo guardar: sin respuesta del servidor. Revisa tu conexión.';
   if(!code || code==='desconocido') return 'No se pudo completar la operación. Inténtalo de nuevo.';
@@ -1116,12 +1117,15 @@ function usrSave(){
     var f=ACC_FORM;
     var val=_validarForm();
     if(!val.ok){ _accSetErr(val.msg); _renderFormBody(); return; }   // muestra el motivo EXACTO en pantalla
-    var telNuevo = (f.ddi||'+34') + normPhone(f.telefono||'');
-    var tel = f.esNuevo ? telNuevo : (f.telefonoFull || telNuevo);
-    mfMutate('saveUsuario', { usuario:{
-      telefono:tel, nombre:String(f.nombre).trim(), email:String(f.email||'').trim().toLowerCase(),
-      esAdmin:!!f.esAdmin, misionesLider:(f.misiones||[]).slice(), idioma:'es'
-    }}, f.esNuevo?'Usuario creado':'Cambios guardados').then(function(ok){ if(ok) closeUsr(); });
+    var telNuevo = (f.ddi||'+34') + normPhone(f.telefono||'');   // teléfono del formulario (puede haber cambiado)
+    var payload = {
+      telefono: telNuevo, nombre:String(f.nombre).trim(), email:String(f.email||'').trim().toLowerCase(),
+      esAdmin:!!f.esAdmin, misionesLider:(f.misiones||[]).slice(), idioma:LANG
+    };
+    // al EDITAR, enviamos también la clave ORIGINAL para que el backend actualice la fila correcta
+    // (permite cambiar el teléfono sin crear duplicado ni pisar a otro)
+    if(!f.esNuevo && f.telefonoFull){ payload.telefonoAnterior = f.telefonoFull; }
+    mfMutate('saveUsuario', { usuario: payload }, f.esNuevo?'Usuario creado':'Cambios guardados').then(function(ok){ if(ok) closeUsr(); });
   }catch(e){
     ACC_BUSY=false; _accLockNav(false);
     _accSetErr('Error inesperado al guardar: '+(e&&e.message?e.message:e));

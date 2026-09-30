@@ -182,7 +182,23 @@ function _saveUsuario(body, email) {
   // upsert de UNA fila en Usuarios: datos + esAdmin (flag) + lider (JSON de misiones)
   var sh = _sheet(SHEETS.USUARIOS);
   var rows = _readRows(SHEETS.USUARIOS);
-  var idx = rows.findIndex(function(r){ return _normTel(r.telefono) === telKey; });
+  var telAnterior = _normTel(u.telefonoAnterior);   // clave original (si se está editando y cambió el teléfono)
+
+  // localizar la fila a actualizar: por la clave ANTERIOR si viene, si no por el teléfono nuevo
+  var idx;
+  if (telAnterior) {
+    idx = rows.findIndex(function(r){ return _normTel(r.telefono) === telAnterior; });
+    // si el teléfono cambió, verificar que el NUEVO no pertenezca ya a OTRO usuario
+    if (telAnterior !== telKey) {
+      var choque = rows.findIndex(function(r){ return _normTel(r.telefono) === telKey; });
+      if (choque >= 0 && choque !== idx) {
+        return { ok:false, error:'telefono_en_uso' };   // el nuevo número ya es de otra persona
+      }
+    }
+  } else {
+    idx = rows.findIndex(function(r){ return _normTel(r.telefono) === telKey; });
+  }
+
   var rec = {
     telefono:_telText(telKey), nombre:nombre, email:mail,
     esAdmin: (esAdmin ? true : false),
