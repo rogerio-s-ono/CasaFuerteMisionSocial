@@ -220,13 +220,15 @@ function _inscribir(body, email) {
   return { ok:true, estado:estado };
 }
 function _cancelar(body, email) {
-  var i = body.inscripcion || {};
+  var i = body.inscripcion || body || {};
+  var motivo = String(body.motivo || i.motivo || '').trim();
   var sh = _sheet(SHEETS.INSCRIPCIONES);
   var rows = _readRows(SHEETS.INSCRIPCIONES);
   var idx = rows.findIndex(function(r){ return r.activityId===i.activityId && r.rol===i.rol && r.voluntario===i.voluntario && r.estado!=='cancelado'; });
   if (idx < 0) return { ok:true, dup:true };
   _setCell(sh, idx, 'estado', 'cancelado');
-  _audit(email||i.voluntario, 'cancelar', 'inscripcion', i.activityId+'/'+i.rol);
+  if (motivo) { try { _setCell(sh, idx, 'motivo', motivo); } catch(e){} }   // columna opcional
+  _audit(email||i.voluntario, 'cancelar'+(motivo?(' ('+motivo+')'):''), 'inscripcion', i.activityId+'/'+i.rol);
   return { ok:true };
 }
 
@@ -277,7 +279,7 @@ function _ensureSheets() {
   var headers = {};
   headers[SHEETS.CONFIG] = ['config_json'];
   headers[SHEETS.VOLUNTARIOS] = ['telefono','nombre','email','idioma','actualizadoEm'];
-  headers[SHEETS.INSCRIPCIONES] = ['id','activityId','misionId','templateId','fecha','rol','voluntario','estado','porEmail','creadoEm'];
+  headers[SHEETS.INSCRIPCIONES] = ['id','activityId','misionId','templateId','fecha','rol','voluntario','estado','porEmail','creadoEm','motivo'];
   headers[SHEETS.CHECKLISTS] = ['activityId','itemId','texto','hecho','hechoPor','asignado','suelto','actualizadoEm'];
   headers[SHEETS.ADMIN] = ['email','papel','mision'];
   headers[SHEETS.AUDIT] = ['timestamp','usuario','accion','tipo','ref'];

@@ -136,6 +136,12 @@ function inscritosDe(activity, roleId){
 }
 /* nombre del voluntario por su teléfono (para mostrar en vez del número) */
 function _volName(tel){ var k=String(tel).replace(/[^0-9]/g,''); var v=SERVER_VOLS.find(function(x){ return String(x.telefono).replace(/[^0-9]/g,'')===k; }); return v?v.nombre:String(tel); }
+/* inscritos REALES del servidor (solo LIVE) con datos completos, para el modal de detalle/quitar del líder */
+function inscritosDetalle(activity, roleId){
+  if(!LIVE) return [];
+  return SERVER_INSCR.filter(function(r){ return r.activityId===activity.id && r.rol===roleId && r.estado==='confirmado'; })
+    .map(function(r){ return { id:r.id, tel:String(r.voluntario), name:_volName(r.voluntario), estado:r.estado }; });
+}
 function esperaDe(activity, roleId){
   if(LIVE){
     return SERVER_INSCR.filter(function(r){ return r.activityId===activity.id && r.rol===roleId && r.estado==='espera'; })
@@ -372,11 +378,28 @@ function applyProfile(){
 /* ---------- VISTA LÍDER ---------- */
 /* helpers de HTML reutilizables */
 function chipsRol(a, r){
+  const cap = a.roles[r];
+  if(LIVE){
+    // inscritos REALES del servidor → chip clicable (abre detalle + quitar de la tarea)
+    const insc = inscritosDetalle(a, r);
+    const adds = addsDe(a.id, r);
+    const ocup = insc.length + adds.length;
+    const falta = Math.max(0, cap - ocup);
+    let html = insc.map(function(p){
+      return `<span class="chip clickable" onclick="volDetalle('${a.id}','${r}','${p.tel.replace(/'/g,"")}')">${p.name}</span>`;
+    }).join('');
+    html += adds.map((ad,i)=> ad.temp
+        ? `<span class="chip temp">${ad.name} <span class="tg">· Temp</span> <span class="x" onclick="delAdd('${a.id}','${r}',${i})">×</span></span>`
+        : `<span class="chip">${ad.name} <span class="x" onclick="delAdd('${a.id}','${r}',${i})">×</span></span>`
+      ).join('');
+    html += Array.from({length:falta}).map(()=>`<span class="chip vac">vacante</span>`).join('');
+    if(falta>0){ html += `<button class="add-btn" onclick="openAddSheet('${a.id}','${r}')">+ Añadir servidor</button>`; }
+    return html || '<span class="chip vac">sin inscritos</span>';
+  }
   const t = tmplId(a.id);
   const demo = (DEMO_INSCR[t] && DEMO_INSCR[t][r]) ? DEMO_INSCR[t][r].slice() : [];
   if(INSCR[a.id]===r && USER) demo.push((USER.name||'Yo') + ' (tú)');
   const adds = addsDe(a.id, r);
-  const cap = a.roles[r];
   const ocup = demo.length + adds.length;
   const falta = Math.max(0, cap - ocup);
   let html = demo.map(n=>`<span class="chip">${n}</span>`).join('');
@@ -575,6 +598,49 @@ function addTemp(){
 function delAdd(activityId, roleId, idx){ removeAdd(activityId, roleId, idx); renderLider(); }
 window.openAddSheet=openAddSheet; window.closeAddSheet=closeAddSheet; window.acType=acType; window.acBackSearch=acBackSearch;
 window.acPick=acPick; window.acGoTemp=acGoTemp; window.addTemp=addTemp; window.delAdd=delAdd;
+
+/* ---------- DETALLE de voluntario asignado (vista líder) → quitar de la tarea con motivo ---------- */
+let VOL_CTX = null;      // { activityId, roleId, tel }
+let VOL_BUSY = false, _volConfirm = false;
+function volDetalle(activityId, roleId, tel){
+  VOL_CTX = { activityId, roleId, tel }; _volConfirm=false;
+  _renderVolDetalle();
+  document.getElementById('usrBackdrop').classList.add('on');
+  document.getElementById('usrSheet').classList.add('on');
+}
+function closeVolDetalle(){ VOL_CTX=null; _volConfirm=false; document.getElementById('usrBackdrop').classList.remove('on'); document.getElementById('usrSheet').classList.remove('on'); }
+function _renderVolDetalle(){
+  const a = currentActivities().find(x=>x.id===VOL_CTX.activityId);
+  const rd = window.CFMS.ROLES[VOL_CTX.roleId];
+  const v = _volByTel(VOL_CTX.tel) || {};
+  const nombre = v.nombre || _volName(VOL_CTX.tel);
+  const f = a ? fmtFecha(a.data) : null;
+  const tarea = (a?a.titulo[LANG]:'') + (f?(' · '+f.w+' '+f.d+' '+f.m):'') + (rd?(' · '+rd.label[LANG]):'');
+  const dis = VOL_BUSY?'disabled':'';
+  const ini = String(nombre).split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase();
+  document.getElementById('usrBody').innerHTML = `
+    <div class="md-icon verde" style="font-family:'Jost',sans-serif;font-weight:600;color:#2f7d4f;font-size:20px">${ini}</div>
+    <h3 class="usr-t">${nombre}</h3>
+    <div class="usr-sub">${VOL_CTX.tel}${v.email?(' · '+v.email):''}</div>
+    <div class="vd-tarea"><span class="vd-lbl">Asignado a</span>${tarea}</div>
+    <div class="usr-sec">Motivo para quitarlo (opcional)</div>
+    <textarea id="volMotivo" ${dis} rows="2" placeholder="Ej. avisó que no puede venir" style="width:100%;padding:12px;border:1px solid var(--linea);border-radius:var(--raio);font-family:'Jost',sans-serif;font-size:14px;resize:vertical"></textarea>
+    <div class="usr-actions"><button class="btn ghost" ${dis} onclick="closeVolDetalle()">Cerrar</button>
+      <button class="btn danger ${_volConfirm?'armed':''}" ${dis} onclick="volQuitar()">${_volConfirm?'¿Seguro? Quitar':'Quitar de la tarea'}</button></div>`;
+}
+function volQuitar(){
+  if(!_volConfirm){ _volConfirm=true; _renderVolDetalle(); return; }   // 1º toque: confirma
+  if(!LIVE || !window.MFSync || !window.MFSync.enabled){ toast('Necesita backend'); return; }
+  if(VOL_BUSY) return; VOL_BUSY=true; _renderVolDetalle();
+  const motivo=(document.getElementById('volMotivo').value||'').trim();
+  toast('Quitando…');
+  window.MFSync.post('cancelar', { activityId:VOL_CTX.activityId, rol:VOL_CTX.roleId, voluntario:VOL_CTX.tel, motivo:motivo })
+    .then(function(j){ if(j&&j.ok) toast('Voluntario quitado de la tarea'); else toast('No se pudo'); return window.MFSync.pull(); })
+    .then(function(res){ if(res&&res.data&&res.data.inscripciones) setServerInscr(res.data.inscripciones); })
+    .catch(function(){ toast('Error'); })
+    .then(function(){ VOL_BUSY=false; closeVolDetalle(); renderLider(); });
+}
+window.volDetalle=volDetalle; window.closeVolDetalle=closeVolDetalle; window.volQuitar=volQuitar;
 
 /* ---------- ADMIN (configuración de misiones/roles) ---------- */
 let ADMIN_NAV = { screen:'list', misionId:null };   // list | mision | roles
