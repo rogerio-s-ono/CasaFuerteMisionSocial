@@ -83,7 +83,8 @@
   .h-center .titulo{ font-family:"Oswald",sans-serif; font-size:20px; font-weight:600; color:#fff; line-height:1; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
   .h-center .saludo{ font-size:11px; color:var(--gris-cl); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .h-center .saludo em{ font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--oro); }
-  .sync-badge{ font-size:10px; font-weight:500; display:inline-flex; align-items:center; gap:3px; margin-left:6px; }
+  .sync-badge{ font-size:10px; font-weight:500; display:inline-flex; align-items:center; justify-content:center; gap:3px; margin-left:6px; vertical-align:middle; line-height:1; position:relative; top:-1px; }
+  .sync-badge svg{ display:block; width:13px; height:13px; }
   .sync-badge span{ font-size:10px; }
   .h-mision{ flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:2px; }
   .h-mision img{ height:28px; width:auto; }
@@ -265,7 +266,7 @@
   #usrSheet .f-fld{ margin-bottom:12px; }
   #usrSheet .f-fld label{ display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--gris); margin-bottom:6px; font-weight:600; }
   #usrSheet .f-fld label > :first-child{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  #usrSheet .f-tag{ flex:0 0 auto; font-size:9px; letter-spacing:.05em; padding:2px 7px; border-radius:10px; font-weight:600; white-space:nowrap; }
+  #usrSheet .f-tag{ flex:0 0 auto; font-size:9.5px; letter-spacing:0; text-transform:none; line-height:1.5; padding:2px 8px; border-radius:10px; font-weight:600; white-space:nowrap; }
   #usrSheet .f-tag.req{ background:#fbf3e0; color:#b8801f; } #usrSheet .f-tag.opt{ background:var(--hueso); color:var(--gris); }
   #usrSheet .f-input{ width:100%; box-sizing:border-box; padding:12px 13px; border:1px solid var(--linea); border-radius:var(--raio); font-family:"Jost",sans-serif; font-size:14.5px; background:#fff; color:var(--grafito); }
   #usrSheet input.req-empty{ border-color:#b8801f !important; background:#fbf3e0 !important; }
