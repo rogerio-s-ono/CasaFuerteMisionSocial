@@ -1403,26 +1403,28 @@ function renderMas(){
   var errList = (window.MFSync && window.MFSync.errorLog) ? window.MFSync.errorLog() : [];
 
   function _fmtErrTime(iso){ try{ var d=new Date(iso); return d.toLocaleString(LANG==='pt'?'pt-BR':'es-ES'); }catch(e){ return iso; } }
+  // botón "Ver errores" (oculta la lista por defecto) + lista revelable con Copiar/Limpiar
   var errBlock = '';
   if(errList && errList.length){
-    var items = errList.map(function(e){
-      return '<div class="mas-err-item">'
-        +   '<div class="mas-err-msg">'+_esc(e.detail)+'</div>'
-        +   '<div class="mas-err-meta">'+_esc(e.where||'')+' · '+_fmtErrTime(e.ts)+' · '+(e.online?'en línea':'sin conexión')+'</div>'
-        + '</div>';
-    }).join('');
+    var verLabel = MAS_SHOW_ERRORS ? ('Ocultar errores ('+errList.length+')') : ('Ver errores ('+errList.length+')');
     errBlock =
-      '<div class="mas-row" style="align-items:flex-start;flex-direction:column;gap:8px">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;width:100%">'
-      +   '<span class="mas-lbl">Últimos errores ('+errList.length+')</span>'
-      +   '<div style="display:flex;gap:6px">'
-      +     '<button class="mas-mini" onclick="mfCopyErrLog()">Copiar</button>'
-      +     '<button class="mas-mini ghost" onclick="mfClearErrLog()">Limpiar</button>'
-      +   '</div>'
-      + '</div>'
-      + '<div class="mas-errbox">'+items+'</div>'
-      + '<button class="mas-retry" onclick="mfRetrySync()">Reintentar sincronización</button>'
-      + '</div>';
+      '<div class="mas-row" style="align-items:stretch;flex-direction:column;gap:8px">'
+      + '<button class="mas-mini ghost" style="width:100%" onclick="mfToggleErrors()">'+verLabel+'</button>';
+    if(MAS_SHOW_ERRORS){
+      var items = errList.map(function(e){
+        return '<div class="mas-err-item">'
+          +   '<div class="mas-err-msg">'+_esc(e.detail)+'</div>'
+          +   '<div class="mas-err-meta">'+_esc(e.where||'')+' · '+_fmtErrTime(e.ts)+' · '+(e.online?'en línea':'sin conexión')+'</div>'
+          + '</div>';
+      }).join('');
+      errBlock +=
+        '<div class="mas-errbox">'+items+'</div>'
+        + '<div style="display:flex;gap:6px">'
+        +   '<button class="mas-mini" style="flex:1" onclick="mfCopyErrLog()">Copiar</button>'
+        +   '<button class="mas-mini ghost" style="flex:1" onclick="mfClearErrLog()">Limpiar</button>'
+        + '</div>';
+    }
+    errBlock += '</div>';
   }
 
   box.innerHTML =
@@ -1442,6 +1444,7 @@ function renderMas(){
     +(queueLen > 0
       ? '<div class="mas-row"><span class="mas-lbl">Pendientes de envío</span><span class="mas-val">'+queueLen+'</span></div>'
       : '')
+    +'<div class="mas-row" style="padding:0;border:0;background:none"><button class="mas-retry" style="width:100%" onclick="mfRetrySync()">Reintentar sincronización</button></div>'
     + errBlock
 
     +'<div class="mas-sec">Aplicación</div>'
@@ -1460,6 +1463,10 @@ function mfRetrySync(){
   window.MFSync.pull().then(function(){ renderMas(); });
 }
 window.mfRetrySync=mfRetrySync;
+/* mostrar/ocultar la lista de errores (oculta por defecto) */
+var MAS_SHOW_ERRORS = false;
+function mfToggleErrors(){ MAS_SHOW_ERRORS = !MAS_SHOW_ERRORS; renderMas(); }
+window.mfToggleErrors=mfToggleErrors;
 /* copiar el log de errores al portapapeles (con fallback para navegadores sin clipboard API) */
 function mfCopyErrLog(){
   var txt = (window.MFSync && window.MFSync.errorLogText) ? window.MFSync.errorLogText() : '';
