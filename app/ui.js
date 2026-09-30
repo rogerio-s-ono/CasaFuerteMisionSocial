@@ -594,6 +594,19 @@ function addTemp(){
   closeAddSheet();
 }
 /* el líder inscribe a alguien (real por teléfono o temporal) → PERSISTE en el backend (con cola offline) */
+/* ---- overlay global "Guardando…" (feedback sincronizado con la operación) ---- */
+function showSaving(txt){ var el=document.getElementById('mfSaving'); if(el){ document.getElementById('mfSavingTx').textContent=txt||'Guardando…'; el.classList.add('on'); } window.MF_MUTATING=true; }
+function hideSaving(){ var el=document.getElementById('mfSaving'); if(el) el.classList.remove('on'); window.MF_MUTATING=false; }
+/* actualiza SERVER_INSCR localmente de forma AUTORITATIVA con la respuesta del backend (evita 2º round-trip) */
+function _inscLocalUpsert(rec){
+  var i = SERVER_INSCR.findIndex(function(r){ return String(r.id)===String(rec.id); });
+  if(i>=0) SERVER_INSCR[i]=rec; else SERVER_INSCR.push(rec);
+}
+function _inscLocalSetEstado(id, estado){
+  var i = SERVER_INSCR.findIndex(function(r){ return String(r.id)===String(id); });
+  if(i>=0){ if(estado==='cancelado') SERVER_INSCR.splice(i,1); else SERVER_INSCR[i].estado=estado; }
+}
+
 function _liderInscribir(activityId, roleId, who){
   var a = currentActivities().find(function(x){ return x.id===activityId; });
   if(!a){ toast('Actividad no encontrada'); return; }
@@ -606,22 +619,29 @@ function _liderInscribir(activityId, roleId, who){
     nombre: who.nombre||'', temp: !!who.temp
   }};
   if(!window.MFSync || !window.MFSync.enabled){ toast('Necesita backend'); return; }
-  toast('Añadiendo…');
+  showSaving('Añadiendo…');
   window.MFSync.post('inscribir', payload).then(function(j){
-    if(j && !j.ok){ toast('No se pudo añadir'); renderLider(); return; }
-    // releer del servidor para reflejar el estado real (evita que un pull concurrente pise el optimista)
-    return window.MFSync.pull().then(function(res){
-      if(res && res.data && res.data.inscripciones) setServerInscr(res.data.inscripciones);
-      toast((j&&j.estado==='espera')?'Añadido a lista de espera':'Añadido');
-      renderLider();
-    });
+    if(j && j.ok){
+      // B: usar la respuesta del backend (id/estado/voluntario) para actualizar local — SIN 2º round-trip
+      if(!j.dup){
+        _inscLocalUpsert({ id:(j.id||('_srv_'+Date.now())), activityId:activityId, rol:roleId,
+          voluntario:(j.voluntario|| (who.temp?('temp:'+Date.now()):String(who.tel||'').replace(/[^0-9]/g,''))),
+          nombre:who.nombre||'', temp:!!who.temp, estado:(j.estado||'confirmado') });
+      }
+      renderLider();               // A: la pantalla ya está actualizada ANTES de ocultar el overlay
+      hideSaving();
+      toast((j.estado==='espera')?'Añadido a lista de espera':'Añadido');
+    } else {
+      hideSaving(); toast('No se pudo añadir');
+    }
   }).catch(function(){
     // offline → encola y refleja local optimista
     window.MFSync.queue('inscribir', payload);
-    SERVER_INSCR.push({ id:'_local_'+Date.now(), activityId:activityId, rol:roleId,
+    _inscLocalUpsert({ id:'_local_'+Date.now(), activityId:activityId, rol:roleId,
       voluntario:(who.temp?('temp:local'+Date.now()):String(who.tel||'').replace(/[^0-9]/g,'')),
       nombre:who.nombre||'', temp:!!who.temp, estado:'confirmado' });
-    toast('Sin conexión — se enviará al reconectar'); renderLider();
+    renderLider(); hideSaving();
+    toast('Sin conexión — se enviará al reconectar');
   });
 }
 window.openAddSheet=openAddSheet; window.closeAddSheet=closeAddSheet; window.acType=acType; window.acBackSearch=acBackSearch;
@@ -636,7 +656,7 @@ function volDetalle(activityId, roleId, tel, id){
   document.getElementById('usrBackdrop').classList.add('on');
   document.getElementById('usrSheet').classList.add('on');
 }
-function closeVolDetalle(){ VOL_CTX=null; _volConfirm=false; document.getElementById('usrBackdrop').classList.remove('on'); document.getElementById('usrSheet').classList.remove('on'); }
+function closeVolDetalle(){ VOL_CTX=null; _volConfirm=false; VOL_BUSY=false; document.getElementById('usrBackdrop').classList.remove('on'); document.getElementById('usrSheet').classList.remove('on'); }
 function _renderVolDetalle(){
   const a = currentActivities().find(x=>x.id===VOL_CTX.activityId);
   const rd = window.CFMS.ROLES[VOL_CTX.roleId];
@@ -679,12 +699,24 @@ function _renderVolDetalle(){
 /* acción backend genérica del modal (suspender/reactivar/eliminar) con pull + refresco */
 function _volAccion(fn, okMsg){
   if(!LIVE || !window.MFSync || !window.MFSync.enabled){ toast('Necesita backend'); return; }
-  if(VOL_BUSY) return; VOL_BUSY=true; _renderVolDetalle();
-  toast('Guardando…');
-  fn().then(function(j){ if(j&&j.ok) toast(okMsg); else toast('No se pudo'); return window.MFSync.pull(); })
-    .then(function(res){ if(res&&res.data&&res.data.inscripciones) setServerInscr(res.data.inscripciones); })
-    .catch(function(){ toast('Error de conexión'); })
-    .then(function(){ VOL_BUSY=false; closeVolDetalle(); renderLider(); });
+  if(VOL_BUSY) return; VOL_BUSY=true;
+  var idAfetado = VOL_CTX ? (VOL_CTX.id||'') : '';
+  showSaving(okMsg||'Guardando…');
+  fn().then(function(j){
+    if(j && j.ok){
+      // B: aplicar el nuevo estado localmente con lo que devuelve el backend (sin 2º round-trip)
+      if(idAfetado){
+        if(j.accion==='eliminar' || j.cancelado) _inscLocalSetEstado(idAfetado, 'cancelado');
+        else if(j.estado) _inscLocalSetEstado(idAfetado, j.estado);
+      }
+      closeVolDetalle(); renderLider(); hideSaving();
+      toast(okMsg||'Hecho');
+    } else {
+      VOL_BUSY=false; hideSaving(); toast('No se pudo');
+    }
+  }).catch(function(){
+    VOL_BUSY=false; hideSaving(); toast('Error de conexión');
+  });
 }
 function _volCapacidad(){ var a=currentActivities().find(function(x){return x.id===VOL_CTX.activityId;}); return a?(a.roles[VOL_CTX.roleId]||0):0; }
 function volSuspender(){
@@ -695,7 +727,7 @@ function volReactivar(){
 }
 function volEliminar(){
   if(_volConfirm!=='del'){ _volConfirm='del'; _renderVolDetalle(); return; }   // 1º toque confirma
-  _volAccion(function(){ return window.MFSync.post('cancelar', { id:VOL_CTX.id||'', activityId:VOL_CTX.activityId, rol:VOL_CTX.roleId, voluntario:VOL_CTX.tel }); }, 'Voluntario eliminado');
+  _volAccion(function(){ return window.MFSync.post('cancelar', { id:VOL_CTX.id||'', activityId:VOL_CTX.activityId, rol:VOL_CTX.roleId, voluntario:VOL_CTX.tel }).then(function(j){ if(j) j.cancelado=true; return j; }); }, 'Voluntario eliminado');
 }
 window.volDetalle=volDetalle; window.closeVolDetalle=closeVolDetalle;
 window.volSuspender=volSuspender; window.volReactivar=volReactivar; window.volEliminar=volEliminar;
@@ -1902,7 +1934,7 @@ if(window.MFSync){
   }
   window.MFSync.init().then(function(res){ applyPull(res, true); });
   // PULL periódico y al volver el foco (para ver cambios de otros dispositivos)
-  function refreshFromServer(){ if(document.hidden) return; window.MFSync.pull().then(function(r){ applyPull(r, false); }); }
+  function refreshFromServer(){ if(document.hidden || window.MF_MUTATING) return; window.MFSync.pull().then(function(r){ applyPull(r, false); }); }
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) refreshFromServer(); });
   window.addEventListener('online', refreshFromServer);
   setInterval(refreshFromServer, 3*60*1000);   // cada 3 min

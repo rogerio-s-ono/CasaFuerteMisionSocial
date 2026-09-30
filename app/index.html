@@ -348,6 +348,12 @@
   .acc-spin{ width:34px; height:34px; border-radius:50%; border:3px solid #e2e0db; border-top-color:var(--negro); animation:accsp .8s linear infinite; }
   @keyframes accsp{ to{ transform:rotate(360deg); } }
   .acc-savetx{ font-size:13.5px; color:var(--grafito); font-weight:600; }
+  /* overlay global "Guardando…" centrado en pantalla */
+  #mfSaving{ position:fixed; inset:0; z-index:300; display:none; align-items:center; justify-content:center; background:rgba(15,15,15,.32); backdrop-filter:blur(1px); }
+  #mfSaving.on{ display:flex; }
+  #mfSaving .mfs-box{ background:#fff; border-radius:16px; padding:22px 28px; display:flex; flex-direction:column; align-items:center; gap:12px; box-shadow:0 12px 40px rgba(0,0,0,.28); min-width:140px; }
+  #mfSaving .mfs-spin{ width:36px; height:36px; border-radius:50%; border:3px solid #e2e0db; border-top-color:var(--negro); animation:accsp .8s linear infinite; }
+  #mfSaving .mfs-tx{ font-size:14px; color:var(--grafito); font-weight:600; }
   /* navegación bloqueada mientras guarda */
   #bottomNav.nav-locked{ opacity:.45; pointer-events:none; }
 
@@ -703,6 +709,9 @@
 </div>
 
 <div class="footver">Manos Fuertes v<span id="ver"></span></div>
+
+<!-- Overlay global "Guardando…" centrado (sincroniza feedback con la operación real) -->
+<div id="mfSaving" aria-live="polite"><div class="mfs-box"><div class="mfs-spin"></div><div class="mfs-tx" id="mfSavingTx">Guardando…</div></div></div>
 
 <script src="config.js"></script>
 <script src="app.js"></script>
