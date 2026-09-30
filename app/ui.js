@@ -1326,10 +1326,23 @@ function chkCount(activity){
   const done=items.filter(i=>i.done).length; return ` <span class="chk-n">${done}/${items.length}</span>`;
 }
 function chkPersistItem(activityId, item){
+  item.actualizadoEm = new Date().toISOString();   // sello local para el merge por fecha
   CHK[activityId]=CHK[activityId]||{ items:[] };
   const arr=CHK[activityId].items; const i=arr.findIndex(x=>x.id===item.id);
   if(i>=0) arr[i]=item; else arr.push(item);
   saveChk();
+  // persistir en el backend (offline-first: se encola y se envía al haber red)
+  if(window.MFSync && window.MFSync.enabled){
+    window.MFSync.queue('setChecklistItem', { item:{
+      activityId: activityId,
+      itemId: item.id,
+      texto: item.texto || '',
+      hecho: !!item.done,
+      hechoPor: item.doneBy || '',
+      asignado: item.asignado || null,
+      suelto: !!item.suelto
+    }});
+  }
 }
 
 function openChecklist(activityId){
@@ -1391,7 +1404,9 @@ function chkAddSuelto(){
   chkPersistItem(a.id, { id:'x'+Date.now(), texto:txt, done:false, asignado:null, suelto:true }); renderChecklist();
 }
 function chkDelSuelto(itemId){
-  const a=chkActivity(); CHK[a.id].items=(CHK[a.id].items||[]).filter(x=>x.id!==itemId); saveChk(); renderChecklist();
+  const a=chkActivity(); CHK[a.id].items=(CHK[a.id].items||[]).filter(x=>x.id!==itemId); saveChk();
+  if(window.MFSync && window.MFSync.enabled){ window.MFSync.queue('delChecklistItem', { item:{ activityId:a.id, itemId:itemId } }); }
+  renderChecklist();
 }
 window.chkToggle=chkToggle; window.chkAddSuelto=chkAddSuelto; window.chkDelSuelto=chkDelSuelto;
 
