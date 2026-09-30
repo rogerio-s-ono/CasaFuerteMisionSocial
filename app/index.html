@@ -209,8 +209,10 @@
   #usrSheet .vd-hint{ font-size:11.5px; color:var(--gris); text-align:center; margin-top:10px; line-height:1.4; }
   #usrSheet .md-icon.susp{ background:#f0f0f0; }
   /* sheet añadir: header compacto + busca fija + lista scroll + temporal fijo */
-  #addSheet.add-sheet{ max-height:88vh; }
+  /* bottom-sheet con altura concreta para que las 3 zonas (busca fija / lista scroll / temporal fijo) funcionen */
+  #addSheet.add-sheet{ position:fixed; inset:auto 0 0 0; margin:0 auto; width:100%; max-width:480px; height:72vh; max-height:72vh; border-radius:18px 18px 0 0; padding:14px 18px calc(14px + env(safe-area-inset-bottom)); overflow:hidden; }
   #addSheet.add-sheet.on{ display:flex; flex-direction:column; }
+  #addSheet .add-head, #addSheet .add-search, #addSheet .add-list-lbl{ flex:0 0 auto; }
   #addSheet .add-head{ display:flex; align-items:center; gap:11px; margin-bottom:12px; }
   #addSheet .add-ic{ width:40px; height:40px; flex:0 0 40px; border-radius:50%; background:#e6f3ea; display:flex; align-items:center; justify-content:center; color:#2f7d4f; }
   #addSheet .add-ic svg{ width:20px; height:20px; }
@@ -220,7 +222,7 @@
   #addSheet .add-search input{ width:100%; padding:12px 12px 12px 40px; border:1px solid var(--linea); border-radius:var(--raio); font-family:"Jost",sans-serif; font-size:15px; }
   #addSheet .add-search .add-si{ position:absolute; left:13px; top:50%; transform:translateY(-50%); width:18px; height:18px; color:var(--gris); }
   #addSheet .add-list-lbl{ font-size:10.5px; text-transform:uppercase; letter-spacing:.1em; color:var(--gris); font-weight:600; margin:2px 2px 8px; flex:0 0 auto; }
-  #addSheet .ac-list{ position:static; box-shadow:none; border:0; overflow-y:auto; flex:1; min-height:60px; max-height:40vh; display:block; }
+  #addSheet .ac-list{ position:static; box-shadow:none; border:0; overflow-y:auto; flex:1; min-height:60px; display:block; }
   #addSheet .ac-item{ display:flex; align-items:center; gap:11px; padding:11px 12px; border:1px solid var(--linea); border-radius:var(--raio); margin-bottom:7px; cursor:pointer; }
   #addSheet .ac-item .av{ width:34px; height:34px; border-radius:50%; background:#e6f3ea; color:#2f7d4f; font-size:12px; font-weight:600; display:grid; place-items:center; flex:0 0 34px; }
   #addSheet .ac-item .nm{ flex:1; } #addSheet .ac-item .n1{ font-size:14px; } #addSheet .ac-item .n2{ font-size:11.5px; color:var(--gris); }
