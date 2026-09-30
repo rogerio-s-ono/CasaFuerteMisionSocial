@@ -29,9 +29,20 @@ class Insc:
         cap=int(capacidad or 0)
         estado='espera' if (cap>0 and conf>=cap) else 'confirmado'
         _id=uuid()
-        self.rows.append({'id':_id,'activityId':activityId,'rol':rol,'voluntario':vol,'nombre':nombre,'tel':telp,'temp':esTemp,'estado':estado,'porLider':porLider})
+        self.rows.append({'id':_id,'activityId':activityId,'rol':rol,'voluntario':vol,'nombre':nombre,'tel':telp,'temp':esTemp,'estado':estado,'porLider':porLider,'creadoEm':_id})
         return {'ok':True,'estado':estado,'id':_id,'voluntario':vol}
-    def cancelar(self, id=None, activityId=None, rol=None, voluntario=None):
+    def promover_espera(self, activityId, rol, capacidad):
+        cap=int(capacidad or 0)
+        if cap<=0: return []
+        conf=len([r for r in self.rows if r['activityId']==activityId and r['rol']==rol and r['estado']=='confirmado'])
+        libres=cap-conf
+        if libres<=0: return []
+        espera=sorted([r for r in self.rows if r['activityId']==activityId and r['rol']==rol and r['estado']=='espera'], key=lambda r:str(r['creadoEm']))
+        prom=[]
+        for r in espera[:libres]:
+            r['estado']='confirmado'; prom.append({'id':r['id'],'voluntario':r['voluntario']})
+        return prom
+    def cancelar(self, id=None, activityId=None, rol=None, voluntario=None, capacidad=0):
         idx=-1
         if id:
             idx=next((i for i,r in enumerate(self.rows) if str(r['id'])==str(id) and r['estado']!='cancelado'), -1)
@@ -39,8 +50,11 @@ class Insc:
             vk = str(voluntario) if (voluntario and str(voluntario).startswith('temp:')) else norm(voluntario)
             idx=next((i for i,r in enumerate(self.rows) if r['activityId']==activityId and r['rol']==rol and str(r['voluntario'])==vk and r['estado']!='cancelado'), -1)
         if idx<0: return {'ok':True,'dup':True}
+        eraConf = (self.rows[idx]['estado']=='confirmado')
+        aid=self.rows[idx]['activityId']; arol=self.rows[idx]['rol']
         self.rows[idx]['estado']='cancelado'
-        return {'ok':True}
+        prom = self.promover_espera(aid, arol, capacidad) if eraConf else []
+        return {'ok':True,'promovidos':prom}
     def set_estado(self, accion, id=None, activityId=None, rol=None, voluntario=None, capacidad=0):
         if accion not in ('suspender','reactivar'): return {'error':'accion_invalida'}
         idx=-1
@@ -51,7 +65,9 @@ class Insc:
         if idx<0: return {'error':'no_encontrado'}
         row=self.rows[idx]
         if accion=='suspender':
-            row['estado']='suspendido'; return {'ok':True,'estado':'suspendido'}
+            row['estado']='suspendido'
+            prom=self.promover_espera(row['activityId'], row['rol'], capacidad)
+            return {'ok':True,'estado':'suspendido','promovidos':prom}
         cap=int(capacidad or 0)
         conf=len([r for j,r in enumerate(self.rows) if j!=idx and r['activityId']==row['activityId'] and r['rol']==row['rol'] and r['estado']=='confirmado'])
         nuevo='espera' if (cap>0 and conf>=cap) else 'confirmado'
@@ -180,6 +196,42 @@ check("inscrito ok", res.get('ok') and res.get('estado')=='confirmado')
 check("voluntario es id sintético temp:", str(res.get('voluntario')).startswith('temp:'))
 check("tel guardado (solo dígitos)", b.rows[0].get('tel')=='34600111222')
 check("real (no temp) no llena 'tel'", (lambda r=b.inscribir('A1','prep',capacidad=6,voluntario='+34699888777'): b.rows[1].get('tel')=='')())
+
+print("CASO 16 — Cancelar un confirmado promueve al 1º de la espera (FIFO)")
+b=Insc()
+r1=b.inscribir('A1','motor',capacidad=1,voluntario='+34600000001')  # confirmado
+r2=b.inscribir('A1','motor',capacidad=1,voluntario='+34600000002')  # espera (1º)
+r3=b.inscribir('A1','motor',capacidad=1,voluntario='+34600000003')  # espera (2º)
+check("cupo 1: solo 1 confirmado", len(b.confirmados('A1','motor'))==1)
+res=b.cancelar(id=r1['id'], capacidad=1)
+check("promueve exactamente 1", len(res.get('promovidos',[]))==1)
+check("promueve al MÁS ANTIGUO (r2)", res['promovidos'][0]['id']==r2['id'])
+check("sigue 1 confirmado", len(b.confirmados('A1','motor'))==1)
+check("el confirmado ahora es r2", b.confirmados('A1','motor')[0]['id']==r2['id'])
+
+print("CASO 17 — Suspender un confirmado también promueve la espera")
+b=Insc()
+r1=b.inscribir('A1','prep',capacidad=2,voluntario='+34600000001')
+r2=b.inscribir('A1','prep',capacidad=2,voluntario='+34600000002')
+r3=b.inscribir('A1','prep',capacidad=2,voluntario='+34600000003')  # espera
+res=b.set_estado('suspender', id=r1['id'], capacidad=2)
+check("promueve 1 al suspender", len(res.get('promovidos',[]))==1)
+check("promovido es r3 (único en espera)", res['promovidos'][0]['id']==r3['id'])
+check("2 confirmados (r2 + r3)", len(b.confirmados('A1','prep'))==2)
+
+print("CASO 18 — Sin espera, cancelar no promueve a nadie")
+b=Insc()
+r1=b.inscribir('A1','prep',capacidad=3,voluntario='+34600000001')
+res=b.cancelar(id=r1['id'], capacidad=3)
+check("promovidos vacío", len(res.get('promovidos',[]))==0)
+
+print("CASO 19 — Cancelar a alguien en espera NO promueve (no liberó plaza)")
+b=Insc()
+b.inscribir('A1','motor',capacidad=1,voluntario='+34600000001')     # confirmado
+r2=b.inscribir('A1','motor',capacidad=1,voluntario='+34600000002')  # espera
+res=b.cancelar(id=r2['id'], capacidad=1)
+check("no promueve (el que salió no ocupaba plaza)", len(res.get('promovidos',[]))==0)
+check("sigue 1 confirmado", len(b.confirmados('A1','motor'))==1)
 
 print(f"\n===== RESULTADO: {PASS} passaram, {FAIL} falharam =====")
 import sys; sys.exit(1 if FAIL else 0)

@@ -92,7 +92,10 @@ function inscritosDetalle(activity, roleId){
 }
 function esperaDe(activity, roleId){
   return SERVER_INSCR.filter(function(r){ return r.activityId===activity.id && r.rol===roleId && r.estado==='espera'; })
-                     .map(function(r){ return r.temp ? (r.nombre||'Temporal') : _volName(r.voluntario); });
+                     .map(function(r){
+                       var temp=(r.temp===true||String(r.temp).toLowerCase()==='true');
+                       return { id:r.id, tel:String(r.voluntario), name: temp ? (r.nombre||'Temporal') : _volName(r.voluntario), temp:temp };
+                     });
 }
 /* ocupación considerando demo: cuántos inscritos reales hay en un rol */
 function ocupados(activity, roleId){ return inscritosDe(activity, roleId).length; }
@@ -389,7 +392,12 @@ function chipsRol(a, r){
 }
 function esperaHtml(a, r){
   const esp = esperaDe(a,r);
-  return esp.length ? `<div class="lc-esp"><div class="et">⏳ Lista de espera</div><div class="people">${esp.map(n=>`<span class="chip esp">${n}</span>`).join('')}</div></div>` : '';
+  if(!esp.length) return '';
+  var chips = esp.map(function(p){
+    var ini = String(p.name).split(' ').map(function(x){return x[0]||'';}).slice(0,2).join('').toUpperCase();
+    return `<span class="chip esp clickable" onclick="volDetalle('${a.id}','${r}','${String(p.tel).replace(/'/g,"")}','${String(p.id||'').replace(/'/g,"")}')"><span class="av">${ini}</span>${p.name}</span>`;
+  }).join('');
+  return `<div class="lc-esp"><div class="et">⏳ Lista de espera</div><div class="people">${chips}</div></div>`;
 }
 function actCardLider(a){
   const f=fmtFecha(a.data); const roleIds=Object.keys(a.roles);
@@ -664,6 +672,7 @@ function _renderVolDetalle(){
   var rowInsc = SERVER_INSCR.find(function(r){ return (VOL_CTX.id && String(r.id)===String(VOL_CTX.id)) || (String(r.voluntario)===String(VOL_CTX.tel) && r.activityId===VOL_CTX.activityId && r.rol===VOL_CTX.roleId); }) || {};
   const estado = rowInsc.estado || 'confirmado';
   const suspendido = (estado==='suspendido');
+  const enEspera = (estado==='espera');
   const v = esTemp ? {} : (_volByTel(VOL_CTX.tel) || {});
   const nombre = esTemp ? (rowInsc.nombre||'Temporal') : (v.nombre || _volName(VOL_CTX.tel));
   var telTemp = esTemp ? String(rowInsc.tel||'').trim() : '';
@@ -682,19 +691,27 @@ function _renderVolDetalle(){
   var accionPrincipal = suspendido
     ? `<div class="act reactivate" onclick="volReactivar()">${SVG_REACT}Reactivar</div>`
     : `<div class="act suspend" onclick="volSuspender()">${SVG_SUSP}Suspender</div>`;
+  var accionPrincipal = (suspendido||enEspera)
+    ? `<div class="act reactivate" onclick="volReactivar()">${SVG_REACT}${enEspera?'Confirmar':'Reactivar'}</div>`
+    : `<div class="act suspend" onclick="volSuspender()">${SVG_SUSP}Suspender</div>`;
   var delTxt = (_volConfirm==='del') ? '¿Seguro?' : 'Eliminar';
+  var estadoTag = suspendido ? 'susp' : (enEspera ? 'esp' : 'act');
+  var estadoTxt = suspendido ? 'Suspendido · no cuenta' : (enEspera ? 'En lista de espera' : 'Activo · cuenta en el cupo');
+  var hint = suspendido ? 'Si el cupo está lleno al reactivar, entrará en lista de espera.'
+           : (enEspera ? 'Confirmar lo pasa a la plaza si hay cupo; si está lleno, sigue en espera.'
+                       : 'Suspender lo mantiene tachado y sin contar en el cupo; puedes reactivarlo luego.');
   document.getElementById('usrBody').innerHTML = `
     <div class="md-icon ${suspendido?'susp':'verde'}" style="font-family:'Jost',sans-serif;font-weight:600;font-size:20px">${ini}</div>
     <h3 class="usr-t" ${suspendido?'style="text-decoration:line-through;color:#888"':''}>${nombre}</h3>
     <div class="usr-sub">${subLine}</div>
-    <div class="vd-badges"><span class="vd-tag ${suspendido?'susp':'act'}">${suspendido?'Suspendido · no cuenta':'Activo · cuenta en el cupo'}</span></div>
+    <div class="vd-badges"><span class="vd-tag ${estadoTag}">${estadoTxt}</span></div>
     <div class="vd-tarea"><span class="vd-lbl">Asignado a</span>${tarea}</div>
     <div class="action-bar" ${dis}>
       ${accionPrincipal}
       <div class="act del ${_volConfirm==='del'?'confirm':''}" onclick="volEliminar()">${SVG_DEL}${delTxt}</div>
       <div class="act cancel" onclick="closeVolDetalle()">${SVG_X}Cerrar</div>
     </div>
-    <div class="vd-hint">${suspendido?'Si el cupo está lleno al reactivar, entrará en lista de espera.':'Suspender lo mantiene tachado y sin contar en el cupo; puedes reactivarlo luego.'}</div>`;
+    <div class="vd-hint">${hint}</div>`;
 }
 /* acción backend genérica del modal (suspender/reactivar/eliminar) con pull + refresco */
 function _volAccion(fn, okMsg){
@@ -709,6 +726,8 @@ function _volAccion(fn, okMsg){
         if(j.accion==='eliminar' || j.cancelado) _inscLocalSetEstado(idAfetado, 'cancelado');
         else if(j.estado) _inscLocalSetEstado(idAfetado, j.estado);
       }
+      // promociones FIFO de la lista de espera → confirmado (las devuelve el backend)
+      if(j.promovidos && j.promovidos.length){ j.promovidos.forEach(function(p){ _inscLocalSetEstado(p.id, 'confirmado'); }); }
       closeVolDetalle(); renderLider(); hideSaving();
       toast(okMsg||'Hecho');
     } else {
@@ -720,14 +739,14 @@ function _volAccion(fn, okMsg){
 }
 function _volCapacidad(){ var a=currentActivities().find(function(x){return x.id===VOL_CTX.activityId;}); return a?(a.roles[VOL_CTX.roleId]||0):0; }
 function volSuspender(){
-  _volAccion(function(){ return window.MFSync.post('setEstadoInscripcion', { accion:'suspender', id:VOL_CTX.id||'', activityId:VOL_CTX.activityId, rol:VOL_CTX.roleId, voluntario:VOL_CTX.tel }); }, 'Voluntario suspendido');
+  _volAccion(function(){ return window.MFSync.post('setEstadoInscripcion', { accion:'suspender', id:VOL_CTX.id||'', activityId:VOL_CTX.activityId, rol:VOL_CTX.roleId, voluntario:VOL_CTX.tel, capacidad:_volCapacidad() }); }, 'Voluntario suspendido');
 }
 function volReactivar(){
   _volAccion(function(){ return window.MFSync.post('setEstadoInscripcion', { accion:'reactivar', id:VOL_CTX.id||'', activityId:VOL_CTX.activityId, rol:VOL_CTX.roleId, voluntario:VOL_CTX.tel, capacidad:_volCapacidad() }); }, 'Voluntario reactivado');
 }
 function volEliminar(){
   if(_volConfirm!=='del'){ _volConfirm='del'; _renderVolDetalle(); return; }   // 1º toque confirma
-  _volAccion(function(){ return window.MFSync.post('cancelar', { id:VOL_CTX.id||'', activityId:VOL_CTX.activityId, rol:VOL_CTX.roleId, voluntario:VOL_CTX.tel }).then(function(j){ if(j) j.cancelado=true; return j; }); }, 'Voluntario eliminado');
+  _volAccion(function(){ return window.MFSync.post('cancelar', { id:VOL_CTX.id||'', activityId:VOL_CTX.activityId, rol:VOL_CTX.roleId, voluntario:VOL_CTX.tel, capacidad:_volCapacidad() }).then(function(j){ if(j) j.cancelado=true; return j; }); }, 'Voluntario eliminado');
 }
 window.volDetalle=volDetalle; window.closeVolDetalle=closeVolDetalle;
 window.volSuspender=volSuspender; window.volReactivar=volReactivar; window.volEliminar=volEliminar;
@@ -1244,6 +1263,48 @@ let CHK = {};
 function loadChk(){ try{ CHK=JSON.parse(localStorage.getItem('mf_chk')||'{}'); }catch(e){ CHK={}; } }
 function saveChk(){ localStorage.setItem('mf_chk', JSON.stringify(CHK)); }
 let chkCtx = { activityId:null, view:'inst' };
+
+/* mapea una fila del servidor (aba Checklists) al item local del modelo CHK */
+function _chkRowToItem(r){
+  var asg = null;
+  try{ asg = r.asignado ? (typeof r.asignado==='string' ? JSON.parse(r.asignado) : r.asignado) : null; }catch(e){ asg = null; }
+  var suelto = (r.suelto===true || String(r.suelto).toLowerCase()==='true');
+  var hecho  = (r.hecho===true  || String(r.hecho).toLowerCase()==='true');
+  return {
+    id: String(r.itemId),
+    texto: r.texto || '',
+    done: hecho,
+    doneBy: r.hechoPor || null,
+    asignado: asg,
+    suelto: suelto,
+    actualizadoEm: r.actualizadoEm || ''
+  };
+}
+/* fusiona el estado del servidor con el local, item a item, prefiriendo el más reciente (actualizadoEm) */
+function mergeChecklistsFromServer(rows){
+  if(!Array.isArray(rows)) return;
+  // agrupar filas del servidor por activityId
+  var srv = {};
+  rows.forEach(function(r){
+    if(!r || !r.activityId || !r.itemId) return;
+    (srv[r.activityId] = srv[r.activityId] || []).push(_chkRowToItem(r));
+  });
+  Object.keys(srv).forEach(function(actId){
+    var localWrap = CHK[actId] || { items:[] };
+    var localItems = localWrap.items || [];
+    var byId = {}; localItems.forEach(function(it){ byId[it.id] = it; });
+    srv[actId].forEach(function(sit){
+      var lit = byId[sit.id];
+      if(!lit){ byId[sit.id] = sit; return; }                     // no local → tomar servidor
+      var ls = lit.actualizadoEm || '';
+      var ss = sit.actualizadoEm || '';
+      if(ss >= ls) byId[sit.id] = sit;                            // servidor más reciente (o igual) → gana
+      // si el local es más reciente, se mantiene (aún no sincronizado / cola pendiente)
+    });
+    CHK[actId] = { items: Object.keys(byId).map(function(k){ return byId[k]; }) };
+  });
+  saveChk();
+}
 
 /* materializa la instancia: fusiona plantilla (de CONFIG) + estado guardado + sueltos */
 function chkInstance(activity){
@@ -1919,6 +1980,7 @@ if(window.MFSync){
     if(res.data.permisos) setPermisos(res.data.permisos);
     if(res.data.voluntarios) setServerVols(res.data.voluntarios);
     if(res.data.inscripciones) setServerInscr(res.data.inscripciones);
+    if(res.data.checklists) mergeChecklistsFromServer(res.data.checklists);
     if(res.data.config && res.data.config.misiones){
       window.CFMS.setConfig(res.data.config);
       localStorage.setItem('mf_config', JSON.stringify(res.data.config));

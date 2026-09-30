@@ -103,6 +103,7 @@ function doPost(e) {
       case 'cancelar':        return _json(_cancelar(body, email));
       case 'setEstadoInscripcion': return _json(_setEstadoInscripcion(body, email));
       case 'setChecklistItem':return _json(_setChecklistItem(body, email));
+      case 'delChecklistItem':return _json(_delChecklistItem(body, email));
       default:                return _json({ ok:false, error:'unknown_action' });
     }
   } catch (err) {
@@ -374,10 +375,13 @@ function _cancelar(body, email) {
     idx = rows.findIndex(function(r){ return r.activityId===i.activityId && r.rol===i.rol && String(r.voluntario)===volKey && r.estado!=='cancelado'; });
   }
   if (idx < 0) return { ok:true, dup:true };
+  var eraConfirmado = (rows[idx].estado==='confirmado');
   _setCell(sh, idx, 'estado', 'cancelado');
   if (motivo) { try { _setCell(sh, idx, 'motivo', motivo); } catch(e){} }
   _audit(email||i.voluntario||i.id, 'cancelar'+(motivo?(' ('+motivo+')'):''), 'inscripcion', (i.activityId||'')+'/'+(i.rol||''));
-  return { ok:true };
+  // si el que salió ocupaba plaza (confirmado), promover al primero de la espera (FIFO)
+  var prom = eraConfirmado ? _promoverEspera(rows[idx].activityId, rows[idx].rol, Number(i.capacidad||0), email) : [];
+  return { ok:true, promovidos:prom };
 }
 
 /* ============ SUSPENDER / REACTIVAR una inscripción ============
@@ -405,7 +409,8 @@ function _setEstadoInscripcion(body, email) {
     _setCell(sh, idx, 'estado', 'suspendido');
     SpreadsheetApp.flush();
     _audit(email||row.voluntario, 'suspender', 'inscripcion', row.activityId+'/'+row.rol);
-    return { ok:true, estado:'suspendido' };
+    var prom = _promoverEspera(row.activityId, row.rol, Number(i.capacidad||0), email);
+    return { ok:true, estado:'suspendido', promovidos:prom };
   }
   // reactivar: si el cupo (confirmados) ya llegó a capacidad → espera; si no → confirmado
   var cap = Number(i.capacidad || 0);
@@ -415,6 +420,30 @@ function _setEstadoInscripcion(body, email) {
   SpreadsheetApp.flush();
   _audit(email||row.voluntario, 'reactivar:'+nuevo, 'inscripcion', row.activityId+'/'+row.rol);
   return { ok:true, estado:nuevo };
+}
+
+/* Promueve de 'espera' → 'confirmado' al/los más antiguos (FIFO por creadoEm) mientras haya plaza.
+   Devuelve array de {id, voluntario} promovidos (para que el cliente refresque). */
+function _promoverEspera(activityId, rol, capacidad, email) {
+  var cap = Number(capacidad||0);
+  if (cap <= 0) return [];   // sin cupo definido, no hay concepto de "plaza libre"
+  var sh = _sheet(SHEETS.INSCRIPCIONES);
+  var rows = _readRows(SHEETS.INSCRIPCIONES);
+  var confirmados = rows.filter(function(r){ return r.activityId===activityId && r.rol===rol && r.estado==='confirmado'; }).length;
+  var libres = cap - confirmados;
+  if (libres <= 0) return [];
+  // candidatos en espera, ordenados por creadoEm ascendente (FIFO)
+  var espera = [];
+  rows.forEach(function(r, j){ if(r.activityId===activityId && r.rol===rol && r.estado==='espera'){ espera.push({ j:j, r:r }); } });
+  espera.sort(function(a,b){ return String(a.r.creadoEm||'').localeCompare(String(b.r.creadoEm||'')); });
+  var promovidos = [];
+  for (var k=0; k<espera.length && promovidos.length<libres; k++){
+    _setCell(sh, espera[k].j, 'estado', 'confirmado');
+    promovidos.push({ id:espera[k].r.id, voluntario:espera[k].r.voluntario });
+    _audit(email||'', 'promover_espera', 'inscripcion', activityId+'/'+rol);
+  }
+  if (promovidos.length) SpreadsheetApp.flush();
+  return promovidos;
 }
 
 /* ============ CHECKLISTS ============ */
@@ -431,6 +460,19 @@ function _setChecklistItem(body, email) {
   };
   if (idx >= 0) _updateRow(sh, idx, rec); else _appendRow(sh, rec);
   _audit(email||'', 'setChecklistItem', 'checklist', c.activityId+'/'+c.itemId);
+  return { ok:true };
+}
+
+/* elimina un ítem del checklist (línea de la aba) por activityId+itemId. Idempotente. */
+function _delChecklistItem(body, email) {
+  var c = body.item || {}; // { activityId, itemId }
+  if (!c.activityId || !c.itemId) return { ok:false, error:'datos_incompletos' };
+  var sh = _sheet(SHEETS.CHECKLISTS);
+  var rows = _readRows(SHEETS.CHECKLISTS);
+  var idx = rows.findIndex(function(r){ return r.activityId===c.activityId && r.itemId===c.itemId; });
+  if (idx < 0) return { ok:true, dup:true };   // no existe → nada que borrar (idempotente)
+  sh.deleteRow(idx + 2);                        // +2: fila 1 = cabecera, filas de datos empiezan en 2
+  _audit(email||'', 'delChecklistItem', 'checklist', c.activityId+'/'+c.itemId);
   return { ok:true };
 }
 
