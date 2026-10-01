@@ -11,10 +11,38 @@
 ## Projeto
 PWA de gestão de voluntários das missões sociais da Casa Fuerte Church (Leganés/Madrid). UI em **espanhol**. Mobile-first, HTML/JS/CSS puro (sem framework). Estilo: monocromático grafite/branco + dourado `#f5c518`. Fontes: Cormorant Garamond (títulos itálico) + Jost + Oswald.
 
-## Estado atual: **v0.15.0** (no ar)
+## Estado atual: **v0.38.0** (no ar) · Backend clasp **@23**
 - App publicado: https://rogerio-s-ono.github.io/CasaFuerteMisionSocial/
 - Repo PÚBLICO (autorizado): github.com/rogerio-s-ono/CasaFuerteMisionSocial — branch **`main`** (NÃO master), Pages via GitHub Actions (.github/workflows/pages.yml, ~1-2min).
-- Último commit: d580880.
+- Último commit: 004b06b.
+
+## Sessão 2026-10-01 (resumo — v0.19.0 → v0.38.0)
+Grande rodada. Principais entregas:
+- **Gestão de usuários reescrita** (modelo unificado): aba única `Usuarios` (telefono chave + nombre + email + esAdmin flag + lider JSON), substituiu Voluntarios+Admin. Modal único criar/editar, online-only, bloqueio de navegação, email obrigatório p/ admin/líder, unicidade de email, proteção do último admin. Login por telefone reconhece quem o Admin criou.
+- **Fix crítico de identidade:** `_upsertVoluntario` não carimba mais o email verificado do token (do Admin na sessão) em registro de terceiro — corrigia o "vira admin sozinho".
+- **Assignação de voluntários (vista líder) reformulada:** chips com avatar (ativo/temporal/suspenso riscado só nome/vacantes), botão add (ícone persona+) no header do rol, modal com action-bar de ícones (Suspender/Reactivar/Eliminar/Cerrar), sheet añadir (busca fija + lista disponíveis rolável [exclui já assignados] + temporal roxo fixo). Persiste no backend (inscribir/cancelar/setEstadoInscripcion).
+- **Estado `suspendido`** (não conta no cupo) + **promoção FIFO automática** da lista de espera ao liberar vaga (suspender/eliminar confirmado). Lista de espera clicável (só Eliminar/Cerrar — promoção é automática).
+- **Sync feedback A+B:** overlay "Guardando…" centralizado sincronizado + eliminado 2º round-trip (usa retorno do post) + pausa pull periódico (MF_MUTATING) → sem delay.
+- **UX:** tab bar com ícones SVG outline consistentes; badge de sync só-ícone (nuvem); seletor de idioma ES/BR (bandeiras SVG) na aba Más persistido no backend; log de sync (10 erros, botão copiar) na aba Más; modal de comentário do checklist (título próprio + X + lápis).
+- **Auditoria de regressão completa (v0.38.0):** navegabilidade (77 handlers 0 órfãos, go() fecha tudo), botões/mensagens padronizados, robustez (BUSY com reset, promises com catch, null-safety). Correções menores aplicadas.
+- **Suítes de regressão (OBRIGATÓRIO rodar antes de deploy de assignação/usuário):** `python3 backend/test_asignacion.py` (46/46) e `python3 backend/test_usuarios.py` (26/26). Doc em `backend/TESTS.md`.
+- **Lição de processo:** validar COMPORTAMENTO (testes com casos reais), não só sintaxe/balanceamento — regressões (DDI, telefone) vieram de validar só sintaxe.
+- **ALERTA:** houve 2 sessões Kiro editando este repo em paralelo nesta data — risco de conflito. Manter 1 sessão por vez. Sempre `git fetch` antes de editar.
+
+## Modelos de dados (backend, aba única por entidade)
+- **Usuarios:** telefono(chave) · nombre · email(único, vínculo admin/líder) · esAdmin(TRUE/FALSE) · lider(JSON misionIds) · idioma · actualizadoEm.
+- **Inscripciones:** id · activityId · misionId · templateId · fecha · rol · voluntario(telefone ou `temp:<uuid>`) · nombre · temp · estado(confirmado/suspendido/espera/cancelado) · porLider · porEmail · creadoEm · motivo. Cupo conta só `confirmado`.
+- Backend ações: saveConfig, upsertVoluntario(login), saveUsuario, delVoluntario, dedupeVoluntarios, inscribir, cancelar, setEstadoInscripcion(suspender/reactivar), setChecklistItem. _promoverEspera (FIFO por creadoEm).
+
+## Backlog atual (docs/backlog.md)
+- **Sincronizar checklist do líder** com backend (hoje só localStorage; backend `setChecklistItem` pronto).
+- **Seção exploratória** (ideias de mercado, pendentes de validação): lembretes automáticos de turno, confirmar presença (aceitar/recusar), datas de indisponibilidade (blockout), exportar calendário .ics, troca de turno (swap).
+
+## Pendências de refino (não-bloqueantes, da auditoria v0.38)
+- Unificar CSS de `.btn` (redefinido em 4 escopos).
+- Renomear classe `.act` do action-bar do modal (colisão latente com card de atividade — hoje escopado, sem bug).
+
+## ----- HISTÓRICO ANTERIOR (pré 2026-10-01) -----
 
 ## Pipeline de deploy automático (clasp) — montado 2026-09-30
 - **Objetivo:** eliminar copy/paste manual do Code.gs no editor Apps Script.
