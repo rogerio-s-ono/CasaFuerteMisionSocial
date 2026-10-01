@@ -640,7 +640,7 @@ function _liderInscribir(activityId, roleId, who){
       hideSaving();
       toast((j.estado==='espera')?'Añadido a lista de espera':'Añadido');
     } else {
-      hideSaving(); toast('No se pudo añadir');
+      hideSaving(); toast((j&&j.error)?_errMsg(j.error):'No se pudo añadir');
     }
   }).catch(function(){
     // offline → encola y refleja local optimista
@@ -731,7 +731,7 @@ function _volAccion(fn, okMsg){
       closeVolDetalle(); renderLider(); hideSaving();
       toast(okMsg||'Hecho');
     } else {
-      VOL_BUSY=false; hideSaving(); toast('No se pudo');
+      VOL_BUSY=false; hideSaving(); toast((j&&j.error)?_errMsg(j.error):'No se pudo completar la operación');
     }
   }).catch(function(){
     VOL_BUSY=false; hideSaving(); toast('Error de conexión');
@@ -1664,7 +1664,7 @@ function _esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g
 function mfRetrySync(){
   if(!window.MFSync || !window.MFSync.enabled){ toast('Sin servidor configurado'); return; }
   toast('Reintentando…');
-  window.MFSync.pull().then(function(){ renderMas(); });
+  window.MFSync.pull().then(function(){ renderMas(); }).catch(function(){ toast('No se pudo reintentar'); renderMas(); });
 }
 window.mfRetrySync=mfRetrySync;
 /* mostrar/ocultar la lista de errores (oculta por defecto) */
