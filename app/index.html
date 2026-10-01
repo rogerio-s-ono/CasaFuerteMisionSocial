@@ -393,7 +393,19 @@
   .assign.none{ background:var(--hueso); color:var(--gris); border:1px dashed var(--linea); }
   .tagsuelto{ font-size:9px; text-transform:uppercase; letter-spacing:.04em; background:var(--oro-bg); color:var(--oro-osc); border:1px solid #ecdca6; border-radius:6px; padding:1px 6px; }
   .doneby{ font-size:11px; color:var(--gris-cl); }
-  .addrow{ display:flex; gap:8px; margin-top:10px; } .addrow input{ flex:1; padding:13px; border:1px solid var(--linea); border-radius:var(--raio); font-size:15px; font-family:"Jost",sans-serif; } .addrow button{ border:0; background:var(--oro); color:#111; border-radius:var(--raio); padding:0 16px; font-weight:600; font-family:"Jost",sans-serif; cursor:pointer; }
+  /* Añadir ítem — progressive disclosure (colapsado → formulario inline) */
+  .chk-add-trigger{ display:flex; align-items:center; gap:8px; width:100%; margin-top:12px; padding:12px 14px; background:none; border:1px dashed var(--linea); border-radius:var(--raio); color:var(--gris); font-size:14px; font-family:"Jost",sans-serif; cursor:pointer; text-align:left; }
+  .chk-add-trigger:active{ background:var(--hueso); }
+  .chk-add-trigger .plus{ display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; background:var(--oro-bg); color:var(--oro-osc); font-weight:600; font-size:16px; line-height:1; }
+  .chk-add-form{ margin-top:12px; padding:14px; border:1px solid var(--linea); border-radius:var(--raio); background:#fff; box-shadow:0 2px 10px rgba(0,0,0,.04); }
+  .chk-add-txt{ width:100%; padding:13px; border:1px solid var(--linea); border-radius:var(--raio); font-size:15px; font-family:"Jost",sans-serif; }
+  .chk-add-opts{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .chk-add-more{ background:none; border:0; color:var(--oro-osc); font-size:13px; font-family:"Jost",sans-serif; cursor:pointer; padding:4px 2px; }
+  .chk-add-opt{ width:100%; margin-top:4px; }
+  .chk-add-opt label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--gris); margin-bottom:5px; }
+  .chk-add-opt textarea, .chk-add-opt select{ width:100%; padding:11px 12px; border:1px solid var(--linea); border-radius:var(--raio); font-size:14px; font-family:"Jost",sans-serif; resize:vertical; }
+  .chk-add-actions{ display:flex; gap:8px; margin-top:12px; } .chk-add-actions .btn{ flex:1; }
+  .chk-add-hint{ font-size:11px; color:var(--gris); margin-top:8px; }
   .tpl-note{ background:var(--oro-bg); border:1px solid #ecdca6; border-radius:var(--raio); padding:10px 12px; font-size:12px; color:#8a6d1a; margin-bottom:14px; }
   #asgBackdrop{ z-index:60; } #asgSheet{ z-index:61; }
   #asgSheet .opt{ display:flex; align-items:center; gap:10px; padding:12px 8px; border-bottom:1px solid var(--linea); cursor:pointer; } #asgSheet .opt:last-child{ border-bottom:0; }
