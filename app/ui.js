@@ -691,14 +691,14 @@ function _renderVolDetalle(){
   const SVG_REACT= '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
   const SVG_DEL  = '<svg viewBox="0 0 24 24"><path d="M6 7h12l-1 14H7L6 7zm3-3h6l1 2H8l1-2z"/></svg>';
   const SVG_X    = '<svg viewBox="0 0 24 24"><path d="M18.3 5.7L12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3l6.3 6.3 6.3-6.3z"/></svg>';
-  var accionPrincipal = (suspendido||enEspera)
-    ? `<div class="act reactivate" onclick="volReactivar()">${SVG_REACT}${enEspera?'Confirmar':'Reactivar'}</div>`
-    : `<div class="act suspend" onclick="volSuspender()">${SVG_SUSP}Suspender</div>`;
+  var accionPrincipal = suspendido
+    ? `<div class="act reactivate" onclick="volReactivar()">${SVG_REACT}Reactivar</div>`
+    : (enEspera ? '' : `<div class="act suspend" onclick="volSuspender()">${SVG_SUSP}Suspender</div>`);
   var delTxt = (_volConfirm==='del') ? '¿Seguro?' : 'Eliminar';
   var estadoTag = suspendido ? 'susp' : (enEspera ? 'esp' : 'act');
   var estadoTxt = suspendido ? 'Suspendido · no cuenta' : (enEspera ? 'En lista de espera' : 'Activo · cuenta en el cupo');
   var hint = suspendido ? 'Si el cupo está lleno al reactivar, entrará en lista de espera.'
-           : (enEspera ? 'Confirmar lo pasa a la plaza si hay cupo; si está lleno, sigue en espera.'
+           : (enEspera ? 'Entrará automáticamente cuando se libere una plaza (por orden de llegada).'
                        : 'Suspender lo mantiene tachado y sin contar en el cupo; puedes reactivarlo luego.');
   document.getElementById('usrBody').innerHTML = `
     <div class="md-icon ${suspendido?'susp':'verde'}" style="font-family:'Jost',sans-serif;font-weight:600;font-size:20px">${ini}</div>
