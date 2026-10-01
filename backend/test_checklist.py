@@ -33,6 +33,7 @@ class Chk:
             'activityId': c['activityId'], 'itemId': c['itemId'], 'texto': c.get('texto', ''),
             'hecho': bool(c.get('hecho')), 'hechoPor': c.get('hechoPor', ''),
             'asignado': json.dumps(c.get('asignado')), 'suelto': bool(c.get('suelto')),
+            'na': bool(c.get('na')), 'comentario': c.get('comentario', ''),
             'actualizadoEm': _now(),
         }
         idx = self._idx(c['activityId'], c['itemId'])
@@ -56,6 +57,7 @@ def _row_to_item(r):
     return {'id': str(r['itemId']), 'texto': r.get('texto', ''),
             'done': bool(r.get('hecho')), 'doneBy': r.get('hechoPor') or None,
             'asignado': asg, 'suelto': bool(r.get('suelto')),
+            'na': bool(r.get('na')), 'comentario': r.get('comentario', ''),
             'actualizadoEm': r.get('actualizadoEm', '')}
 
 def merge_from_server(CHK, rows):
@@ -131,6 +133,51 @@ srv3 = Chk(); srv3.set_item({'activityId': 'B1', 'itemId': 'n1', 'texto': 'Nuevo
 CHK3 = {}
 merge_from_server(CHK3, srv3.pull())
 check("item del servidor incorporado", CHK3.get('B1', {}).get('items', [{}])[0].get('id') == 'n1')
+
+print("CASO 11 — N/A se persiste")
+b = Chk(); b.set_item({'activityId': 'A1', 'itemId': 't1', 'texto': 'x', 'na': True})
+check("na=True guardado", b.pull()[0]['na'] is True)
+
+print("CASO 12 — N/A y hecho mutuamente excluyentes (lógica del toggle N/A)")
+# simula chkToggleNA: al marcar na, se limpia hecho
+def toggle_na(item):
+    item['na'] = not item.get('na')
+    if item['na']: item['done'] = False; item['doneBy'] = None
+    return item
+it = {'id': 't1', 'done': True, 'doneBy': 'Ana', 'na': False}
+toggle_na(it)
+check("na activado quita done", it['done'] is False and it['na'] is True)
+check("doneBy limpiado", it['doneBy'] is None)
+
+print("CASO 13 — Comentario se persiste")
+b = Chk(); b.set_item({'activityId': 'A1', 'itemId': 't1', 'texto': 'x', 'comentario': 'Traer guantes'})
+check("comentario guardado", b.pull()[0]['comentario'] == 'Traer guantes')
+b.set_item({'activityId': 'A1', 'itemId': 't1', 'texto': 'x', 'comentario': 'Editado'})
+check("comentario editable (upsert)", b.pull()[0]['comentario'] == 'Editado')
+
+print("CASO 14 — Progreso ignora N/A (feitos / (total - na))")
+def progreso(items):
+    aplican = [i for i in items if not i.get('na')]
+    done = len([i for i in aplican if i.get('done')])
+    return (done, len(aplican))
+items = [
+    {'id': '1', 'done': True,  'na': False},
+    {'id': '2', 'done': False, 'na': False},
+    {'id': '3', 'done': False, 'na': True},   # N/A → fuera del conteo
+]
+d, t = progreso(items)
+check("1 hecho de 2 aplicables (no 3)", d == 1 and t == 2)
+# todos N/A → total 0 (no divide por cero en el front)
+d2, t2 = progreso([{'id': 'x', 'done': False, 'na': True}])
+check("todos N/A → total 0", t2 == 0)
+
+print("CASO 15 — Merge trae na y comentario del servidor")
+srvN = Chk(); srvN.set_item({'activityId': 'A1', 'itemId': 't1', 'na': True, 'comentario': 'desde servidor'})
+CHKn = {}
+merge_from_server(CHKn, srvN.pull())
+itn = CHKn['A1']['items'][0]
+check("na del servidor en merge", itn['na'] is True)
+check("comentario del servidor en merge", itn['comentario'] == 'desde servidor')
 
 print(f"\n===== RESULTADO: {PASS} passaram, {FAIL} falharam =====")
 import sys; sys.exit(1 if FAIL else 0)

@@ -448,7 +448,7 @@ function _promoverEspera(activityId, rol, capacidad, email) {
 
 /* ============ CHECKLISTS ============ */
 function _setChecklistItem(body, email) {
-  var c = body.item || {}; // { activityId, itemId, texto, hecho, hechoPor, asignado, suelto }
+  var c = body.item || {}; // { activityId, itemId, texto, hecho, hechoPor, asignado, suelto, na, comentario }
   if (!c.activityId || !c.itemId) return { ok:false, error:'datos_incompletos' };
   var sh = _sheet(SHEETS.CHECKLISTS);
   var rows = _readRows(SHEETS.CHECKLISTS);
@@ -456,7 +456,7 @@ function _setChecklistItem(body, email) {
   var rec = {
     activityId:c.activityId, itemId:c.itemId, texto:c.texto||'',
     hecho:!!c.hecho, hechoPor:c.hechoPor||'', asignado:JSON.stringify(c.asignado||null),
-    suelto:!!c.suelto, actualizadoEm:new Date().toISOString()
+    suelto:!!c.suelto, na:!!c.na, comentario:c.comentario||'', actualizadoEm:new Date().toISOString()
   };
   if (idx >= 0) _updateRow(sh, idx, rec); else _appendRow(sh, rec);
   _audit(email||'', 'setChecklistItem', 'checklist', c.activityId+'/'+c.itemId);
@@ -508,7 +508,7 @@ function _ensureSheets() {
   headers[SHEETS.CONFIG] = ['config_json'];
   headers[SHEETS.USUARIOS] = ['telefono','nombre','email','esAdmin','lider','idioma','actualizadoEm'];
   headers[SHEETS.INSCRIPCIONES] = ['id','activityId','misionId','templateId','fecha','rol','voluntario','nombre','tel','temp','estado','porLider','porEmail','creadoEm','motivo'];
-  headers[SHEETS.CHECKLISTS] = ['activityId','itemId','texto','hecho','hechoPor','asignado','suelto','actualizadoEm'];
+  headers[SHEETS.CHECKLISTS] = ['activityId','itemId','texto','hecho','hechoPor','asignado','suelto','na','comentario','actualizadoEm'];
   headers[SHEETS.AUDIT] = ['timestamp','usuario','accion','tipo','ref'];
   Object.keys(headers).forEach(function(name){
     var sh = _sheet(name);

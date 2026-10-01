@@ -1270,6 +1270,7 @@ function _chkRowToItem(r){
   try{ asg = r.asignado ? (typeof r.asignado==='string' ? JSON.parse(r.asignado) : r.asignado) : null; }catch(e){ asg = null; }
   var suelto = (r.suelto===true || String(r.suelto).toLowerCase()==='true');
   var hecho  = (r.hecho===true  || String(r.hecho).toLowerCase()==='true');
+  var na     = (r.na===true     || String(r.na).toLowerCase()==='true');
   return {
     id: String(r.itemId),
     texto: r.texto || '',
@@ -1277,6 +1278,8 @@ function _chkRowToItem(r){
     doneBy: r.hechoPor || null,
     asignado: asg,
     suelto: suelto,
+    na: na,
+    comentario: r.comentario || '',
     actualizadoEm: r.actualizadoEm || ''
   };
 }
@@ -1312,18 +1315,19 @@ function chkInstance(activity){
   const saved = (CHK[activity.id] && CHK[activity.id].items) ? CHK[activity.id].items : [];
   const byId = {}; saved.forEach(it=>{ byId[it.id]=it; });
   const items = [];
-  // items de plantilla (heredan estado guardado si existe)
+  // items de plantilla (heredan estado guardado si existe; comentario por defecto del template)
   tpl.slice().sort((a,b)=>(a.orden||0)-(b.orden||0)).forEach(t=>{
     const s = byId[t.id] || {};
-    items.push({ id:t.id, texto:(t.texto[LANG]||t.texto.es), done:!!s.done, doneBy:s.doneBy||null, asignado:s.asignado||null, suelto:false });
+    const tplComent = t.comentario ? (typeof t.comentario==='object' ? (t.comentario[LANG]||t.comentario.es||'') : t.comentario) : '';
+    items.push({ id:t.id, texto:(t.texto[LANG]||t.texto.es), done:!!s.done, doneBy:s.doneBy||null, asignado:s.asignado||null, suelto:false, na:!!s.na, comentario:(s.comentario!=null && s.comentario!=='')?s.comentario:tplComent });
   });
   // items sueltos (guardados que no vienen de plantilla)
-  saved.filter(it=>it.suelto).forEach(it=>items.push({ id:it.id, texto:it.texto, done:!!it.done, doneBy:it.doneBy||null, asignado:it.asignado||null, suelto:true }));
+  saved.filter(it=>it.suelto).forEach(it=>items.push({ id:it.id, texto:it.texto, done:!!it.done, doneBy:it.doneBy||null, asignado:it.asignado||null, suelto:true, na:!!it.na, comentario:it.comentario||'' }));
   return items;
 }
 function chkCount(activity){
-  const items=chkInstance(activity); if(!items.length) return '';
-  const done=items.filter(i=>i.done).length; return ` <span class="chk-n">${done}/${items.length}</span>`;
+  const items=chkInstance(activity); const aplican=items.filter(i=>!i.na); if(!aplican.length) return '';
+  const done=aplican.filter(i=>i.done).length; return ` <span class="chk-n">${done}/${aplican.length}</span>`;
 }
 function chkPersistItem(activityId, item){
   item.actualizadoEm = new Date().toISOString();   // sello local para el merge por fecha
@@ -1340,7 +1344,9 @@ function chkPersistItem(activityId, item){
       hecho: !!item.done,
       hechoPor: item.doneBy || '',
       asignado: item.asignado || null,
-      suelto: !!item.suelto
+      suelto: !!item.suelto,
+      na: !!item.na,
+      comentario: item.comentario || ''
     }});
   }
 }
@@ -1362,53 +1368,110 @@ function renderChecklist(){
   const body=document.getElementById('chkBody');
   if(chkCtx.view==='tpl'){ body.innerHTML=renderChkTpl(a); return; }
   // instancia
-  const items=chkInstance(a); const done=items.filter(i=>i.done).length;
+  const items=chkInstance(a);
+  const aplican=items.filter(i=>!i.na);
+  const done=aplican.filter(i=>i.done).length;
+  const total=aplican.length;
   const rows=items.map(it=>{
     const asg = it.asignado
-      ? (it.asignado.temp ? `<span class="assign temp" onclick="chkAssign('${it.id}')">${it.asignado.name} <span style="font-size:9px">· Temp</span></span>`
-                          : `<span class="assign serv" onclick="chkAssign('${it.id}')">${it.asignado.name}</span>`)
-      : `<span class="assign none" onclick="chkAssign('${it.id}')">+ Asignar</span>`;
+      ? (it.asignado.temp ? `<span class="assign temp" onclick="event.stopPropagation();chkAssign('${it.id}')">${it.asignado.name} <span style="font-size:9px">· Temp</span></span>`
+                          : `<span class="assign serv" onclick="event.stopPropagation();chkAssign('${it.id}')">${it.asignado.name}</span>`)
+      : `<span class="assign none" onclick="event.stopPropagation();chkAssign('${it.id}')">+ Asignar</span>`;
     const suelto = it.suelto ? '<span class="tagsuelto">suelto</span>' : '';
-    const delx = it.suelto ? `<span class="x" style="opacity:.4;cursor:pointer;margin-left:auto" onclick="chkDelSuelto('${it.id}')">×</span>` : '';
-    return `<div class="item ${it.done?'done':''}">
-      <div class="box" onclick="chkToggle('${it.id}')">${it.done?'✓':''}</div>
-      <div class="body"><div class="txt">${it.texto}</div><div class="meta">${asg} ${suelto} ${it.done&&it.doneBy?`<span class="doneby">· hecho por ${it.doneBy}</span>`:''}${delx}</div></div></div>`;
+    const delx = it.suelto ? `<span class="x" style="opacity:.4;cursor:pointer;margin-left:auto" onclick="event.stopPropagation();chkDelSuelto('${it.id}')">×</span>` : '';
+    const hasCom = it.comentario && String(it.comentario).trim();
+    const comInd = hasCom ? `<span class="chk-com-ind" title="Ver comentario">💬</span>` : '';
+    // caja: deshabilitada si N/A; toggle N/A arriba a la derecha; cuerpo clicable abre el comentario
+    return `<div class="item ${it.done?'done':''} ${it.na?'na':''}">
+      <div class="box ${it.na?'dis':''}" onclick="event.stopPropagation();chkToggle('${it.id}')">${it.done&&!it.na?'✓':''}</div>
+      <div class="body" onclick="chkOpenComment('${it.id}')">
+        <div class="txt">${it.texto}</div>
+        <div class="meta">${it.na?'':asg} ${suelto} ${comInd} ${it.done&&!it.na&&it.doneBy?`<span class="doneby">· hecho por ${it.doneBy}</span>`:''}${delx}</div>
+      </div>
+      <button class="chk-na ${it.na?'on':''}" onclick="event.stopPropagation();chkToggleNA('${it.id}')" title="No aplica">N/A</button>
+    </div>`;
   }).join('');
   body.innerHTML = `
     <div class="chk-ctx">${f.w} ${f.d} ${f.m} · ${hhrs(a)} · ${window.CFMS.misionLabel(a.misionId)}</div>
-    <div class="prog"><div class="bar"><i style="width:${items.length?Math.round(done/items.length*100):0}%"></i></div><div class="txt">${done} / ${items.length}</div></div>
+    <div class="prog"><div class="bar"><i style="width:${total?Math.round(done/total*100):0}%"></i></div><div class="txt">${done} / ${total}</div></div>
     ${rows || '<div class="empty">Sin ítems. Añade uno abajo o crea la plantilla.</div>'}
     <div class="addrow"><input id="chkNew" placeholder="Añadir ítem para hoy…" /><button onclick="chkAddSuelto()">+</button></div>
-    <div class="note">Los ítems sueltos son solo de hoy · no cambian la plantilla.</div>`;
+    <div class="fld" style="margin:6px 0 0"><input id="chkNewCom" placeholder="Comentario (opcional)…" style="width:100%;padding:10px 12px;border:1px solid var(--linea);border-radius:var(--raio);font-size:14px;font-family:'Jost',sans-serif" /></div>
+    <div class="note">Los ítems sueltos son solo de hoy · no cambian la plantilla. El comentario es opcional.</div>`;
 }
 function renderChkTpl(a){
   const mis=window.CFMS.getMision(a.misionId); const act=mis&&mis.actividades.find(x=>x.id===a.templateId);
   const tpl=(act&&act.checklistTemplate)?act.checklistTemplate.slice().sort((x,y)=>(x.orden||0)-(y.orden||0)):[];
   const cfg=window.CFMS.getConfig();
-  const rows=tpl.map(t=>`<div class="item"><div class="body"><div class="txt">${t.texto[LANG]||t.texto.es}</div>${t.rolSugerido?`<div class="meta"><span class="assign serv">Rol sugerido: ${window.CFMS.rolLabel(t.rolSugerido,LANG)}</span></div>`:''}</div><span class="x" style="opacity:.4;cursor:pointer;align-self:center" onclick="chkTplDel('${t.id}')">×</span></div>`).join('');
+  const rows=tpl.map(t=>{
+    const tc = t.comentario ? (typeof t.comentario==='object' ? (t.comentario[LANG]||t.comentario.es||'') : t.comentario) : '';
+    const comMeta = tc ? `<span class="assign none" style="cursor:default">💬 ${tc.replace(/</g,'&lt;')}</span>` : '';
+    return `<div class="item"><div class="body"><div class="txt">${t.texto[LANG]||t.texto.es}</div>${(t.rolSugerido||tc)?`<div class="meta">${t.rolSugerido?`<span class="assign serv">Rol sugerido: ${window.CFMS.rolLabel(t.rolSugerido,LANG)}</span>`:''} ${comMeta}</div>`:''}</div><span class="x" style="opacity:.4;cursor:pointer;align-self:center" onclick="chkTplDel('${t.id}')">×</span></div>`;
+  }).join('');
   const rolOpts = `<option value="">Sin rol sugerido</option>` + cfg.roles.map(r=>`<option value="${r.id}">${r.nombre[LANG]}</option>`).join('');
   return `<div class="tpl-note">Editas la <b>plantilla</b> de esta actividad. Se aplica a <b>cada ocurrencia futura</b> de la misión.</div>
     ${rows || '<div class="empty">Plantilla vacía.</div>'}
     <div class="sec-t" style="margin:16px 2px 8px">Añadir ítem</div>
     <div class="fld" style="margin-bottom:8px"><input id="chkTplNew" placeholder="Texto de la tarea…" style="width:100%;padding:13px;border:1px solid var(--linea);border-radius:var(--raio);font-size:15px;font-family:'Jost',sans-serif" /></div>
+    <div class="fld" style="margin-bottom:8px"><input id="chkTplCom" placeholder="Comentario (opcional)…" style="width:100%;padding:11px 13px;border:1px solid var(--linea);border-radius:var(--raio);font-size:14px;font-family:'Jost',sans-serif" /></div>
     <div class="rolerow"><select id="chkTplRol" style="flex:1;padding:11px;border:1px solid var(--linea);border-radius:var(--raio);font-family:'Jost',sans-serif">${rolOpts}</select><button class="miniadd" onclick="chkTplAdd()">+ Añadir</button></div>`;
 }
 
 function chkToggle(itemId){
   const a=chkActivity(); const items=chkInstance(a); const it=items.find(x=>x.id===itemId); if(!it)return;
+  if(it.na) return;   // N/A deshabilita el check
   it.done=!it.done; it.doneBy = it.done ? (USER?USER.name.split(' ')[0]:'—') : null;
+  chkPersistItem(a.id, it); renderChecklist();
+}
+/* N/A: 3er estado, mutuamente excluyente con 'hecho' (al marcar N/A se quita el hecho) */
+function chkToggleNA(itemId){
+  const a=chkActivity(); const items=chkInstance(a); const it=items.find(x=>x.id===itemId); if(!it)return;
+  it.na=!it.na;
+  if(it.na){ it.done=false; it.doneBy=null; }   // N/A y hecho son excluyentes
   chkPersistItem(a.id, it); renderChecklist();
 }
 function chkAddSuelto(){
   const a=chkActivity(); const inp=document.getElementById('chkNew'); const txt=(inp.value||'').trim(); if(!txt)return;
-  chkPersistItem(a.id, { id:'x'+Date.now(), texto:txt, done:false, asignado:null, suelto:true }); renderChecklist();
+  const comInp=document.getElementById('chkNewCom'); const com=comInp?(comInp.value||'').trim():'';
+  chkPersistItem(a.id, { id:'x'+Date.now(), texto:txt, done:false, asignado:null, suelto:true, na:false, comentario:com }); renderChecklist();
 }
 function chkDelSuelto(itemId){
   const a=chkActivity(); CHK[a.id].items=(CHK[a.id].items||[]).filter(x=>x.id!==itemId); saveChk();
   if(window.MFSync && window.MFSync.enabled){ window.MFSync.queue('delChecklistItem', { item:{ activityId:a.id, itemId:itemId } }); }
   renderChecklist();
 }
-window.chkToggle=chkToggle; window.chkAddSuelto=chkAddSuelto; window.chkDelSuelto=chkDelSuelto;
+window.chkToggle=chkToggle; window.chkToggleNA=chkToggleNA; window.chkAddSuelto=chkAddSuelto; window.chkDelSuelto=chkDelSuelto;
+
+/* ---------- comentario del item (ver → editar) ---------- */
+let chkComId=null; let chkComEdit=false;
+function chkOpenComment(itemId){ chkComId=itemId; chkComEdit=false; _renderChkComment(); document.getElementById('asgBackdrop').classList.add('on'); document.getElementById('asgSheet').classList.add('on'); }
+function closeChkComment(){ chkComId=null; chkComEdit=false; closeAsg(); }
+function chkCommentEdit(){ chkComEdit=true; _renderChkComment(); }
+function chkCommentSave(){
+  const a=chkActivity(); const items=chkInstance(a); const it=items.find(x=>x.id===chkComId); if(!it){ closeChkComment(); return; }
+  const ta=document.getElementById('chkComTa'); it.comentario=ta?(ta.value||'').trim():'';
+  chkPersistItem(a.id, it); closeChkComment(); renderChecklist();
+}
+function _renderChkComment(){
+  const a=chkActivity(); const items=chkInstance(a); const it=items.find(x=>x.id===chkComId);
+  const box=document.getElementById('asgList'); if(!it||!box){ return; }
+  const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  if(chkComEdit){
+    box.innerHTML = `<div class="fld" style="margin:0">
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--gris);display:block;margin-bottom:6px">Comentario · ${esc(it.texto)}</label>
+        <textarea id="chkComTa" rows="4" placeholder="Escribe un comentario…" style="width:100%;padding:12px;border:1px solid var(--linea);border-radius:var(--raio);font-family:'Jost',sans-serif;font-size:15px;resize:vertical">${esc(it.comentario)}</textarea>
+        <div class="sh-actions" style="margin-top:12px"><button class="btn ghost" onclick="closeChkComment()">Cancelar</button><button class="btn primary" onclick="chkCommentSave()">Guardar</button></div>
+      </div>`;
+    setTimeout(()=>{ const el=document.getElementById('chkComTa'); if(el) el.focus(); },150);
+  } else {
+    box.innerHTML = `<div class="fld" style="margin:0">
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--gris);display:block;margin-bottom:6px">Comentario · ${esc(it.texto)}</label>
+        <div class="chk-com-read">${ it.comentario ? esc(it.comentario) : '<span style="color:var(--gris)">Sin comentario.</span>' }</div>
+        <div class="sh-actions" style="margin-top:12px"><button class="btn ghost" onclick="closeChkComment()">Cerrar</button><button class="btn primary" onclick="chkCommentEdit()">Editar</button></div>
+      </div>`;
+  }
+}
+window.chkOpenComment=chkOpenComment; window.closeChkComment=closeChkComment; window.chkCommentEdit=chkCommentEdit; window.chkCommentSave=chkCommentSave;
 
 /* asignación de tarea (reusa servidores inscritos + temporal) */
 let asgItemId=null;
@@ -1445,10 +1508,12 @@ window.chkAssign=chkAssign; window.chkAssignTemp=chkAssignTemp; window.chkDoAssi
 function chkTplAdd(){
   const a=chkActivity(); const inp=document.getElementById('chkTplNew'); const txt=(inp.value||'').trim(); if(!txt){ if(inp)inp.focus(); return; }
   const rolSel=document.getElementById('chkTplRol'); const rol=rolSel?rolSel.value:'';
+  const comInp=document.getElementById('chkTplCom'); const com=comInp?(comInp.value||'').trim():'';
   const mis=window.CFMS.getMision(a.misionId); const act=mis.actividades.find(x=>x.id===a.templateId);
   act.checklistTemplate=act.checklistTemplate||[];
   const item={ id:'c'+Date.now(), texto:{es:txt,pt:txt}, orden:(act.checklistTemplate.length+1) };
   if(rol) item.rolSugerido=rol;
+  if(com) item.comentario=com;
   act.checklistTemplate.push(item);
   saveConfig(); renderChecklist();
 }
