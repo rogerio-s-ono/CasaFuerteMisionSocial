@@ -2,7 +2,7 @@
    Estrategia: app shell (html/js/config/version) = NETWORK-FIRST (con fallback a caché) para
    que las versiones nuevas se vean sin quedar atrapado en caché viejo; assets pesados
    (logos/iconos) = cache-first. skipWaiting + clients.claim → el SW nuevo toma control ya. */
-const CACHE = 'cfms-v0.36.0';
+const CACHE = 'cfms-v0.37.0';
 const ASSETS = [
   './', './index.html', './app.js', './ui.js', './sync.js', './config.js', './manifest.json',
   './assets/logo-casafuerte-light.png', './assets/logo-mision-heart.png', './assets/logo-mision-social-dark.png'

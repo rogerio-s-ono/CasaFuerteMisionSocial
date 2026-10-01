@@ -375,8 +375,17 @@
   .item .chk-na.on{ background:#ececec; color:#555; border-color:#ccc; }
   .item.na{ opacity:.6; } .item.na .txt{ text-decoration:line-through; color:var(--gris); }
   .item .box.dis{ opacity:.4; pointer-events:none; }
-  .chk-com-ind{ font-size:12px; cursor:pointer; }
-  .chk-com-read{ white-space:pre-wrap; font-size:15px; color:var(--negro); background:var(--hueso); border:1px solid var(--linea); border-radius:var(--raio); padding:12px; min-height:48px; }
+  .chk-com-ind{ font-size:12px; cursor:pointer; margin-left:5px; vertical-align:middle; }
+  .chk-com-read{ white-space:pre-wrap; font-size:15px; color:var(--negro); background:var(--hueso); border:1px solid var(--linea); border-radius:var(--raio); padding:12px; min-height:48px; flex:1; }
+  /* modal comentario: header con título + X; lectura con ícono lápiz */
+  .chkcom-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:14px; }
+  .chkcom-head .chkcom-t{ font-family:"Cormorant Garamond",serif; font-style:italic; font-size:20px; color:var(--negro); line-height:1.1; }
+  .chkcom-head .chkcom-sub{ font-size:12px; color:var(--gris); margin-top:2px; }
+  .chkcom-x{ flex:0 0 auto; width:32px; height:32px; border:0; background:none; color:var(--gris); cursor:pointer; display:grid; place-items:center; border-radius:8px; }
+  .chkcom-x svg{ width:20px; height:20px; } .chkcom-x:active{ background:var(--hueso); }
+  .chkcom-read-row{ display:flex; align-items:flex-start; gap:10px; }
+  .chkcom-edit{ flex:0 0 auto; width:40px; height:40px; border:1px solid var(--linea); background:#fff; border-radius:var(--raio); cursor:pointer; display:grid; place-items:center; color:var(--oro-osc); }
+  .chkcom-edit svg{ width:18px; height:18px; } .chkcom-edit:active{ background:var(--oro-bg); }
   .item .meta{ display:flex; align-items:center; gap:6px; margin-top:7px; flex-wrap:wrap; }
   .assign{ font-size:11px; padding:3px 10px; border-radius:999px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; }
   .assign.serv{ background:var(--t-distri-bg); color:var(--t-distri-tx); border:1px solid #cfe6ad; }
@@ -691,7 +700,7 @@
 <div class="backdrop" id="asgBackdrop" onclick="closeAsg()"></div>
 <div class="sheet" id="asgSheet">
   <div class="sh-grab"></div>
-  <h3 style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:20px;margin:0 0 12px">Asignar tarea</h3>
+  <h3 id="asgTitle" style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:20px;margin:0 0 12px">Asignar tarea</h3>
   <div id="asgList"></div>
 </div>
 

@@ -1385,8 +1385,8 @@ function renderChecklist(){
     return `<div class="item ${it.done?'done':''} ${it.na?'na':''}">
       <div class="box ${it.na?'dis':''}" onclick="event.stopPropagation();chkToggle('${it.id}')">${it.done&&!it.na?'✓':''}</div>
       <div class="body" onclick="chkOpenComment('${it.id}')">
-        <div class="txt">${it.texto}</div>
-        <div class="meta">${it.na?'':asg} ${suelto} ${comInd} ${it.done&&!it.na&&it.doneBy?`<span class="doneby">· hecho por ${it.doneBy}</span>`:''}${delx}</div>
+        <div class="txt">${it.texto}${comInd}</div>
+        <div class="meta">${it.na?'':asg} ${suelto} ${it.done&&!it.na&&it.doneBy?`<span class="doneby">· hecho por ${it.doneBy}</span>`:''}${delx}</div>
       </div>
       <button class="chk-na ${it.na?'on':''}" onclick="event.stopPropagation();chkToggleNA('${it.id}')" title="No aplica">N/A</button>
     </div>`;
@@ -1445,7 +1445,8 @@ window.chkToggle=chkToggle; window.chkToggleNA=chkToggleNA; window.chkAddSuelto=
 /* ---------- comentario del item (ver → editar) ---------- */
 let chkComId=null; let chkComEdit=false;
 function chkOpenComment(itemId){ chkComId=itemId; chkComEdit=false; _renderChkComment(); document.getElementById('asgBackdrop').classList.add('on'); document.getElementById('asgSheet').classList.add('on'); }
-function closeChkComment(){ chkComId=null; chkComEdit=false; closeAsg(); }
+function chkOpenComment(itemId){ chkComId=itemId; chkComEdit=false; document.getElementById('asgTitle').style.display='none'; _renderChkComment(); document.getElementById('asgBackdrop').classList.add('on'); document.getElementById('asgSheet').classList.add('on'); }
+function closeChkComment(){ chkComId=null; chkComEdit=false; var t=document.getElementById('asgTitle'); if(t) t.style.display=''; closeAsg(); }
 function chkCommentEdit(){ chkComEdit=true; _renderChkComment(); }
 function chkCommentSave(){
   const a=chkActivity(); const items=chkInstance(a); const it=items.find(x=>x.id===chkComId); if(!it){ closeChkComment(); return; }
@@ -1456,18 +1457,24 @@ function _renderChkComment(){
   const a=chkActivity(); const items=chkInstance(a); const it=items.find(x=>x.id===chkComId);
   const box=document.getElementById('asgList'); if(!it||!box){ return; }
   const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // header propio: título "Comentario" + X arriba a la derecha (cierra)
+  var header = `<div class="chkcom-head">
+      <div class="chkcom-h-tx"><div class="chkcom-t">Comentario</div><div class="chkcom-sub">${esc(it.texto)}</div></div>
+      <button class="chkcom-x" onclick="closeChkComment()" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+    </div>`;
   if(chkComEdit){
-    box.innerHTML = `<div class="fld" style="margin:0">
-        <label style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--gris);display:block;margin-bottom:6px">Comentario · ${esc(it.texto)}</label>
+    box.innerHTML = header + `<div class="fld" style="margin:0">
         <textarea id="chkComTa" rows="4" placeholder="Escribe un comentario…" style="width:100%;padding:12px;border:1px solid var(--linea);border-radius:var(--raio);font-family:'Jost',sans-serif;font-size:15px;resize:vertical">${esc(it.comentario)}</textarea>
-        <div class="sh-actions" style="margin-top:12px"><button class="btn ghost" onclick="closeChkComment()">Cancelar</button><button class="btn primary" onclick="chkCommentSave()">Guardar</button></div>
+        <button class="btn primary" style="width:100%;margin-top:12px" onclick="chkCommentSave()">Guardar</button>
       </div>`;
     setTimeout(()=>{ const el=document.getElementById('chkComTa'); if(el) el.focus(); },150);
   } else {
-    box.innerHTML = `<div class="fld" style="margin:0">
-        <label style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--gris);display:block;margin-bottom:6px">Comentario · ${esc(it.texto)}</label>
-        <div class="chk-com-read">${ it.comentario ? esc(it.comentario) : '<span style="color:var(--gris)">Sin comentario.</span>' }</div>
-        <div class="sh-actions" style="margin-top:12px"><button class="btn ghost" onclick="closeChkComment()">Cerrar</button><button class="btn primary" onclick="chkCommentEdit()">Editar</button></div>
+    // modo lectura: texto + ícono LÁPIZ para editar (no botón)
+    box.innerHTML = header + `<div class="fld" style="margin:0">
+        <div class="chkcom-read-row">
+          <div class="chk-com-read">${ it.comentario ? esc(it.comentario) : '<span style="color:var(--gris)">Sin comentario.</span>' }</div>
+          <button class="chkcom-edit" onclick="chkCommentEdit()" aria-label="Editar comentario" title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        </div>
       </div>`;
   }
 }
