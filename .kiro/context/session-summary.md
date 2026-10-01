@@ -11,10 +11,22 @@
 ## Projeto
 PWA de gestão de voluntários das missões sociais da Casa Fuerte Church (Leganés/Madrid). UI em **espanhol**. Mobile-first, HTML/JS/CSS puro (sem framework). Estilo: monocromático grafite/branco + dourado `#f5c518`. Fontes: Cormorant Garamond (títulos itálico) + Jost + Oswald.
 
-## Estado atual: **v0.38.0** (no ar) · Backend clasp **@23**
+## Estado atual: **v0.38.2** (no ar) · Backend clasp **@24**
 - App publicado: https://rogerio-s-ono.github.io/CasaFuerteMisionSocial/
 - Repo PÚBLICO (autorizado): github.com/rogerio-s-ono/CasaFuerteMisionSocial — branch **`main`** (NÃO master), Pages via GitHub Actions (.github/workflows/pages.yml, ~1-2min).
-- Último commit: 004b06b.
+- Último commit: cb155f6.
+
+## Sessão 2026-10-01 (noite) — checklist persistente + N/A/comentário + redesenho add-form + backlog
+Esta sessão (em paralelo com outra que avançou gestão de usuários/espera FIFO até v0.38.0, backend @23):
+- **Pipeline clasp de deploy do backend** montado (Node via nvm, clasp 3.4.1, `npm run deploy`, segredos → Script Properties). Backend deployável sem copy/paste. SETUP.md atualizado + cópia no OneDrive. Backlog do Gideão (`~/Projects/Personal/CasaFuerte/.kiro/context/backlog.md`) ganhou item 9 (DevOps) para replicar lá.
+- **Validação de navegação + remoção de DEMO** (v0.32.0): `go()` fecha overlays (wizard/checklist) e reseta sub-estados; MODO DEMO removido (papéis só via PERMISOS reais); seed sem emails reais; telefone do temporal persiste (coluna `tel`, migração `_ensureColumns`); código morto removido.
+- **Checklist persistente (Fase 4)** (v0.34.1): write-path completo — `chkPersistItem` enfileira `MFSync.queue('setChecklistItem')`, `chkDelSuelto` → `delChecklistItem`; `applyPull` consome `res.data.checklists`; merge por `actualizadoEm`. Backend `_delChecklistItem` + `_setChecklistItem`.
+- **Toggle N/A + comentário por item** (v0.35.0): N/A = 3º estado (topo-dir, mutex com feito, sai do progresso); comentário opcional por item, indicador 💬, abre por clique no corpo em leitura + botão Editar. Backend: colunas `na`+`comentario` em Checklists (migração automática).
+- **Redesenho do "añadir ítem"** (v0.38.1): progressive disclosure (padrão Todoist/Trello/Planning Center) — colapsado por padrão (botão "+ Añadir ítem"), abre form inline com texto + links "+ Comentario"/"+ Rol" que revelam campos opcionais; componente único `_chkAddForm` para suelto E plantilla. Removidos chkAddSuelto/chkTplAdd/.addrow.
+- **Fix (v0.38.2):** revelar Comentario/Rol não perde mais o texto já digitado (`_chkAddCapture` + `chkAdd.txt/comVal/rolVal` repostos no render).
+- **Testes:** `test_checklist.py` 27/27, `test_asignacion.py` 46/46, `test_usuarios.py` 26/26.
+- **Backlog revisado** (`docs/backlog.md`): consolidado (Entregue vs Pendente, validado no código — Tab Más/LockService/motivo já feitos; `_verify` continua ESTRITO = decisão pendente; `replaceUsers` não existe). Adicionada seção **🧪 Exploratório PENDENTE DE VALIDAÇÃO** com 9 ideias de apps de referência (Planning Center/SignUpGenius/etc) + UX: E1 lembretes automáticos, E2 confirmar presença, E3 blockout dates, E4 "Mi horario"+.ics, E5 swap de turno, E6 notas visíveis ao voluntário, E7 push PWA, E8 relatório de horas, E9 a11y. NENHUM aprovado.
+
 
 ## Sessão 2026-10-01 (resumo — v0.19.0 → v0.38.0)
 Grande rodada. Principais entregas:
