@@ -27,6 +27,66 @@ Comunicação/avisos em grupo (ex.: WhatsApp click-to-chat por função/missão,
 
 ---
 
+## 🧪 Exploratório — PENDENTE DE VALIDAÇÃO (ideias de mercado + UX, aguardam seu aval)
+
+> Levantado em 2026-10-01 a partir de **apps de referência** (Planning Center Services — padrão-ouro em igrejas, SignUpGenius, Zelos, POINT, Servant Keeper, VolunteerLocal) e **best practices de UX** para gestão de voluntários/escalas. Cada item diz o que o mercado faz, o valor, e o que o app **já tem** (para não duplicar). **Nada aqui está aprovado — validar antes de implementar.**
+
+### E1. Lembretes automáticos de turno (reduzir no-shows)
+**Prioridade sugerida:** Alta · **Área:** Backend + comunicação.
+Padrão nº1 citado em TODAS as referências (Planning Center envia lembrete até 7 dias antes; "reminders to cut no-shows"). Hoje o app tem WhatsApp click-to-chat **manual**. Ideia: lembrete automático (ex.: Apps Script time-trigger que gera as mensagens/avisos do dia seguinte, ou push PWA) para quem está confirmado numa atividade próxima.
+- **Já tem:** `wa.me` manual, dados de inscrição no backend.
+- **Validar:** canal (WhatsApp vs push vs e-mail), antecedência (24h?), quem dispara.
+
+### E2. Confirmar presença (aceitar/recusar o turno)
+**Prioridade sugerida:** Alta · **Área:** Frontend + backend.
+Planning Center/Queensway: "enabling volunteers to confirm their slot, avoiding no-shows" — botões **Aceptar/Rechazar** por escala. Hoje o voluntário se inscreve (confirmado direto) mas não há um passo de **confirmação de presença** próximo à data (nem o líder vê quem confirmou).
+- **Já tem:** estados confirmado/suspendido/espera; o líder adiciona/remove.
+- **Validar:** adicionar estado "pendiente de confirmación" ou um flag `confirmadoPresencia` + UI de aceitar/recusar.
+
+### E3. Datas de indisponibilidade (blockout) + aviso de conflito
+**Prioridade sugerida:** Média · **Área:** Frontend + backend.
+Planning Center "Blockouts": o voluntário marca dias em que **não pode servir**; ao escalá-lo nessa data, aparece **aviso de conflito** (líder pode ignorar). Reduz escalas furadas.
+- **Já tem:** nada equivalente.
+- **Validar:** nova aba/UI de indisponibilidade do voluntário + checagem no fluxo do líder (`openAddSheet`/wizard) com aviso não-bloqueante.
+
+### E4. "Mi horario" consolidado + exportar/sincronizar calendário (.ics)
+**Prioridade sugerida:** Média · **Área:** Frontend.
+Planning Center: "My Schedule" + sync com Google/Outlook/Apple. Hoje há "Mis turnos", mas sem export. Ideia: botão **"Añadir al calendario"** gerando um `.ics` (data/hora/local/notas) por turno — simples, offline, sem backend novo.
+- **Já tem:** aba "Mis turnos" (`renderMios`), dados de data/hora/duração.
+- **Validar:** só o `.ics` (fácil) ou sync completo (mais complexo).
+
+### E5. Troca de turno entre voluntários (swap) com aprovação do líder
+**Prioridade sugerida:** Média-Baixa · **Área:** Frontend + backend.
+Servant Keeper: "approval-controlled swaps and conflict checks". Voluntário pede para trocar/ceder seu turno; outro assume; líder aprova. Hoje só o líder remove/adiciona manualmente.
+- **Já tem:** lista de espera FIFO (parcialmente cobre "quem assume"), suspender/reactivar.
+- **Validar:** se o fluxo de espera já basta ou se vale um "ceder mi plaza" explícito.
+
+### E6. Notas da atividade visíveis ao voluntário (preparação)
+**Prioridade sugerida:** Média · **Área:** Frontend.
+Planning Center: "notes to store info volunteers need to be prepared". O config já tem `notas` por atividade; validar se o **voluntário** as vê no detalhe/wizard (não só o líder). Barato e alto valor.
+- **Já tem:** campo `notas` no config das atividades.
+- **Validar:** expor as notas na tela do voluntário (hero/wizard/mis turnos).
+
+### E7. Notificações push (PWA)
+**Prioridade sugerida:** Média-Baixa · **Área:** PWA + backend.
+Complemento ao WhatsApp: push nativo do PWA (service worker já existe) para lembretes/mudanças de escala. Mais "app-like".
+- **Já tem:** `sw.js` (shell), sem push.
+- **Validar:** exige Web Push (VAPID) + um emissor; avaliar custo/benefício vs. WhatsApp (que já é o canal natural do grupo).
+
+### E8. Relatório de participação / horas servidas
+**Prioridade sugerida:** Baixa · **Área:** Backend + UI (admin).
+Mercado: "track hours for grant reporting"; aqui o valor é **reconhecimento e visão do líder** (quem serviu, quantas vezes, assiduidade). Dados já existem em `Inscripciones` (fecha, estado, voluntario).
+- **Já tem:** histórico de inscrições no backend.
+- **Validar:** um painel simples (por voluntário/mês/missão) — read-only, sem novo modelo.
+
+### E9. Acessibilidade e refinamento UX do checklist/listas
+**Prioridade sugerida:** Baixa · **Área:** Frontend (a11y).
+Best practice: alvos de toque ≥44px, contraste AA, foco visível, `aria-label` em ícones-only (ex.: toggle N/A, 💬, chips de sync). Garante usabilidade para todas as idades do grupo.
+- **Já tem:** UI mobile-first; falta auditoria a11y formal.
+- **Validar:** auditoria rápida (Lighthouse) + ajustes pontuais.
+
+---
+
 ## ✅ Entregue
 
 ### Tab "Más" + ícones de sync no header (validado no código 2026-10-01)
