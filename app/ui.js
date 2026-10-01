@@ -1265,7 +1265,7 @@ function saveChk(){ localStorage.setItem('mf_chk', JSON.stringify(CHK)); }
 let chkCtx = { activityId:null, view:'inst' };
 /* estado del formulario "añadir ítem" (progressive disclosure): colapsado por defecto;
    'inst' = ítem suelto de hoy · 'tpl' = ítem de plantilla. 'com'/'rol' revelan campos opcionales. */
-let chkAdd = { open:'', com:false, rol:false };   // open: '' | 'inst' | 'tpl'
+let chkAdd = { open:'', com:false, rol:false, txt:'', comVal:'', rolVal:'' };   // open: '' | 'inst' | 'tpl'
 
 /* mapea una fila del servidor (aba Checklists) al item local del modelo CHK */
 function _chkRowToItem(r){
@@ -1356,12 +1356,12 @@ function chkPersistItem(activityId, item){
 
 function openChecklist(activityId){
   chkCtx={ activityId, view:'inst' };
-  chkAdd={ open:'', com:false, rol:false };   // formulario de añadir siempre colapsado al abrir
+  chkAdd={ open:'', com:false, rol:false, txt:'', comVal:'', rolVal:'' };   // formulario de añadir siempre colapsado al abrir
   document.getElementById('chkOverlay').classList.add('active');
   renderChecklist();
 }
 function closeChecklist(){ document.getElementById('chkOverlay').classList.remove('active'); renderLider(); }
-function chkSetView(v){ chkCtx.view=v; chkAdd={ open:'', com:false, rol:false }; document.getElementById('chkBInst').classList.toggle('on',v==='inst'); document.getElementById('chkBTpl').classList.toggle('on',v==='tpl'); renderChecklist(); }
+function chkSetView(v){ chkCtx.view=v; chkAdd={ open:'', com:false, rol:false, txt:'', comVal:'', rolVal:'' }; document.getElementById('chkBInst').classList.toggle('on',v==='inst'); document.getElementById('chkBTpl').classList.toggle('on',v==='tpl'); renderChecklist(); }
 window.openChecklist=openChecklist; window.closeChecklist=closeChecklist; window.chkSetView=chkSetView;
 
 function chkActivity(){ return currentActivities().find(a=>a.id===chkCtx.activityId); }
@@ -1425,23 +1425,25 @@ function _chkAddForm(mode){
     const label = isTpl ? 'Añadir ítem a la plantilla' : 'Añadir ítem para hoy';
     return `<button class="chk-add-trigger" onclick="chkAddOpen('${mode}')"><span class="plus">+</span> ${label}</button>`;
   }
-  // campos opcionales revelables
+  const esc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const txtVal = esc(chkAdd.txt||'');
+  // campos opcionales revelables (reponen el valor ya escrito)
   let rolField = '';
   if(isTpl){
     const cfg = window.CFMS.getConfig();
-    const rolOpts = `<option value="">Sin rol sugerido</option>` + cfg.roles.map(r=>`<option value="${r.id}">${r.nombre[LANG]}</option>`).join('');
+    const rolOpts = `<option value="">Sin rol sugerido</option>` + cfg.roles.map(r=>`<option value="${r.id}" ${chkAdd.rolVal===r.id?'selected':''}>${r.nombre[LANG]}</option>`).join('');
     rolField = chkAdd.rol
       ? `<div class="chk-add-opt"><label>Rol sugerido</label><select id="chkAddRol">${rolOpts}</select></div>`
       : `<button class="chk-add-more" onclick="chkAddReveal('rol')">+ Rol sugerido</button>`;
   }
   const comField = chkAdd.com
-    ? `<div class="chk-add-opt"><label>Comentario</label><textarea id="chkAddCom" rows="2" placeholder="Nota para este ítem…"></textarea></div>`
+    ? `<div class="chk-add-opt"><label>Comentario</label><textarea id="chkAddCom" rows="2" placeholder="Nota para este ítem…">${esc(chkAdd.comVal||'')}</textarea></div>`
     : `<button class="chk-add-more" onclick="chkAddReveal('com')">+ Comentario</button>`;
   const hint = isTpl
     ? 'Se aplica a cada ocurrencia futura de la misión.'
     : 'Solo para hoy · no cambia la plantilla.';
   return `<div class="chk-add-form">
-      <input id="chkAddTxt" class="chk-add-txt" placeholder="${isTpl?'Texto de la tarea…':'Nombre del ítem…'}" autocomplete="off" />
+      <input id="chkAddTxt" class="chk-add-txt" value="${txtVal}" placeholder="${isTpl?'Texto de la tarea…':'Nombre del ítem…'}" autocomplete="off" />
       <div class="chk-add-opts">${comField}${rolField}</div>
       <div class="chk-add-actions">
         <button class="btn ghost" onclick="chkAddCancel()">Cancelar</button>
@@ -1450,9 +1452,15 @@ function _chkAddForm(mode){
       <div class="chk-add-hint">${hint}</div>
     </div>`;
 }
-function chkAddOpen(mode){ chkAdd={ open:mode, com:false, rol:false }; renderChecklist(); setTimeout(function(){ var el=document.getElementById('chkAddTxt'); if(el) el.focus(); }, 60); }
-function chkAddReveal(which){ chkAdd[which]=true; renderChecklist(); setTimeout(function(){ var el=document.getElementById(which==='com'?'chkAddCom':'chkAddRol'); if(el) el.focus(); }, 60); }
-function chkAddCancel(){ chkAdd={ open:'', com:false, rol:false }; renderChecklist(); }
+/* captura lo ya escrito en el formulario a chkAdd (para no perderlo al re-renderizar) */
+function _chkAddCapture(){
+  var t=document.getElementById('chkAddTxt'); if(t) chkAdd.txt=t.value;
+  var c=document.getElementById('chkAddCom'); if(c) chkAdd.comVal=c.value;
+  var r=document.getElementById('chkAddRol'); if(r) chkAdd.rolVal=r.value;
+}
+function chkAddOpen(mode){ chkAdd={ open:mode, com:false, rol:false, txt:'', comVal:'', rolVal:'' }; renderChecklist(); setTimeout(function(){ var el=document.getElementById('chkAddTxt'); if(el) el.focus(); }, 60); }
+function chkAddReveal(which){ _chkAddCapture(); chkAdd[which]=true; renderChecklist(); setTimeout(function(){ var el=document.getElementById(which==='com'?'chkAddCom':'chkAddRol'); if(el) el.focus(); }, 60); }
+function chkAddCancel(){ chkAdd={ open:'', com:false, rol:false, txt:'', comVal:'', rolVal:'' }; renderChecklist(); }
 function chkAddSubmit(mode){
   const a=chkActivity(); if(!a) return;
   const txt=(document.getElementById('chkAddTxt').value||'').trim();
@@ -1470,7 +1478,7 @@ function chkAddSubmit(mode){
   } else {
     chkPersistItem(a.id, { id:'x'+Date.now(), texto:txt, done:false, asignado:null, suelto:true, na:false, comentario:com });
   }
-  chkAdd={ open:'', com:false, rol:false };   // vuelve a colapsado tras añadir
+  chkAdd={ open:'', com:false, rol:false, txt:'', comVal:'', rolVal:'' };   // vuelve a colapsado tras añadir
   renderChecklist();
 }
 window.chkAddOpen=chkAddOpen; window.chkAddReveal=chkAddReveal; window.chkAddCancel=chkAddCancel; window.chkAddSubmit=chkAddSubmit;
