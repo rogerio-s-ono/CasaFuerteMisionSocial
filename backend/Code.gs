@@ -72,9 +72,11 @@ function doGet(e) {
   try {
     _ensureSheets();
     var p = (e && e.parameter) || {};
-    if (p.token !== SYNC_TOKEN()) return _json({ ok:false, error:'bad_token' });
+    // Seguridad: ya NO depende del SYNC_TOKEN (quedaba expuesto en el frontend público).
+    // El pull es público (ver agenda) pero los teléfonos se enmascaran según el rol (ver _pull).
+    var email = _verify(p.idToken);   // null si no hay login Google válido
     var action = p.action || 'pull';
-    if (action === 'pull') return _json({ ok:true, data: _pull() });
+    if (action === 'pull') return _json({ ok:true, data: _pull(email) });
     return _json({ ok:false, error:'unknown_action' });
   } catch (err) {
     return _json({ ok:false, error:String(err) });
@@ -88,8 +90,8 @@ function doPost(e) {
     _ensureSheets();
     var body = {};
     try { body = JSON.parse(e.postData.contents); } catch (x) {}
-    if (body.token !== SYNC_TOKEN()) return _json({ ok:false, error:'bad_token' });
-
+    // Seguridad: ya NO depende del SYNC_TOKEN. La barrera es el login Google (idToken) + rol
+    // (allowlist) verificado por acción abajo. _verify devuelve el email o null.
     var email = _verify(body.idToken); // null si no verificado / no login Google
     var action = body.action;
 
@@ -104,6 +106,7 @@ function doPost(e) {
       case 'setEstadoInscripcion': return _json(_setEstadoInscripcion(body, email));
       case 'setChecklistItem':return _json(_setChecklistItem(body, email));
       case 'delChecklistItem':return _json(_delChecklistItem(body, email));
+      case 'verifyTelefono':  return _json(_verifyTelefono(body));
       default:                return _json({ ok:false, error:'unknown_action' });
     }
   } catch (err) {
@@ -114,9 +117,44 @@ function doPost(e) {
 }
 
 /* ============ PULL ============ */
-function _pull() {
+/* token opaco ESTABLE a partir del teléfono (no reversible). Se usa como IDENTIDAD en el
+   cliente cuando el llamante NO puede ver el número real (voluntario común / anónimo).
+   Mismo teléfono → mismo token (para que nombre/chips/"soy yo" sigan funcionando por clave). */
+function _telToken(tel) {
+  var k = _normTel(tel);
+  if (!k) return '';
+  var raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, 'cfms:' + k);
+  var hex = raw.map(function(b){ var v=(b<0?b+256:b).toString(16); return v.length===1?('0'+v):v; }).join('');
+  return 'v_' + hex.slice(0, 12);
+}
+/* enmascara los teléfonos del pull según el rol del llamante.
+   - líder/admin (email con rol): NO se enmascara (ven los números reales para contactar).
+   - voluntario común / anónimo: teléfonos → token opaco; el número crudo NUNCA sale del servidor. */
+function _maskPull(data, email) {
+  if (_isLider(email)) return data;   // admin o líder de alguna misión → ve números reales
+  // voluntario/anónimo: sustituir teléfono por token EXCEPTO la fila del PROPIO usuario (su email),
+  // porque su propio número no es una fuga (es suyo) y el cliente lo necesita como identidad.
+  var me = String(email||'').toLowerCase().trim();
+  var miTel = '';
+  if (me) {
+    (data.voluntarios || []).forEach(function(r){
+      if (r && String(r.email||'').toLowerCase().trim() === me) miTel = _normTel(r.telefono);
+    });
+  }
+  function keepMine(telRaw){ return (miTel && _normTel(telRaw) === miTel); }
+  (data.voluntarios || []).forEach(function(r){ if(r && r.telefono && !keepMine(r.telefono)) r.telefono = _telToken(r.telefono); });
+  if (data.usuarios && data.usuarios !== data.voluntarios) {
+    data.usuarios.forEach(function(r){ if(r && r.telefono && !keepMine(r.telefono)) r.telefono = _telToken(r.telefono); });
+  }
+  (data.inscripciones || []).forEach(function(r){
+    if (r && r.voluntario && String(r.voluntario).indexOf('temp:')!==0 && !keepMine(r.voluntario)) r.voluntario = _telToken(r.voluntario);
+    if (r && r.tel && !keepMine(r.tel)) r.tel = _telToken(r.tel);
+  });
+  return data;
+}
+function _pull(email) {
   var usuarios = _readRows(SHEETS.USUARIOS);
-  return {
+  var data = {
     config:        _readConfig(),
     voluntarios:   usuarios,          // compat: el cliente sigue leyendo "voluntarios" (ahora = Usuarios)
     usuarios:      usuarios,
@@ -125,6 +163,19 @@ function _pull() {
     permisos:      _permisos(),   // { admins:[email], lideres:{email:[misionId]} }
     serverTime:    new Date().toISOString()
   };
+  return _maskPull(data, email);
+}
+/* login por teléfono (Fase 2): el cliente MANDA el número; el servidor responde si existe
+   (nombre + token de identidad + email), SIN exponer la lista de teléfonos. El número que
+   se devuelve es el que el propio usuario tecleó, así que no filtra datos de terceros. */
+function _verifyTelefono(body) {
+  var k = _normTel(body && body.telefono);
+  if (!k) return { ok:false, error:'sin_telefono' };
+  var rows = _readRows(SHEETS.USUARIOS);
+  var v = null;
+  for (var r=0; r<rows.length; r++){ if(_normTel(rows[r].telefono)===k){ v=rows[r]; break; } }
+  if (!v) return { ok:true, existe:false };
+  return { ok:true, existe:true, nombre:String(v.nombre||''), token:_telToken(k), email:String(v.email||'') };
 }
 /* parse tolerante del JSON de líder (puede venir vacío, array o string JSON) */
 function _parseLider(val){
@@ -334,6 +385,13 @@ function _inscribir(body, email) {
   // voluntario = teléfono (dígitos) para persona real; para TEMPORAL no hay teléfono → se genera id sintético.
   if (!i.activityId || !i.rol) return { ok:false, error:'datos_incompletos' };
   var esTemp = !!i.temp;
+  // Autorización: inscribir a TERCEROS (porLider) o TEMPORALES es acción de líder/admin de la misión.
+  // Auto-inscripción (el propio voluntario) sigue permitida sin idToken en esta fase, porque el
+  // login por teléfono no genera idToken. (Fase 2: identidad por token opaco + verify endpoint.)
+  var _mis = i.misionId || _misionDeActivity(i.activityId);
+  if (i.porLider || esTemp) {
+    if (!_isLider(email, _mis)) return { ok:false, error:'forbidden_lider' };
+  }
   var vol = esTemp ? ('temp:' + Utilities.getUuid().slice(0,8)) : _normTel(i.voluntario);
   var nombre = String(i.nombre||'').trim();
   var tel = _normTel(i.tel);   // teléfono del temporal (opcional); para persona real el tel ya está en 'voluntario'
@@ -363,6 +421,9 @@ function _inscribir(body, email) {
 function _cancelar(body, email) {
   var i = body.inscripcion || body || {};
   var motivo = String(body.motivo || i.motivo || '').trim();
+  // Cancelar/quitar una inscripción es acción de líder/admin de la misión (en el app, "quitar de la tarea").
+  var _mis = i.misionId || _misionDeActivity(i.activityId);
+  if (!_isLider(email, _mis)) return { ok:false, error:'forbidden_lider' };
   var sh = _sheet(SHEETS.INSCRIPCIONES);
   var rows = _readRows(SHEETS.INSCRIPCIONES);
   var idx = -1;
@@ -393,6 +454,8 @@ function _setEstadoInscripcion(body, email) {
   var i = body || {};
   var accion = String(i.accion||'').toLowerCase();
   if (accion!=='suspender' && accion!=='reactivar') return { ok:false, error:'accion_invalida' };
+  var _mis = i.misionId || _misionDeActivity(i.activityId);
+  if (!_isLider(email, _mis)) return { ok:false, error:'forbidden_lider' };
   var sh = _sheet(SHEETS.INSCRIPCIONES);
   var rows = _readRows(SHEETS.INSCRIPCIONES);
   // localizar la fila (por id o por activityId+rol+voluntario)
@@ -450,6 +513,7 @@ function _promoverEspera(activityId, rol, capacidad, email) {
 function _setChecklistItem(body, email) {
   var c = body.item || {}; // { activityId, itemId, texto, hecho, hechoPor, asignado, suelto, na, comentario }
   if (!c.activityId || !c.itemId) return { ok:false, error:'datos_incompletos' };
+  if (!_isLider(email, _misionDeActivity(c.activityId))) return { ok:false, error:'forbidden_lider' };
   var sh = _sheet(SHEETS.CHECKLISTS);
   var rows = _readRows(SHEETS.CHECKLISTS);
   var idx = rows.findIndex(function(r){ return r.activityId===c.activityId && r.itemId===c.itemId; });
@@ -467,6 +531,7 @@ function _setChecklistItem(body, email) {
 function _delChecklistItem(body, email) {
   var c = body.item || {}; // { activityId, itemId }
   if (!c.activityId || !c.itemId) return { ok:false, error:'datos_incompletos' };
+  if (!_isLider(email, _misionDeActivity(c.activityId))) return { ok:false, error:'forbidden_lider' };
   var sh = _sheet(SHEETS.CHECKLISTS);
   var rows = _readRows(SHEETS.CHECKLISTS);
   var idx = rows.findIndex(function(r){ return r.activityId===c.activityId && r.itemId===c.itemId; });
@@ -498,6 +563,23 @@ function _adminList() {
   var list = rows.filter(function(r){ return _esAdminFlag(r.esAdmin) && String(r.email||'').trim(); })
                  .map(function(r){ return String(r.email||'').toLowerCase(); });
   return list.length ? list : ADMIN_FALLBACK();
+}
+/* ¿el email es líder? Admin cuenta como líder de todo. Si se pasa misionId, exige ser líder DE esa misión. */
+function _isLider(email, misionId) {
+  if (!email) return false;
+  email = email.toLowerCase();
+  if (_isAdmin(email)) return true;                 // admin manda en todo
+  var perm = _permisos();
+  var mis = (perm.lideres && perm.lideres[email]) ? perm.lideres[email] : [];
+  if (!mis.length) return false;
+  if (!misionId) return true;                        // es líder de alguna misión
+  return mis.indexOf(String(misionId)) >= 0;         // es líder DE esta misión
+}
+/* misionId a partir de un activityId "misionId:TMPL-YYYY-MM-DD" (o del campo misionId si viene) */
+function _misionDeActivity(activityId) {
+  var s = String(activityId||'');
+  var colon = s.indexOf(':');
+  return colon > 0 ? s.slice(0, colon) : '';
 }
 
 /* ============ HELPERS DE PLANILLA ============ */

@@ -153,11 +153,6 @@ function knownUsers(){ try{ return JSON.parse(localStorage.getItem('mf_known')||
 function rememberUser(phone,name){ const k=knownUsers(); k[phone]=name; localStorage.setItem('mf_known',JSON.stringify(k)); }
 
 /* busca un voluntario del servidor por teléfono (para reconocer usuarios creados por el Admin) */
-function volByTelServer(full){
-  var k=normPhone(full);
-  var v=(SERVER_VOLS||[]).find(function(r){ return String(r.telefono).replace(/[^0-9]/g,'')===k; });
-  return v ? { name:v.nombre, phone:String(v.telefono), email:String(v.email||'') } : null;
-}
 function submitPhone(){
   const ddi = document.getElementById('ddi1').value;
   const local = normPhone(document.getElementById('inPhone').value.trim());
@@ -167,30 +162,34 @@ function submitPhone(){
   // para que el backend NO estampe el email de otra persona en este usuario.
   try{ sessionStorage.removeItem('mf_idtoken'); }catch(e){}
   window._googleEmail='';
-  // 1) ¿existe en el SERVIDOR (creado por el Admin o registrado en otro dispositivo)?
-  var srv = volByTelServer(full);
-  if(srv && srv.name){ USER={ name:srv.name, phone:srv.phone, email:srv.email||'' }; enter('Entrando…'); return; }
-  // 2) ¿base local de este dispositivo?
-  const known = knownUsers();
-  if(known[full]){ USER={ name:known[full], phone:full }; enter('Entrando…'); return; }
-  // 3) por si el pull inicial aún no trajo voluntarios: pull fresco y reintenta
+  // Seguridad (Fase 2): NO casamos contra SERVER_VOLS (que ahora trae tokens, no números).
+  // Preguntamos al backend si el número existe (verifyTelefono) — sin exponer la lista.
   if(window.MFSync && window.MFSync.enabled){
     document.getElementById('lgCheckTxt').textContent='Entrando…';
     document.getElementById('panelPhone').classList.add('hidden');
     document.getElementById('lgChecking').classList.add('on');
-    window.MFSync.pull().then(function(res){
-      if(res && res.data && res.data.voluntarios){ setServerVols(res.data.voluntarios); if(res.data.permisos) setPermisos(res.data.permisos); }
-      var s2 = volByTelServer(full);
-      if(s2 && s2.name){ USER={ name:s2.name, phone:s2.phone, email:s2.email||'' }; enter('Entrando…'); return; }
+    window.MFSync.post('verifyTelefono', { telefono:full }).then(function(j){
+      if(j && j.ok && j.existe){
+        USER={ name:j.nombre, phone:full, email:j.email||'' };
+        enter('Entrando…'); return;
+      }
+      // no existe en el servidor → ¿base local de este dispositivo?
+      const known = knownUsers();
+      if(known[full]){ USER={ name:known[full], phone:full }; enter('Entrando…'); return; }
       document.getElementById('lgChecking').classList.remove('on');
       _phoneFirstTime(ddi, local);   // 1ª vez → pedir nombre
     }).catch(function(){
+      // error de red → cae a base local; si no, 1ª vez
+      const known = knownUsers();
       document.getElementById('lgChecking').classList.remove('on');
+      if(known[full]){ USER={ name:known[full], phone:full }; enter('Entrando…'); return; }
       _phoneFirstTime(ddi, local);
     });
     return;
   }
-  // 4) sin servidor → 1ª vez
+  // sin servidor → base local / 1ª vez
+  const known = knownUsers();
+  if(known[full]){ USER={ name:known[full], phone:full }; enter('Entrando…'); return; }
   _phoneFirstTime(ddi, local);
 }
 /* muestra el formulario de nombre (1ª vez con teléfono) */

@@ -15,7 +15,7 @@
 (function(){
   var CFG = window.CFMS_CONFIG || {};
   var URL = CFG.SHEET_WEBAPP_URL || '';
-  var TOKEN = CFG.SYNC_TOKEN || '';
+  // SYNC_TOKEN abandonado: la barrera es login Google (idToken) + allowlist en el backend.
   var ENABLED = !!URL && URL.indexOf('XX(X)') === -1 && URL.indexOf('/exec') > -1;
 
   var state = ENABLED ? 'ok' : 'off';
@@ -94,7 +94,7 @@
   function pull(){
     if(!ENABLED) return Promise.resolve({ local:true, data: cacheGet() });
     setStatus('syncing');
-    var u = URL + '?action=pull&token=' + encodeURIComponent(TOKEN) + (idToken()?('&idToken='+encodeURIComponent(idToken())):'');
+    var u = URL + '?action=pull' + (idToken()?('&idToken='+encodeURIComponent(idToken())):'');
     return _fetchJson(u, { method:'GET' })
       .then(function(j){
         if(!j.ok) throw new Error('backend: '+(j.error||'pull_failed'));
@@ -113,7 +113,7 @@
 
   /* ---- POST genérico ---- */
   function post(action, payload){
-    var body = Object.assign({ token:TOKEN, action:action, idToken:idToken() }, payload||{});
+    var body = Object.assign({ action:action, idToken:idToken() }, payload||{});
     // Content-Type text/plain evita el preflight CORS que Apps Script no maneja bien
     return _fetchJson(URL, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(body) })
       .then(function(j){
